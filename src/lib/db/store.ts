@@ -8,6 +8,7 @@ import type {
   Venta,
   Compra,
   Apartado,
+  Bitacora,
 } from "@/lib/types";
 import {
   clientesSeed,
@@ -24,6 +25,7 @@ interface Store {
   ventas: Venta[];
   compras: Compra[];
   apartados: Apartado[];
+  bitacora: Bitacora[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -39,6 +41,7 @@ export function getStore(): Store {
       ventas: [],
       compras: [],
       apartados: [],
+      bitacora: [],
     };
   }
   return g.__empenoStore;

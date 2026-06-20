@@ -45,7 +45,11 @@ export const navGroups: NavGroup[] = [
   },
   {
     titulo: "Sistema",
-    items: [{ href: "/configuracion", label: "Configuración", icon: "⚙️" }],
+    items: [
+      { href: "/bitacora", label: "Bitácora", icon: "📜" },
+      { href: "/usuarios", label: "Usuarios", icon: "🔑" },
+      { href: "/configuracion", label: "Configuración", icon: "⚙️" },
+    ],
   },
 ];
 

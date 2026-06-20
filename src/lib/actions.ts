@@ -20,6 +20,7 @@ import type {
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
+import { bitacoraAuto } from "@/lib/bitacora";
 
 function s(form: FormData, key: string): string {
   return (form.get(key) as string | null)?.trim() ?? "";
@@ -257,6 +258,7 @@ export async function crearEmpeno(form: FormData) {
     empenoId = empeno.id;
   }
 
+  await bitacoraAuto("Empeño creado", `Préstamo ${montoPrestado} MXN`, null);
   revalidatePath("/empenos");
   revalidatePath("/caja");
   redirect(`/empenos/${empenoId}`);
@@ -314,6 +316,7 @@ export async function refrendarEmpeno(id: string) {
       creadoEn: new Date().toISOString(),
     });
   }
+  await bitacoraAuto("Refrendo registrado", null, `empeño ${id}`);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
@@ -363,6 +366,7 @@ export async function desempenarEmpeno(id: string) {
       creadoEn: new Date().toISOString(),
     });
   }
+  await bitacoraAuto("Desempeño registrado", null, `empeño ${id}`);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
@@ -460,6 +464,7 @@ export async function crearEmpenoGuiado(
       referencia: e.folio,
     });
 
+    await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, e.folio);
     revalidatePaths();
     return { empenoId: e.id, folio: e.folio };
   }
@@ -544,6 +549,7 @@ export async function crearEmpenoGuiado(
     creadoEn: ts,
   });
 
+  await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, empeno.folio);
   revalidatePaths();
   return { empenoId: empeno.id, folio: empeno.folio };
 }
@@ -627,6 +633,7 @@ export async function registrarVenta(form: FormData) {
       creadoEn: new Date().toISOString(),
     });
   }
+  await bitacoraAuto("Venta registrada", `${precio} MXN`, null);
   revalidatePath("/ventas");
   revalidatePath("/prendas");
   revalidatePath("/caja");
@@ -728,6 +735,7 @@ export async function crearCompra(form: FormData) {
       creadoEn: new Date().toISOString(),
     });
   }
+  await bitacoraAuto("Compra directa", `${monto} MXN`, null);
   revalidatePath("/compras");
   revalidatePath("/prendas");
   revalidatePath("/caja");

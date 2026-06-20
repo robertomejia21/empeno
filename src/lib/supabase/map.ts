@@ -119,6 +119,29 @@ export function rowToApartado(r: any): import("@/lib/types").Apartado {
   };
 }
 
+export function rowToUsuario(r: any): import("@/lib/types").Usuario {
+  return {
+    id: r.id,
+    nombre: r.nombre,
+    email: r.email,
+    rol: r.rol,
+    activo: r.activo,
+    creadoEn: r.creado_en,
+  };
+}
+
+export function rowToBitacora(r: any): import("@/lib/types").Bitacora {
+  return {
+    id: r.id,
+    fecha: r.fecha,
+    usuarioNombre: r.usuario_nombre,
+    usuarioRol: r.usuario_rol,
+    accion: r.accion,
+    detalle: r.detalle,
+    referencia: r.referencia,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

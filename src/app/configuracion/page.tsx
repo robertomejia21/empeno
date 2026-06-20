@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { getUsuarioActual } from "@/lib/session";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import {
   EMPRESA,
@@ -10,7 +12,10 @@ import {
 import { tasaPorHistorial } from "@/lib/interes";
 import { formatMXN } from "@/lib/format";
 
-export default function ConfiguracionPage() {
+export default async function ConfiguracionPage() {
+  const actual = await getUsuarioActual();
+  if (!actual || (actual.rol !== "admin" && actual.rol !== "gerente")) redirect("/");
+
   const niveles = [0, 4, 6].map((n) => tasaPorHistorial(n));
 
   return (

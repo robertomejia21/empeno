@@ -169,6 +169,17 @@ export interface Usuario {
   email: string;
   rol: RolUsuario;
   activo: boolean;
+  creadoEn?: string;
+}
+
+export interface Bitacora {
+  id: ID;
+  fecha: string;
+  usuarioNombre: string;
+  usuarioRol: string | null;
+  accion: string;
+  detalle: string | null;
+  referencia: string | null;
 }
 
 // ---- Tipos derivados / de vista ----

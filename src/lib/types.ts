@@ -50,8 +50,11 @@ export interface Prenda {
   categoria: CategoriaPrenda;
   descripcion: string;
   marca: string | null;
-  modelo: string | null;
-  serie: string | null;
+  submarca: string | null; // submodelo / línea (vehículos)
+  modelo: string | null; // año o modelo
+  color: string | null;
+  serie: string | null; // número de serie / NIV
+  placas: string | null; // vehículos
   // Joyería
   metal: string | null; // oro, plata...
   kilataje: string | null; // 10k, 14k, 18k, 24k
@@ -61,6 +64,7 @@ export interface Prenda {
   montoPrestamoSugerido: number; // % del avalúo (préstamo recomendado)
   estado: EstadoPrenda;
   fotos: string[]; // urls
+  ubicacionResguardo: string | null; // dónde se almacena físicamente
   notas: string | null;
   creadoEn: string;
 }

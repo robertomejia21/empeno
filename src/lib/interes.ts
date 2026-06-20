@@ -78,6 +78,25 @@ export function prestamoSugerido(valorAvaluo: number, porcentaje = 50): number {
   return round2(valorAvaluo * (porcentaje / 100));
 }
 
+/**
+ * Tasa de interés mensual sugerida según el historial del cliente
+ * (basado en el flujo PRENDAFLEX):
+ *  - Cliente regular: 10.80%
+ *  - Más de 3 empeños: 8.64%
+ *  - Más de 5 empeños: 6.48%
+ */
+export function tasaPorHistorial(empenosPrevios: number): {
+  tasa: number;
+  nivel: string;
+  requiereAutorizacion: boolean;
+} {
+  if (empenosPrevios > 5)
+    return { tasa: 6.48, nivel: "Preferente (+5 empeños)", requiereAutorizacion: true };
+  if (empenosPrevios > 3)
+    return { tasa: 8.64, nivel: "Frecuente (+3 empeños)", requiereAutorizacion: false };
+  return { tasa: 10.8, nivel: "Regular", requiereAutorizacion: false };
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

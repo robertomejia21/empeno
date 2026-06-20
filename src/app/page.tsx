@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { formatMXN, formatFecha } from "@/lib/format";
-import { Card, CardHeader, Badge, PageHeader, LinkButton } from "@/components/ui";
+import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
+import { Card, CardHeader, Badge, LinkButton } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 
 export default async function Tablero() {
@@ -33,11 +33,30 @@ export default async function Tablero() {
 
   return (
     <div>
-      <PageHeader
-        title="Tablero"
-        subtitle="Resumen de la operación de hoy"
-        action={<LinkButton href="/empenos/asistente">+ Nuevo empeño</LinkButton>}
-      />
+      {/* Hero premium */}
+      <div className="bg-gold-gradient shadow-elevated relative mb-7 overflow-hidden rounded-2xl px-6 py-7 text-white md:px-8">
+        <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" />
+        <div className="absolute -bottom-16 right-24 h-44 w-44 rounded-full bg-white/5" />
+        <div className="relative flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-white/70">
+              {formatFechaLarga(new Date().toISOString())}
+            </p>
+            <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">
+              Bienvenido de vuelta 👋
+            </h1>
+            <p className="mt-1 text-sm text-white/80">
+              Resumen de la operación de tu casa de empeño hoy.
+            </p>
+          </div>
+          <Link
+            href="/empenos/asistente"
+            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-soft transition hover:bg-white/90"
+          >
+            + Nuevo empeño
+          </Link>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Empeños activos" valor={activos.length.toString()} icono="🤝" />
@@ -139,13 +158,23 @@ function Stat({
       : tono === "danger"
         ? "text-danger"
         : "text-foreground";
+  const iconBg =
+    tono === "success"
+      ? "bg-success-soft"
+      : tono === "danger"
+        ? "bg-danger-soft"
+        : "bg-primary-soft";
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{label}</p>
-        <span className="text-lg">{icono}</span>
+    <Card className="p-5 transition hover:shadow-elevated">
+      <div className="flex items-start justify-between">
+        <p className="text-[13px] font-medium text-muted">{label}</p>
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-base ${iconBg}`}>
+          {icono}
+        </span>
       </div>
-      <p className={`mt-2 text-2xl font-bold ${color}`}>{valor}</p>
+      <p className={`mt-3 text-[28px] font-bold leading-none tracking-tight ${color}`}>
+        {valor}
+      </p>
     </Card>
   );
 }

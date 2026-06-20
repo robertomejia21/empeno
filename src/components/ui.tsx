@@ -11,7 +11,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`rounded-xl border border-border bg-surface shadow-sm ${className}`}
+      className={`shadow-card rounded-2xl border border-border bg-surface ${className}`}
     >
       {children}
     </div>
@@ -28,9 +28,9 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+    <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
       <div>
-        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight text-foreground">{title}</h2>
         {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
@@ -58,7 +58,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tonos[tono]}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ring-black/5 ${tonos[tono]}`}
     >
       {children}
     </span>
@@ -68,9 +68,9 @@ export function Badge({
 type Variante = "primary" | "secondary" | "danger" | "ghost";
 
 const variantes: Record<Variante, string> = {
-  primary: "bg-primary text-primary-fg hover:opacity-90",
-  secondary: "border border-border bg-surface text-foreground hover:bg-surface-2",
-  danger: "bg-danger text-white hover:opacity-90",
+  primary: "bg-gold-gradient text-primary-fg shadow-soft hover:brightness-105 active:brightness-95",
+  secondary: "border border-border bg-surface text-foreground shadow-soft hover:bg-surface-2",
+  danger: "bg-danger text-white shadow-soft hover:brightness-110",
   ghost: "text-foreground hover:bg-surface-2",
 };
 
@@ -126,12 +126,12 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-foreground">
           {title}
         </h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
     </div>
@@ -188,7 +188,7 @@ export function Field({
         placeholder={placeholder}
         required={required}
         step={step}
-        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20"
       />
     </label>
   );
@@ -217,7 +217,7 @@ export function SelectField({
         name={name}
         defaultValue={defaultValue}
         required={required}
-        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -248,7 +248,7 @@ export function TextArea({
         defaultValue={defaultValue ?? undefined}
         placeholder={placeholder}
         rows={3}
-        className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+        className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20"
       />
     </label>
   );

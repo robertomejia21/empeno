@@ -6,6 +6,8 @@ import type {
   Empeno,
   MovimientoCaja,
   Venta,
+  Compra,
+  Apartado,
 } from "@/lib/types";
 import {
   clientesSeed,
@@ -20,6 +22,8 @@ interface Store {
   empenos: Empeno[];
   movimientos: MovimientoCaja[];
   ventas: Venta[];
+  compras: Compra[];
+  apartados: Apartado[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -33,6 +37,8 @@ export function getStore(): Store {
       empenos: structuredClone(empenosSeed),
       movimientos: structuredClone(movimientosSeed),
       ventas: [],
+      compras: [],
+      apartados: [],
     };
   }
   return g.__empenoStore;

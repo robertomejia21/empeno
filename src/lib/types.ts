@@ -42,6 +42,7 @@ export type EstadoPrenda =
   | "empenada" // garantía de un empeño activo
   | "desempenada" // devuelta al cliente
   | "en_venta" // vencida, a la venta
+  | "apartada" // reservada en un apartado
   | "vendida";
 
 export interface Prenda {
@@ -105,7 +106,8 @@ export type TipoMovimiento =
   | "gasto" // salida: gasto operativo
   | "apertura" // saldo inicial de caja
   | "retiro" // salida: retiro de efectivo
-  | "deposito"; // entrada: depósito de efectivo
+  | "deposito" // entrada: depósito de efectivo
+  | "compra"; // salida: compra directa de mercancía
 
 export interface MovimientoCaja {
   id: ID;
@@ -128,6 +130,32 @@ export interface Venta {
   clienteId: ID | null; // comprador (opcional)
   precio: number;
   metodoPago: MetodoPago;
+  fecha: string;
+  notas: string | null;
+  creadoEn: string;
+}
+
+export interface Compra {
+  id: ID;
+  folio: string;
+  prendaId: ID;
+  clienteId: ID | null; // vendedor
+  monto: number;
+  fecha: string;
+  notas: string | null;
+  creadoEn: string;
+}
+
+export type EstadoApartado = "activo" | "liquidado" | "cancelado";
+
+export interface Apartado {
+  id: ID;
+  folio: string;
+  prendaId: ID;
+  clienteId: ID;
+  precioTotal: number;
+  abonado: number; // suma de enganche + abonos
+  estado: EstadoApartado;
   fecha: string;
   notas: string | null;
   creadoEn: string;

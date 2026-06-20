@@ -7,7 +7,7 @@ import type {
   EmpenoConDetalle,
   MovimientoCaja,
 } from "@/lib/types";
-import type { Venta } from "@/lib/types";
+import type { Venta, Compra, Apartado } from "@/lib/types";
 import { getStore } from "./store";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import {
@@ -16,6 +16,8 @@ import {
   rowToEmpeno,
   rowToMovimiento,
   rowToVenta,
+  rowToCompra,
+  rowToApartado,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -184,4 +186,28 @@ export async function listarVentas(): Promise<Venta[]> {
     return (data ?? []).map(rowToVenta);
   }
   return getStore().ventas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+export async function listarCompras(): Promise<Compra[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("compras")
+      .select("*")
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToCompra);
+  }
+  return getStore().compras.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+export async function listarApartados(): Promise<Apartado[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("apartados")
+      .select("*")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToApartado);
+  }
+  return getStore().apartados.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 }

@@ -17,6 +17,7 @@ export const navGroups: NavGroup[] = [
       { href: "/empenos", label: "Empeños", icon: "🤝" },
       { href: "/prendas", label: "Prendas", icon: "💍" },
       { href: "/clientes", label: "Clientes", icon: "👤" },
+      { href: "/recordatorios", label: "Recordatorios", icon: "🔔" },
     ],
   },
   {
@@ -24,6 +25,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/remates", label: "Remates", icon: "🔨" },
       { href: "/ventas", label: "Ventas", icon: "🛒" },
+      { href: "/compras", label: "Compra directa", icon: "📥" },
+      { href: "/apartados", label: "Apartados", icon: "🏷️" },
     ],
   },
   {

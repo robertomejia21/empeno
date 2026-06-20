@@ -91,6 +91,34 @@ export function rowToVenta(r: any): import("@/lib/types").Venta {
   };
 }
 
+export function rowToCompra(r: any): import("@/lib/types").Compra {
+  return {
+    id: r.id,
+    folio: r.folio,
+    prendaId: r.prenda_id,
+    clienteId: r.cliente_id,
+    monto: Number(r.monto),
+    fecha: r.fecha,
+    notas: r.notas,
+    creadoEn: r.creado_en,
+  };
+}
+
+export function rowToApartado(r: any): import("@/lib/types").Apartado {
+  return {
+    id: r.id,
+    folio: r.folio,
+    prendaId: r.prenda_id,
+    clienteId: r.cliente_id,
+    precioTotal: Number(r.precio_total),
+    abonado: Number(r.abonado),
+    estado: r.estado,
+    fecha: r.fecha,
+    notas: r.notas,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

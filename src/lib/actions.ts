@@ -14,6 +14,8 @@ import type {
   EmpenoGuiadoPayload,
   Venta,
   MetodoPago,
+  Compra,
+  Apartado,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -629,6 +631,245 @@ export async function registrarVenta(form: FormData) {
   revalidatePath("/prendas");
   revalidatePath("/caja");
   revalidatePath("/remates");
+}
+
+// ----------------- COMPRA DIRECTA -----------------
+
+/** Compra directa: se adquiere un artículo (crea prenda en venta + salida de caja). */
+export async function crearCompra(form: FormData) {
+  const monto = num(form, "monto");
+  const clienteId = sn(form, "clienteId");
+  const prendaBase = {
+    categoria: s(form, "categoria") || "Otro",
+    descripcion: s(form, "descripcion"),
+    marca: sn(form, "marca"),
+    modelo: sn(form, "modelo"),
+    color: sn(form, "color"),
+    serie: sn(form, "serie"),
+  };
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: p, error } = await sb
+      .from("prendas")
+      .insert({
+        categoria: prendaBase.categoria,
+        descripcion: prendaBase.descripcion,
+        marca: prendaBase.marca,
+        modelo: prendaBase.modelo,
+        color: prendaBase.color,
+        serie: prendaBase.serie,
+        valor_avaluo: monto,
+        monto_prestamo_sugerido: 0,
+        estado: "en_venta",
+        notas: sn(form, "notas"),
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const { data: c, error: ec } = await sb
+      .from("compras")
+      .insert({ prenda_id: p.id, cliente_id: clienteId, monto, notas: sn(form, "notas") })
+      .select("folio")
+      .single();
+    if (ec) throw ec;
+    await sb.from("movimientos_caja").insert({
+      tipo: "compra",
+      monto,
+      es_entrada: false,
+      concepto: `Compra directa ${c.folio}`,
+      referencia: c.folio,
+    });
+  } else {
+    const store = getStore();
+    const prenda: Prenda = {
+      id: nuevoId("p"),
+      folio: siguienteFolio(store.prendas, "PR"),
+      categoria: prendaBase.categoria as CategoriaPrenda,
+      descripcion: prendaBase.descripcion,
+      marca: prendaBase.marca,
+      submarca: null,
+      modelo: prendaBase.modelo,
+      color: prendaBase.color,
+      serie: prendaBase.serie,
+      placas: null,
+      metal: null,
+      kilataje: null,
+      gramos: null,
+      valorAvaluo: monto,
+      montoPrestamoSugerido: 0,
+      estado: "en_venta",
+      fotos: [],
+      ubicacionResguardo: null,
+      notas: sn(form, "notas"),
+      creadoEn: new Date().toISOString(),
+    };
+    store.prendas.push(prenda);
+    const compra: Compra = {
+      id: nuevoId("cp"),
+      folio: siguienteFolio(store.compras, "CP"),
+      prendaId: prenda.id,
+      clienteId,
+      monto,
+      fecha: new Date().toISOString(),
+      notas: sn(form, "notas"),
+      creadoEn: new Date().toISOString(),
+    };
+    store.compras.push(compra);
+    store.movimientos.push({
+      id: nuevoId("m"),
+      fecha: new Date().toISOString(),
+      tipo: "compra",
+      monto,
+      esEntrada: false,
+      concepto: `Compra directa ${compra.folio}`,
+      empenoId: null,
+      referencia: compra.folio,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  revalidatePath("/compras");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+  redirect("/compras");
+}
+
+// ----------------- APARTADOS (LAYAWAY) -----------------
+
+/** Crea un apartado sobre una prenda en venta, con enganche inicial. */
+export async function crearApartado(form: FormData) {
+  const prendaId = s(form, "prendaId");
+  const clienteId = s(form, "clienteId");
+  const precioTotal = num(form, "precioTotal");
+  const enganche = num(form, "enganche");
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: a, error } = await sb
+      .from("apartados")
+      .insert({
+        prenda_id: prendaId,
+        cliente_id: clienteId,
+        precio_total: precioTotal,
+        abonado: enganche,
+        estado: "activo",
+        notas: sn(form, "notas"),
+      })
+      .select("folio")
+      .single();
+    if (error) throw error;
+    await sb.from("prendas").update({ estado: "apartada" }).eq("id", prendaId);
+    if (enganche > 0) {
+      await sb.from("movimientos_caja").insert({
+        tipo: "abono",
+        monto: enganche,
+        es_entrada: true,
+        concepto: `Enganche apartado ${a.folio}`,
+        referencia: a.folio,
+      });
+    }
+  } else {
+    const store = getStore();
+    const apartado: Apartado = {
+      id: nuevoId("ap"),
+      folio: siguienteFolio(store.apartados, "AP"),
+      prendaId,
+      clienteId,
+      precioTotal,
+      abonado: enganche,
+      estado: "activo",
+      fecha: new Date().toISOString(),
+      notas: sn(form, "notas"),
+      creadoEn: new Date().toISOString(),
+    };
+    store.apartados.push(apartado);
+    const p = store.prendas.find((x) => x.id === prendaId);
+    if (p) p.estado = "apartada";
+    if (enganche > 0)
+      store.movimientos.push({
+        id: nuevoId("m"),
+        fecha: new Date().toISOString(),
+        tipo: "abono",
+        monto: enganche,
+        esEntrada: true,
+        concepto: `Enganche apartado ${apartado.folio}`,
+        empenoId: null,
+        referencia: apartado.folio,
+        creadoEn: new Date().toISOString(),
+      });
+  }
+  revalidatePath("/apartados");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+}
+
+/** Registra un abono a un apartado; si se completa, se liquida (prenda vendida). */
+export async function abonarApartado(id: string, form: FormData) {
+  const monto = num(form, "monto");
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: a, error } = await sb.from("apartados").select("*").eq("id", id).single();
+    if (error) throw error;
+    const nuevoAbonado = Number(a.abonado) + monto;
+    const liquidado = nuevoAbonado >= Number(a.precio_total);
+    await sb
+      .from("apartados")
+      .update({ abonado: nuevoAbonado, estado: liquidado ? "liquidado" : "activo" })
+      .eq("id", id);
+    if (liquidado) await sb.from("prendas").update({ estado: "vendida" }).eq("id", a.prenda_id);
+    await sb.from("movimientos_caja").insert({
+      tipo: "abono",
+      monto,
+      es_entrada: true,
+      concepto: `Abono apartado ${a.folio}`,
+      referencia: a.folio,
+    });
+  } else {
+    const store = getStore();
+    const a = store.apartados.find((x) => x.id === id);
+    if (!a) return;
+    a.abonado += monto;
+    if (a.abonado >= a.precioTotal) {
+      a.estado = "liquidado";
+      const p = store.prendas.find((x) => x.id === a.prendaId);
+      if (p) p.estado = "vendida";
+    }
+    store.movimientos.push({
+      id: nuevoId("m"),
+      fecha: new Date().toISOString(),
+      tipo: "abono",
+      monto,
+      esEntrada: true,
+      concepto: `Abono apartado ${a.folio}`,
+      empenoId: null,
+      referencia: a.folio,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  revalidatePath("/apartados");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+}
+
+/** Cancela un apartado; la prenda vuelve a estar en venta. */
+export async function cancelarApartado(id: string) {
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: a, error } = await sb.from("apartados").select("prenda_id").eq("id", id).single();
+    if (error) throw error;
+    await sb.from("apartados").update({ estado: "cancelado" }).eq("id", id);
+    await sb.from("prendas").update({ estado: "en_venta" }).eq("id", a.prenda_id);
+  } else {
+    const store = getStore();
+    const a = store.apartados.find((x) => x.id === id);
+    if (!a) return;
+    a.estado = "cancelado";
+    const p = store.prendas.find((x) => x.id === a.prendaId);
+    if (p) p.estado = "en_venta";
+  }
+  revalidatePath("/apartados");
+  revalidatePath("/prendas");
 }
 
 // ----------------- CAJA -----------------

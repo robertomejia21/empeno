@@ -20,6 +20,7 @@ const prendaMap: Record<EstadoPrenda, { label: string; tono: Parameters<typeof B
   empenada: { label: "Empeñada", tono: "info" },
   desempenada: { label: "Desempeñada", tono: "muted" },
   en_venta: { label: "En venta", tono: "primary" },
+  apartada: { label: "Apartada", tono: "warning" },
   vendida: { label: "Vendida", tono: "success" },
 };
 

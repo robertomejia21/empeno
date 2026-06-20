@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { listarPrendas } from "@/lib/db/repo";
-import { formatMXN, formatFecha } from "@/lib/format";
+import { formatMXN } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, Badge } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 
@@ -38,9 +39,13 @@ export default async function PrendasPage() {
               <tbody className="divide-y divide-border">
                 {prendas.map((p) => (
                   <tr key={p.id} className="hover:bg-surface-2">
-                    <td className="px-5 py-3 font-mono text-xs text-muted">{p.folio}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted">
+                      <Link href={`/prendas/${p.id}`} className="hover:text-primary">{p.folio}</Link>
+                    </td>
                     <td className="px-5 py-3">
-                      <p className="font-medium text-foreground">{p.descripcion}</p>
+                      <Link href={`/prendas/${p.id}`} className="font-medium text-foreground hover:text-primary">
+                        {p.descripcion}
+                      </Link>
                       <p className="text-xs text-muted">
                         {[p.marca, p.submarca, p.modelo].filter(Boolean).join(" ") ||
                           [p.metal, p.kilataje].filter(Boolean).join(" ") ||

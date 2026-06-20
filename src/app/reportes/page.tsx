@@ -2,6 +2,7 @@ import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas } from "@
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatPorcentaje, hoyISO } from "@/lib/format";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
+import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
 
 export default async function ReportesPage() {
   const [empenos, movimientos, prendas, ventas] = await Promise.all([
@@ -49,6 +50,28 @@ export default async function ReportesPage() {
     .reduce((s, p) => s + p.valorAvaluo, 0);
   const totalVendido = ventas.reduce((s, v) => s + v.precio, 0);
 
+  // Serie mensual (últimos 6 meses) para la gráfica
+  const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const hoy = new Date();
+  const serieMeses: BarraMes[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const clave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const delMesN = movimientos.filter((m) => m.fecha.slice(0, 7) === clave);
+    serieMeses.push({
+      mes: MESES[d.getMonth()],
+      ingresos: delMesN.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0),
+      egresos: delMesN.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0),
+    });
+  }
+
+  const donaCartera = [
+    { etiqueta: "Activos", valor: activos.filter((e) => !calcularLiquidacion(e).vencido).length, color: "#15803d" },
+    { etiqueta: "Vencidos", valor: activos.filter((e) => calcularLiquidacion(e).vencido).length, color: "#b91c1c" },
+    { etiqueta: "Desempeñados", valor: desempenados, color: "#78716c" },
+    { etiqueta: "Rematados", valor: rematados, color: "#a16207" },
+  ];
+
   const etiquetaEstado: Record<string, string> = {
     activo: "Activos",
     refrendado: "Refrendados",
@@ -67,6 +90,21 @@ export default async function ReportesPage() {
         <Kpi label="Interés devengado" valor={formatMXN(interesDevengado)} hint="sobre empeños activos" />
         <Kpi label="Tasa de recuperación" valor={formatPorcentaje(tasaRecuperacion)} hint={`${desempenados} de ${cerrados} cerrados`} />
         <Kpi label="Vendido (histórico)" valor={formatMXN(totalVendido)} hint={`${ventas.length} ventas`} />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title="Ingresos vs egresos" subtitle="Últimos 6 meses" />
+          <div className="p-5">
+            <BarrasIngresoEgreso datos={serieMeses} />
+          </div>
+        </Card>
+        <Card>
+          <CardHeader title="Distribución de cartera" />
+          <div className="p-5">
+            <Dona segmentos={donaCartera} />
+          </div>
+        </Card>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">

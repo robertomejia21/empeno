@@ -554,6 +554,54 @@ export async function crearEmpenoGuiado(
   return { empenoId: empeno.id, folio: empeno.folio };
 }
 
+// ----------------- FOTOS (STORAGE) -----------------
+
+export async function subirFotoPrenda(prendaId: string, formData: FormData) {
+  const file = formData.get("foto") as File | null;
+  if (!file || file.size === 0) return;
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const buf = Buffer.from(await file.arrayBuffer());
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `${prendaId}/${Date.now()}.${ext}`;
+    const { error } = await sb.storage.from("prendas").upload(path, buf, {
+      contentType: file.type || "image/jpeg",
+      upsert: false,
+    });
+    if (error) throw error;
+    const { data: pub } = sb.storage.from("prendas").getPublicUrl(path);
+    const { data: p } = await sb.from("prendas").select("fotos").eq("id", prendaId).single();
+    const fotos = [...(p?.fotos ?? []), pub.publicUrl];
+    await sb.from("prendas").update({ fotos }).eq("id", prendaId);
+  } else {
+    const p = getStore().prendas.find((x) => x.id === prendaId);
+    if (p) p.fotos.push(file.name);
+  }
+  await bitacoraAuto("Foto agregada a prenda", null, prendaId);
+  revalidatePath(`/prendas/${prendaId}`);
+  revalidatePath("/prendas");
+}
+
+export async function eliminarFotoPrenda(prendaId: string, url: string) {
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: p } = await sb.from("prendas").select("fotos").eq("id", prendaId).single();
+    const fotos = (p?.fotos ?? []).filter((u: string) => u !== url);
+    await sb.from("prendas").update({ fotos }).eq("id", prendaId);
+    // Borrar del bucket (best-effort)
+    const idx = url.indexOf("/prendas/");
+    if (idx >= 0) {
+      const path = url.slice(idx + "/prendas/".length);
+      await sb.storage.from("prendas").remove([path]);
+    }
+  } else {
+    const p = getStore().prendas.find((x) => x.id === prendaId);
+    if (p) p.fotos = p.fotos.filter((u) => u !== url);
+  }
+  revalidatePath(`/prendas/${prendaId}`);
+}
+
 // ----------------- REMATES Y VENTAS -----------------
 
 /** Envía un empeño vencido a remate: la prenda pasa a estar en venta. */

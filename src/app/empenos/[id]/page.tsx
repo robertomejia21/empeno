@@ -39,7 +39,15 @@ export default async function EmpenoDetalle({
           subtitle={`Creado el ${formatFechaLarga(empeno.creadoEn)}`}
           action={
             <div className="flex items-center gap-2">
-              <PrintButton>🖨️ Imprimir boleta</PrintButton>
+              <a
+                href={`/api/boleta/${empeno.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+              >
+                📄 Descargar PDF
+              </a>
+              <PrintButton>🖨️ Imprimir</PrintButton>
               {estadoEmpenoBadge(estadoMostrar)}
             </div>
           }

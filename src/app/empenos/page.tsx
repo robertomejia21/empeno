@@ -13,7 +13,14 @@ export default async function EmpenosPage() {
       <PageHeader
         title="Empeños"
         subtitle={`${empenos.length} contratos`}
-        action={<LinkButton href="/empenos/nuevo">+ Nuevo empeño</LinkButton>}
+        action={
+          <div className="flex gap-2">
+            <LinkButton href="/empenos/nuevo" variante="secondary">
+              Captura rápida
+            </LinkButton>
+            <LinkButton href="/empenos/asistente">+ Nuevo empeño</LinkButton>
+          </div>
+        }
       />
 
       <Card>

@@ -136,6 +136,53 @@ export interface EmpenoConDetalle extends Empeno {
   prenda: Prenda;
 }
 
+// ---- Flujo guiado de empeño (asistente de 9 pasos PRENDAFLEX) ----
+
+export interface ClienteNuevoInput {
+  nombre: string;
+  apellidoPaterno: string;
+  apellidoMaterno: string;
+  curp: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  email: string | null;
+  tipoIdentificacion: TipoIdentificacion;
+  numeroIdentificacion: string;
+}
+
+export interface PrendaInput {
+  categoria: CategoriaPrenda;
+  descripcion: string;
+  marca: string | null;
+  submarca: string | null;
+  modelo: string | null;
+  color: string | null;
+  serie: string | null;
+  placas: string | null;
+  metal: string | null;
+  kilataje: string | null;
+  gramos: number | null;
+  valorAvaluo: number;
+  ubicacionResguardo: string | null;
+  fotos: string[];
+  funcionamientoValidado: boolean;
+  documentacionValidada: boolean;
+  notas: string | null;
+}
+
+export interface EmpenoGuiadoPayload {
+  clienteExistenteId: string | null;
+  clienteNuevo: ClienteNuevoInput | null;
+  prenda: PrendaInput;
+  montoPrestado: number;
+  tasaInteres: number;
+  periodo: PeriodoInteres;
+  plazoPeriodos: number;
+  diasGracia: number;
+  fechaInicio: string;
+  notas: string | null;
+}
+
 export interface CalculoLiquidacion {
   capital: number;
   interesAcumulado: number;

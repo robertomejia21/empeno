@@ -11,6 +11,7 @@ import type {
   CategoriaPrenda,
   PeriodoInteres,
   TipoMovimiento,
+  EmpenoGuiadoPayload,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -214,6 +215,106 @@ export async function desempenarEmpeno(id: string) {
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
+}
+
+/**
+ * Flujo guiado (asistente de 9 pasos): crea cliente (si es nuevo), prenda,
+ * empeño y el movimiento de caja por la salida del préstamo, en un solo paso.
+ */
+export async function crearEmpenoGuiado(
+  data: EmpenoGuiadoPayload
+): Promise<{ empenoId: string; folio: string }> {
+  const store = getStore();
+  const ts = new Date().toISOString();
+
+  // 1) Cliente: existente o nuevo
+  let clienteId = data.clienteExistenteId;
+  if (!clienteId && data.clienteNuevo) {
+    const c: Cliente = {
+      id: nuevoId("c"),
+      nombre: data.clienteNuevo.nombre,
+      apellidoPaterno: data.clienteNuevo.apellidoPaterno,
+      apellidoMaterno: data.clienteNuevo.apellidoMaterno,
+      curp: data.clienteNuevo.curp,
+      rfc: null,
+      telefono: data.clienteNuevo.telefono,
+      email: data.clienteNuevo.email,
+      tipoIdentificacion: data.clienteNuevo.tipoIdentificacion,
+      numeroIdentificacion: data.clienteNuevo.numeroIdentificacion,
+      direccion: data.clienteNuevo.direccion,
+      fechaNacimiento: null,
+      notas: null,
+      creadoEn: ts,
+    };
+    store.clientes.push(c);
+    clienteId = c.id;
+  }
+  if (!clienteId) throw new Error("Cliente requerido");
+
+  // 2) Prenda (queda directamente empeñada)
+  const prenda: Prenda = {
+    id: nuevoId("p"),
+    folio: siguienteFolio(store.prendas, "PR"),
+    categoria: data.prenda.categoria,
+    descripcion: data.prenda.descripcion,
+    marca: data.prenda.marca,
+    submarca: data.prenda.submarca,
+    modelo: data.prenda.modelo,
+    color: data.prenda.color,
+    serie: data.prenda.serie,
+    placas: data.prenda.placas,
+    metal: data.prenda.metal,
+    kilataje: data.prenda.kilataje,
+    gramos: data.prenda.gramos,
+    valorAvaluo: data.prenda.valorAvaluo,
+    montoPrestamoSugerido: Math.round(data.prenda.valorAvaluo * 0.5 * 100) / 100,
+    estado: "empenada",
+    fotos: data.prenda.fotos,
+    ubicacionResguardo: data.prenda.ubicacionResguardo,
+    notas: data.prenda.notas,
+    creadoEn: ts,
+  };
+  store.prendas.push(prenda);
+
+  // 3) Empeño
+  const empeno: Empeno = {
+    id: nuevoId("e"),
+    folio: siguienteFolio(store.empenos, "EM"),
+    clienteId,
+    prendaId: prenda.id,
+    montoPrestado: data.montoPrestado,
+    tasaInteres: data.tasaInteres,
+    periodo: data.periodo,
+    plazoPeriodos: data.plazoPeriodos,
+    fechaInicio: data.fechaInicio,
+    fechaVencimiento: calcularVencimiento(data.fechaInicio, data.periodo, data.plazoPeriodos),
+    diasGracia: data.diasGracia,
+    estado: "activo",
+    notas: data.notas,
+    creadoEn: ts,
+  };
+  store.empenos.push(empeno);
+
+  // 4) Salida de caja por el préstamo (paso 5 del flujo)
+  store.movimientos.push({
+    id: nuevoId("m"),
+    fecha: ts,
+    tipo: "prestamo",
+    monto: data.montoPrestado,
+    esEntrada: false,
+    concepto: `Préstamo empeño ${empeno.folio}`,
+    empenoId: empeno.id,
+    referencia: empeno.folio,
+    creadoEn: ts,
+  });
+
+  revalidatePath("/empenos");
+  revalidatePath("/clientes");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+  revalidatePath("/");
+
+  return { empenoId: empeno.id, folio: empeno.folio };
 }
 
 // ----------------- CAJA -----------------

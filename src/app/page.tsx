@@ -36,7 +36,7 @@ export default async function Tablero() {
       <PageHeader
         title="Tablero"
         subtitle="Resumen de la operación de hoy"
-        action={<LinkButton href="/empenos/nuevo">+ Nuevo empeño</LinkButton>}
+        action={<LinkButton href="/empenos/asistente">+ Nuevo empeño</LinkButton>}
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

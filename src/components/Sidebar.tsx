@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navItems } from "@/lib/nav";
+import { navGroups, navItems } from "@/lib/nav";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -24,35 +24,41 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
-          Operación
-        </p>
-        {navItems.map((item) => {
-          const activo =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
-                activo
-                  ? "bg-sidebar-2 font-semibold text-white"
-                  : "text-sidebar-muted hover:bg-sidebar-2/60 hover:text-sidebar-fg"
-              }`}
-            >
-              {activo && (
-                <span className="bg-gold-gradient absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full" />
-              )}
-              <span className={`text-base transition ${activo ? "" : "opacity-80 group-hover:opacity-100"}`}>
-                {item.icon}
-              </span>
-              <span className="flex-1">{item.label}</span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        {navGroups.map((grupo) => (
+          <div key={grupo.titulo}>
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
+              {grupo.titulo}
+            </p>
+            <div className="space-y-0.5">
+              {grupo.items.map((item) => {
+                const activo =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
+                      activo
+                        ? "bg-sidebar-2 font-semibold text-white"
+                        : "text-sidebar-muted hover:bg-sidebar-2/60 hover:text-sidebar-fg"
+                    }`}
+                  >
+                    {activo && (
+                      <span className="bg-gold-gradient absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full" />
+                    )}
+                    <span className={`text-base transition ${activo ? "" : "opacity-80 group-hover:opacity-100"}`}>
+                      {item.icon}
+                    </span>
+                    <span className="flex-1">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Usuario */}
@@ -71,11 +77,14 @@ export function Sidebar() {
   );
 }
 
+const mobilePrincipales = ["/", "/empenos", "/prendas", "/clientes", "/caja"];
+
 export function MobileNav() {
   const pathname = usePathname();
+  const items = navItems.filter((i) => mobilePrincipales.includes(i.href));
   return (
     <nav className="no-print sticky bottom-0 z-10 flex justify-around border-t border-sidebar-border bg-sidebar py-1.5 md:hidden">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const activo =
           item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
         return (

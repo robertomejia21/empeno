@@ -12,6 +12,8 @@ import type {
   PeriodoInteres,
   TipoMovimiento,
   EmpenoGuiadoPayload,
+  Venta,
+  MetodoPago,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -542,6 +544,91 @@ export async function crearEmpenoGuiado(
 
   revalidatePaths();
   return { empenoId: empeno.id, folio: empeno.folio };
+}
+
+// ----------------- REMATES Y VENTAS -----------------
+
+/** Envía un empeño vencido a remate: la prenda pasa a estar en venta. */
+export async function enviarARemate(empenoId: string) {
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data, error } = await sb.from("empenos").select("prenda_id").eq("id", empenoId).single();
+    if (error) throw error;
+    await sb.from("empenos").update({ estado: "en_remate" }).eq("id", empenoId);
+    await sb.from("prendas").update({ estado: "en_venta" }).eq("id", data.prenda_id);
+  } else {
+    const store = getStore();
+    const e = store.empenos.find((x) => x.id === empenoId);
+    if (!e) return;
+    e.estado = "en_remate";
+    const p = store.prendas.find((x) => x.id === e.prendaId);
+    if (p) p.estado = "en_venta";
+  }
+  revalidatePath("/remates");
+  revalidatePath("/empenos");
+  revalidatePath("/prendas");
+}
+
+/** Registra la venta de una prenda en venta. */
+export async function registrarVenta(form: FormData) {
+  const prendaId = s(form, "prendaId");
+  const precio = num(form, "precio");
+  const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
+  const clienteId = sn(form, "clienteId");
+  const notas = sn(form, "notas");
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: v, error } = await sb
+      .from("ventas")
+      .insert({ prenda_id: prendaId, cliente_id: clienteId, precio, metodo_pago: metodoPago, notas })
+      .select("id, folio")
+      .single();
+    if (error) throw error;
+    await sb.from("prendas").update({ estado: "vendida" }).eq("id", prendaId);
+    // Si la prenda venía de un empeño en remate, marcarlo rematado
+    await sb.from("empenos").update({ estado: "rematado" }).eq("prenda_id", prendaId).eq("estado", "en_remate");
+    await sb.from("movimientos_caja").insert({
+      tipo: "venta",
+      monto: precio,
+      es_entrada: true,
+      concepto: `Venta ${v.folio}`,
+      referencia: v.folio,
+    });
+  } else {
+    const store = getStore();
+    const venta: Venta = {
+      id: nuevoId("v"),
+      folio: siguienteFolio(store.ventas, "VT"),
+      prendaId,
+      clienteId,
+      precio,
+      metodoPago,
+      fecha: new Date().toISOString(),
+      notas,
+      creadoEn: new Date().toISOString(),
+    };
+    store.ventas.push(venta);
+    const p = store.prendas.find((x) => x.id === prendaId);
+    if (p) p.estado = "vendida";
+    const e = store.empenos.find((x) => x.prendaId === prendaId && x.estado === "en_remate");
+    if (e) e.estado = "rematado";
+    store.movimientos.push({
+      id: nuevoId("m"),
+      fecha: new Date().toISOString(),
+      tipo: "venta",
+      monto: precio,
+      esEntrada: true,
+      concepto: `Venta ${venta.folio}`,
+      empenoId: null,
+      referencia: venta.folio,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  revalidatePath("/ventas");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+  revalidatePath("/remates");
 }
 
 // ----------------- CAJA -----------------

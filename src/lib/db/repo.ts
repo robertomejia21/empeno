@@ -7,6 +7,7 @@ import type {
   EmpenoConDetalle,
   MovimientoCaja,
 } from "@/lib/types";
+import type { Venta } from "@/lib/types";
 import { getStore } from "./store";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import {
@@ -14,6 +15,7 @@ import {
   rowToPrenda,
   rowToEmpeno,
   rowToMovimiento,
+  rowToVenta,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -156,4 +158,30 @@ export async function listarMovimientos(): Promise<MovimientoCaja[]> {
 export async function movimientosDelDia(fechaISO: string): Promise<MovimientoCaja[]> {
   const todos = await listarMovimientos();
   return todos.filter((m) => m.fecha.slice(0, 10) === fechaISO);
+}
+
+/** Prendas a la venta (vencidas enviadas a remate). */
+export async function listarPrendasEnVenta(): Promise<Prenda[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("prendas")
+      .select("*")
+      .eq("estado", "en_venta")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToPrenda);
+  }
+  return getStore().prendas.filter((p) => p.estado === "en_venta");
+}
+
+export async function listarVentas(): Promise<Venta[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("ventas")
+      .select("*")
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToVenta);
+  }
+  return getStore().ventas.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
 }

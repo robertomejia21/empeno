@@ -77,6 +77,20 @@ export function rowToEmpeno(r: any): Empeno {
   };
 }
 
+export function rowToVenta(r: any): import("@/lib/types").Venta {
+  return {
+    id: r.id,
+    folio: r.folio,
+    prendaId: r.prenda_id,
+    clienteId: r.cliente_id,
+    precio: Number(r.precio),
+    metodoPago: r.metodo_pago,
+    fecha: r.fecha,
+    notas: r.notas,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

@@ -150,7 +150,7 @@ export const empenosSeed: Empeno[] = [
     fechaInicio: dias(-40),
     fechaVencimiento: dias(-10),
     diasGracia: 7,
-    estado: "vencido",
+    estado: "activo",
     notas: null,
     creadoEn: ahora(-40),
   },

@@ -119,6 +119,20 @@ export interface MovimientoCaja {
   creadoEn: string;
 }
 
+export type MetodoPago = "efectivo" | "tarjeta" | "transferencia";
+
+export interface Venta {
+  id: ID;
+  folio: string;
+  prendaId: ID;
+  clienteId: ID | null; // comprador (opcional)
+  precio: number;
+  metodoPago: MetodoPago;
+  fecha: string;
+  notas: string | null;
+  creadoEn: string;
+}
+
 export type RolUsuario = "admin" | "gerente" | "cajero" | "valuador";
 
 export interface Usuario {

@@ -1,14 +1,50 @@
 export interface NavItem {
   href: string;
   label: string;
-  icon: string; // emoji simple para no depender de librería de íconos
-  descripcion: string;
+  icon: string;
 }
 
-export const navItems: NavItem[] = [
-  { href: "/", label: "Tablero", icon: "📊", descripcion: "Resumen general" },
-  { href: "/empenos", label: "Empeños", icon: "🤝", descripcion: "Préstamos y contratos" },
-  { href: "/prendas", label: "Prendas", icon: "💍", descripcion: "Inventario y avalúos" },
-  { href: "/clientes", label: "Clientes", icon: "👤", descripcion: "Registro y KYC" },
-  { href: "/caja", label: "Caja", icon: "💵", descripcion: "Movimientos y corte" },
+export interface NavGroup {
+  titulo: string;
+  items: NavItem[];
+}
+
+export const navGroups: NavGroup[] = [
+  {
+    titulo: "Operación",
+    items: [
+      { href: "/", label: "Tablero", icon: "📊" },
+      { href: "/empenos", label: "Empeños", icon: "🤝" },
+      { href: "/prendas", label: "Prendas", icon: "💍" },
+      { href: "/clientes", label: "Clientes", icon: "👤" },
+    ],
+  },
+  {
+    titulo: "Punto de venta",
+    items: [
+      { href: "/remates", label: "Remates", icon: "🔨" },
+      { href: "/ventas", label: "Ventas", icon: "🛒" },
+    ],
+  },
+  {
+    titulo: "Finanzas",
+    items: [
+      { href: "/caja", label: "Caja", icon: "💵" },
+      { href: "/reportes", label: "Reportes", icon: "📈" },
+    ],
+  },
+  {
+    titulo: "Cumplimiento",
+    items: [
+      { href: "/cumplimiento", label: "Cumplimiento PLD", icon: "🛡️" },
+      { href: "/avaluo", label: "Avalúo metales", icon: "⚖️" },
+    ],
+  },
+  {
+    titulo: "Sistema",
+    items: [{ href: "/configuracion", label: "Configuración", icon: "⚙️" }],
+  },
 ];
+
+// Lista plana (para la barra móvil: principales)
+export const navItems: NavItem[] = navGroups.flatMap((g) => g.items);

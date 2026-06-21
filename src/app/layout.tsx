@@ -26,8 +26,8 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const esLogin = pathname === "/login";
-  const usuario = esLogin ? null : await getUsuarioActual();
+  const sinShell = pathname === "/login" || pathname === "/inicio";
+  const usuario = sinShell ? null : await getUsuarioActual();
 
   return (
     <html
@@ -35,7 +35,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        {esLogin ? (
+        {sinShell ? (
           children
         ) : (
           <div className="flex min-h-screen">

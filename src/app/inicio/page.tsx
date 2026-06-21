@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Reveal } from "@/components/Reveal";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { AnimatedCounter, Parallax } from "@/components/landing-fx";
 
 export const metadata = {
   title: "Empeño Suite — Software para casas de empeño",
@@ -117,17 +118,19 @@ export default function LandingPage() {
               </a>
             </div>
             <div className="mt-8 flex items-center gap-6 text-sm text-muted">
-              <Stat n="16+" l="módulos" />
-              <Stat n="9 pasos" l="alta de empeño" />
-              <Stat n="24/7" l="en la nube" />
+              <Stat n={<AnimatedCounter value={16} suffix="+" />} l="módulos" />
+              <Stat n={<AnimatedCounter value={9} suffix=" pasos" />} l="alta de empeño" />
+              <Stat n={<AnimatedCounter value={100} suffix="% nube" />} l="disponibilidad" />
             </div>
           </div>
 
           {/* Mockup flotante del producto */}
           <Reveal>
-            <div className="anim-flotar">
-              <BrowserMockup />
-            </div>
+            <Parallax factor={0.04}>
+              <div className="anim-flotar">
+                <BrowserMockup />
+              </div>
+            </Parallax>
           </Reveal>
         </div>
       </section>
@@ -347,7 +350,7 @@ export default function LandingPage() {
   );
 }
 
-function Stat({ n, l }: { n: string; l: string }) {
+function Stat({ n, l }: { n: React.ReactNode; l: string }) {
   return (
     <div>
       <p className="text-xl font-bold text-foreground">{n}</p>

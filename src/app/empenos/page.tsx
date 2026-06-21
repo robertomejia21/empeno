@@ -2,17 +2,30 @@ import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, SearchForm } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 
-export default async function EmpenosPage() {
-  const empenos = await listarEmpenos();
+export default async function EmpenosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const todos = await listarEmpenos();
+  const t = (q ?? "").toLowerCase().trim();
+  const empenos = t
+    ? todos.filter((e) =>
+        [e.folio, e.prenda.descripcion, e.estado, `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`]
+          .filter(Boolean)
+          .some((v) => v.toLowerCase().includes(t))
+      )
+    : todos;
 
   return (
     <div>
       <PageHeader
         title="Empeños"
-        subtitle={`${empenos.length} contratos`}
+        subtitle={t ? `${empenos.length} resultado(s) para "${q}"` : `${empenos.length} contratos`}
         action={
           <div className="flex gap-2">
             <LinkButton href="/empenos/nuevo" variante="secondary">

@@ -1,18 +1,34 @@
 import Link from "next/link";
 import { listarClientes } from "@/lib/db/repo";
 import { formatFecha } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, SearchForm } from "@/components/ui";
 
-export default async function ClientesPage() {
-  const clientes = await listarClientes();
+export default async function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const todos = await listarClientes();
+  const t = (q ?? "").toLowerCase().trim();
+  const clientes = t
+    ? todos.filter((c) =>
+        [c.nombre, c.apellidoPaterno, c.apellidoMaterno, c.curp, c.telefono, c.numeroIdentificacion]
+          .filter(Boolean)
+          .some((v) => v!.toLowerCase().includes(t))
+      )
+    : todos;
 
   return (
     <div>
       <PageHeader
         title="Clientes"
-        subtitle={`${clientes.length} registrados`}
+        subtitle={t ? `${clientes.length} resultado(s) para "${q}"` : `${clientes.length} registrados`}
         action={<LinkButton href="/clientes/nuevo">+ Nuevo cliente</LinkButton>}
       />
+      <div className="mb-5">
+        <SearchForm q={q} placeholder="Buscar por nombre, CURP, teléfono…" />
+      </div>
 
       <Card>
         {clientes.length === 0 ? (

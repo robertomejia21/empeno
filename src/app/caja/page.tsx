@@ -52,6 +52,7 @@ export default async function CajaPage() {
                     <th className="px-5 py-3 font-medium">Tipo</th>
                     <th className="px-5 py-3 font-medium">Concepto</th>
                     <th className="px-5 py-3 text-right font-medium">Monto</th>
+                    <th className="px-5 py-3 text-right font-medium">Recibo</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -69,6 +70,16 @@ export default async function CajaPage() {
                       >
                         {m.esEntrada ? "+" : "−"}
                         {formatMXN(m.monto)}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <a
+                          href={`/api/recibo/${m.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs font-medium text-primary hover:underline"
+                        >
+                          📄 PDF
+                        </a>
                       </td>
                     </tr>
                   ))}

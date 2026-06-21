@@ -1,19 +1,35 @@
 import Link from "next/link";
 import { listarPrendas } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState, Badge } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, Badge, SearchForm } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 
-export default async function PrendasPage() {
-  const prendas = await listarPrendas();
+export default async function PrendasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+  const todas = await listarPrendas();
+  const t = (q ?? "").toLowerCase().trim();
+  const prendas = t
+    ? todas.filter((p) =>
+        [p.folio, p.descripcion, p.marca, p.submarca, p.modelo, p.serie, p.categoria, p.placas]
+          .filter(Boolean)
+          .some((v) => v!.toLowerCase().includes(t))
+      )
+    : todas;
 
   return (
     <div>
       <PageHeader
         title="Prendas"
-        subtitle={`${prendas.length} en inventario`}
+        subtitle={t ? `${prendas.length} resultado(s) para "${q}"` : `${prendas.length} en inventario`}
         action={<LinkButton href="/prendas/nueva">+ Registrar prenda</LinkButton>}
       />
+      <div className="mb-5">
+        <SearchForm q={q} placeholder="Buscar por folio, descripción, marca…" />
+      </div>
 
       <Card>
         {prendas.length === 0 ? (

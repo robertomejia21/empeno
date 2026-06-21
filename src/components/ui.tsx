@@ -229,6 +229,33 @@ export function SelectField({
   );
 }
 
+export function SearchForm({
+  placeholder = "Buscar…",
+  q,
+  action,
+}: {
+  placeholder?: string;
+  q?: string;
+  action?: string;
+}) {
+  return (
+    <form action={action} className="flex w-full max-w-sm items-center gap-2">
+      <input
+        name="q"
+        defaultValue={q}
+        placeholder={placeholder}
+        className="w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20"
+      />
+      <button
+        type="submit"
+        className="shrink-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-2"
+      >
+        🔍
+      </button>
+    </form>
+  );
+}
+
 export function TextArea({
   label,
   name,

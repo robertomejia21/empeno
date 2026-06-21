@@ -159,6 +159,19 @@ export async function listarMovimientos(): Promise<MovimientoCaja[]> {
   return getStore().movimientos.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
+export async function obtenerMovimiento(id: string): Promise<MovimientoCaja | null> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("movimientos_caja")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? rowToMovimiento(data) : null;
+  }
+  return getStore().movimientos.find((m) => m.id === id) ?? null;
+}
+
 export async function movimientosDelDia(fechaISO: string): Promise<MovimientoCaja[]> {
   const todos = await listarMovimientos();
   return todos.filter((m) => m.fecha.slice(0, 10) === fechaISO);

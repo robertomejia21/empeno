@@ -89,8 +89,8 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
 const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   admin: "*",
   gerente: "*",
-  cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/remates", "/ventas", "/compras", "/apartados", "/caja"],
-  valuador: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/avaluo"],
+  cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja"],
+  valuador: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
 };
 
 export function puedeAcceder(rol: RolUsuario, href: string): boolean {

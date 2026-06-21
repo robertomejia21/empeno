@@ -22,6 +22,35 @@ const modulos = [
   "Cumplimiento PLD", "Avalúo de metales", "Usuarios y roles", "Bitácora", "Boletas PDF",
 ];
 
+const testimonios = [
+  { n: "María G.", r: "Gerente · CDMX", t: "Desde que usamos la suite, los refrendos por WhatsApp subieron muchísimo. Los clientes llegan a tiempo." },
+  { n: "Juan C.", r: "Dueño · Toluca", t: "El asistente de empeño es rapidísimo en el mostrador. Capturamos en minutos y el contrato sale en PDF." },
+  { n: "Ana M.", r: "Cajera · Edomex", t: "La caja y los reportes me cuadran solos al final del día. Antes era un caos en papel." },
+];
+
+const precios = [
+  {
+    nombre: "Básico", precio: "$499", periodo: "/mes", destacado: false,
+    incluye: ["1 sucursal", "Empeños e inventario", "Caja y clientes", "Hasta 2 usuarios", "Boletas en PDF"],
+  },
+  {
+    nombre: "Profesional", precio: "$999", periodo: "/mes", destacado: true,
+    incluye: ["Todo lo de Básico", "Punto de venta y apartados", "Reportes y gráficas", "Cumplimiento PLD", "WhatsApp automático", "Usuarios ilimitados"],
+  },
+  {
+    nombre: "Multi-sucursal", precio: "A medida", periodo: "", destacado: false,
+    incluye: ["Varias sucursales", "Soporte prioritario", "Capacitación del equipo", "Integraciones a medida", "Facturación CFDI"],
+  },
+];
+
+const faqs = [
+  { q: "¿Necesito instalar algo?", a: "No. Es 100% web y funciona en la nube desde cualquier navegador, en mostrador, oficina o celular." },
+  { q: "¿Cumple con la normativa mexicana?", a: "Sí. Incorpora umbrales LFPIORPI (UMA), expedientes KYC, contrato prendario conforme a la NOM-179 y base para reportes de PROFECO y la UIF/SAT." },
+  { q: "¿Puedo enviar avisos por WhatsApp?", a: "Sí. Envía recordatorios de vencimiento manuales o automáticos a tus clientes para que refrenden a tiempo." },
+  { q: "¿Mis datos están seguros?", a: "Sí. Base de datos con control de acceso por roles, autenticación de usuarios y bitácora de auditoría de cada operación." },
+  { q: "¿Puedo migrar mis datos actuales?", a: "Sí, te ayudamos a importar tu cartera de empeños, clientes e inventario para arrancar sin perder información." },
+];
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -35,8 +64,8 @@ export default function LandingPage() {
           <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
             <a href="#funciones" className="hover:text-foreground">Funciones</a>
             <a href="#producto" className="hover:text-foreground">Producto</a>
-            <a href="#modulos" className="hover:text-foreground">Módulos</a>
-            <a href="#mexico" className="hover:text-foreground">México</a>
+            <a href="#precios" className="hover:text-foreground">Precios</a>
+            <a href="#faq" className="hover:text-foreground">Preguntas</a>
           </nav>
           <Link href="/login" className="bg-gold-gradient shadow-soft rounded-lg px-4 py-2 text-sm font-semibold text-primary-fg transition hover:brightness-105">
             Iniciar sesión
@@ -140,6 +169,116 @@ export default function LandingPage() {
               <span className="rounded-full border border-border bg-surface px-4 py-2 text-sm font-medium shadow-soft">{m}</span>
             </Reveal>
           ))}
+        </div>
+      </section>
+
+      {/* TESTIMONIOS */}
+      <section className="border-y border-border bg-surface-2 py-16">
+        <div className="mx-auto max-w-6xl px-5">
+          <Reveal>
+            <div className="mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold tracking-tight">Casas de empeño que ya operan mejor</h2>
+              <p className="mt-3 text-muted">Lo que dicen quienes lo usan todos los días.</p>
+            </div>
+          </Reveal>
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {testimonios.map((t, i) => (
+              <Reveal key={t.n} delay={i * 80}>
+                <figure className="shadow-card h-full rounded-2xl border border-border bg-surface p-6">
+                  <div className="mb-3 text-primary">★★★★★</div>
+                  <blockquote className="text-sm text-foreground">“{t.t}”</blockquote>
+                  <figcaption className="mt-4 flex items-center gap-3">
+                    <span className="bg-gold-gradient flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white">
+                      {t.n.charAt(0)}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-semibold">{t.n}</span>
+                      <span className="block text-xs text-muted">{t.r}</span>
+                    </span>
+                  </figcaption>
+                </figure>
+              </Reveal>
+            ))}
+          </div>
+          <p className="mt-6 text-center text-xs text-muted">Testimonios ilustrativos.</p>
+        </div>
+      </section>
+
+      {/* PRECIOS */}
+      <section id="precios" className="mx-auto max-w-6xl px-5 py-16">
+        <Reveal>
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-3xl font-bold tracking-tight">Planes para cada tamaño</h2>
+            <p className="mt-3 text-muted">Sin permanencia. Cancela cuando quieras.</p>
+          </div>
+        </Reveal>
+        <div className="mt-12 grid items-stretch gap-5 md:grid-cols-3">
+          {precios.map((p, i) => (
+            <Reveal key={p.nombre} delay={i * 80}>
+              <div
+                className={`flex h-full flex-col rounded-2xl border p-6 ${
+                  p.destacado
+                    ? "border-primary bg-surface shadow-elevated ring-2 ring-primary/20"
+                    : "border-border bg-surface shadow-card"
+                }`}
+              >
+                {p.destacado && (
+                  <span className="bg-gold-gradient mb-3 self-start rounded-full px-3 py-1 text-xs font-semibold text-white">
+                    Más popular
+                  </span>
+                )}
+                <h3 className="text-lg font-semibold">{p.nombre}</h3>
+                <div className="mt-2 flex items-end gap-1">
+                  <span className="text-3xl font-bold tracking-tight">{p.precio}</span>
+                  <span className="mb-1 text-sm text-muted">{p.periodo}</span>
+                </div>
+                <ul className="mt-5 flex-1 space-y-2.5 text-sm">
+                  {p.incluye.map((x) => (
+                    <li key={x} className="flex items-start gap-2">
+                      <span className="mt-0.5 text-success">✓</span>
+                      <span className="text-foreground">{x}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/login"
+                  className={`mt-6 rounded-xl px-5 py-2.5 text-center text-sm font-semibold transition ${
+                    p.destacado
+                      ? "bg-gold-gradient text-primary-fg shadow-soft hover:brightness-105"
+                      : "border border-border bg-surface hover:bg-surface-2"
+                  }`}
+                >
+                  {p.precio === "A medida" ? "Contactar" : "Empezar"}
+                </Link>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <p className="mt-6 text-center text-xs text-muted">Precios de referencia en MXN, sin IVA. Ajustables a tu operación.</p>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="border-t border-border bg-surface-2 py-16">
+        <div className="mx-auto max-w-3xl px-5">
+          <Reveal>
+            <div className="text-center">
+              <h2 className="text-3xl font-bold tracking-tight">Preguntas frecuentes</h2>
+              <p className="mt-3 text-muted">Lo que más nos preguntan antes de empezar.</p>
+            </div>
+          </Reveal>
+          <div className="mt-10 space-y-3">
+            {faqs.map((f, i) => (
+              <Reveal key={f.q} delay={i * 50}>
+                <details className="group shadow-soft rounded-xl border border-border bg-surface p-5 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer items-center justify-between gap-4 text-sm font-semibold">
+                    {f.q}
+                    <span className="text-primary transition group-open:rotate-45">+</span>
+                  </summary>
+                  <p className="mt-3 text-sm text-muted">{f.a}</p>
+                </details>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 

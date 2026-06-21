@@ -2,8 +2,16 @@ import Link from "next/link";
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
-import { Card, CardHeader, Badge, LinkButton } from "@/components/ui";
+import { Card, CardHeader, Badge } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
+import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
+
+const accesos = [
+  { href: "/empenos/asistente", icon: "🤝", label: "Nuevo empeño", tono: "bg-primary-soft text-primary" },
+  { href: "/ventas", icon: "🛒", label: "Punto de venta", tono: "bg-info-soft text-info" },
+  { href: "/prendas/nueva", icon: "💍", label: "Registrar prenda", tono: "bg-warning-soft text-warning" },
+  { href: "/clientes/nuevo", icon: "👤", label: "Nuevo cliente", tono: "bg-success-soft text-success" },
+];
 
 export default async function Tablero() {
   const [empenos, movimientos, clientes, prendas] = await Promise.all([
@@ -13,91 +21,104 @@ export default async function Tablero() {
     listarPrendas(),
   ]);
 
-  const activos = empenos.filter(
-    (e) => e.estado === "activo" || e.estado === "refrendado"
-  );
+  const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalPrestado = activos.reduce((s, e) => s + e.montoPrestado, 0);
-
   const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e) }));
   const vencidos = conCalc.filter((x) => x.calc.vencido);
   const porVencer = conCalc
     .filter((x) => !x.calc.vencido && x.calc.diasParaVencer <= 7)
     .sort((a, b) => a.calc.diasParaVencer - b.calc.diasParaVencer);
+  const saldoCaja = movimientos.reduce((s, m) => s + (m.esEntrada ? m.monto : -m.monto), 0);
 
-  const saldoCaja = movimientos.reduce(
-    (s, m) => s + (m.esEntrada ? m.monto : -m.monto),
-    0
-  );
+  // Serie mensual (6 meses)
+  const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const hoy = new Date();
+  const serie: BarraMes[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    const clave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const mm = movimientos.filter((m) => m.fecha.slice(0, 7) === clave);
+    serie.push({
+      mes: MESES[d.getMonth()],
+      ingresos: mm.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0),
+      egresos: mm.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0),
+    });
+  }
 
-  const prendasEnVenta = prendas.filter((p) => p.estado === "en_venta").length;
+  const dona = [
+    { etiqueta: "Vigentes", valor: conCalc.filter((x) => !x.calc.vencido).length, color: "#15803d" },
+    { etiqueta: "Vencidos", valor: vencidos.length, color: "#b91c1c" },
+    { etiqueta: "En venta", valor: prendas.filter((p) => p.estado === "en_venta").length, color: "#b45309" },
+  ];
 
   return (
     <div>
-      {/* Hero premium */}
-      <div className="bg-gold-gradient shadow-elevated relative mb-7 overflow-hidden rounded-2xl px-6 py-7 text-white md:px-8">
+      {/* Hero */}
+      <div className="bg-gold-gradient gradiente-animado shadow-elevated relative mb-7 overflow-hidden rounded-2xl px-6 py-7 text-white md:px-8">
         <div className="absolute -right-8 -top-10 h-40 w-40 rounded-full bg-white/10" />
         <div className="absolute -bottom-16 right-24 h-44 w-44 rounded-full bg-white/5" />
-        <div className="relative flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-white/70">
-              {formatFechaLarga(new Date().toISOString())}
-            </p>
-            <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">
-              Bienvenido de vuelta 👋
-            </h1>
-            <p className="mt-1 text-sm text-white/80">
-              Resumen de la operación de tu casa de empeño hoy.
-            </p>
-          </div>
-          <Link
-            href="/empenos/asistente"
-            className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-soft transition hover:bg-white/90"
-          >
-            + Nuevo empeño
-          </Link>
+        <div className="relative">
+          <p className="text-xs font-medium uppercase tracking-widest text-white/70">
+            {formatFechaLarga(new Date().toISOString())}
+          </p>
+          <h1 className="mt-1 text-[28px] font-bold leading-tight tracking-tight">Bienvenido de vuelta 👋</h1>
+          <p className="mt-1 text-sm text-white/80">Resumen de la operación de tu casa de empeño hoy.</p>
         </div>
       </div>
 
+      {/* Accesos rápidos */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {accesos.map((a) => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className="shadow-soft group flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition hover:-translate-y-0.5 hover:shadow-card"
+          >
+            <span className={`flex h-9 w-9 items-center justify-center rounded-lg text-base ${a.tono}`}>{a.icon}</span>
+            <span className="text-sm font-medium text-foreground">{a.label}</span>
+          </Link>
+        ))}
+      </div>
+
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Empeños activos" valor={activos.length.toString()} icono="🤝" />
         <Stat label="Capital prestado" valor={formatMXN(capitalPrestado)} icono="💰" />
-        <Stat
-          label="Saldo en caja"
-          valor={formatMXN(saldoCaja)}
-          icono="💵"
-          tono={saldoCaja < 0 ? "danger" : "success"}
-        />
-        <Stat
-          label="Vencidos"
-          valor={vencidos.length.toString()}
-          icono="⚠️"
-          tono={vencidos.length > 0 ? "danger" : "muted"}
-        />
+        <Stat label="Saldo en caja" valor={formatMXN(saldoCaja)} icono="💵" tono={saldoCaja < 0 ? "danger" : "success"} />
+        <Stat label="Vencidos" valor={vencidos.length.toString()} icono="⚠️" tono={vencidos.length > 0 ? "danger" : "muted"} />
       </div>
 
+      {/* Gráficas */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title="Ingresos vs egresos" subtitle="Últimos 6 meses" />
+          <div className="p-5">
+            <BarrasIngresoEgreso datos={serie} />
+          </div>
+        </Card>
+        <Card>
+          <CardHeader title="Cartera" subtitle="Distribución actual" />
+          <div className="p-5">
+            <Dona segmentos={dona} />
+          </div>
+        </Card>
+      </div>
+
+      {/* Por vencer + inventario */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Por vencer (próximos 7 días)"
-            subtitle="Empeños que requieren refrendo o desempeño pronto"
-            action={
-              <Link href="/empenos" className="text-sm font-medium text-primary">
-                Ver todos →
-              </Link>
-            }
+            title="Por vencer y vencidos"
+            subtitle="Empeños que requieren atención"
+            action={<Link href="/recordatorios" className="text-sm font-medium text-primary">Recordatorios →</Link>}
           />
           {porVencer.length === 0 && vencidos.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-muted">
-              No hay empeños por vencer. 🎉
-            </p>
+            <p className="px-5 py-10 text-center text-sm text-muted">No hay empeños por vencer. 🎉</p>
           ) : (
             <ul className="divide-y divide-border">
-              {[...vencidos, ...porVencer].slice(0, 8).map(({ e, calc }) => (
+              {[...vencidos, ...porVencer].slice(0, 7).map(({ e, calc }) => (
                 <li key={e.id}>
-                  <Link
-                    href={`/empenos/${e.id}`}
-                    className="flex items-center justify-between gap-4 px-5 py-3 hover:bg-surface-2"
-                  >
+                  <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-4 px-5 py-3 transition hover:bg-surface-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-foreground">
                         {e.folio} · {e.cliente.nombre} {e.cliente.apellidoPaterno}
@@ -107,9 +128,7 @@ export default async function Tablero() {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">
-                        {formatMXN(calc.totalDesempeno)}
-                      </span>
+                      <span className="text-sm font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</span>
                       {estadoEmpenoBadge(calc.vencido ? "vencido" : e.estado)}
                     </div>
                   </Link>
@@ -121,19 +140,12 @@ export default async function Tablero() {
 
         <Card>
           <CardHeader title="Inventario" />
-          <div className="space-y-4 px-5 py-4">
-            <ResumenLinea etiqueta="Clientes registrados" valor={clientes.length} />
+          <div className="space-y-3.5 px-5 py-4">
+            <ResumenLinea etiqueta="Clientes" valor={clientes.length} />
             <ResumenLinea etiqueta="Prendas en inventario" valor={prendas.length} />
-            <ResumenLinea
-              etiqueta="Prendas empeñadas"
-              valor={prendas.filter((p) => p.estado === "empenada").length}
-            />
-            <ResumenLinea etiqueta="Prendas en venta" valor={prendasEnVenta} />
-            <div className="border-t border-border pt-4">
-              <LinkButton href="/prendas/nueva" variante="secondary" className="w-full">
-                + Registrar prenda
-              </LinkButton>
-            </div>
+            <ResumenLinea etiqueta="Empeñadas" valor={prendas.filter((p) => p.estado === "empenada").length} />
+            <ResumenLinea etiqueta="En venta" valor={prendas.filter((p) => p.estado === "en_venta").length} />
+            <ResumenLinea etiqueta="Apartadas" valor={prendas.filter((p) => p.estado === "apartada").length} />
           </div>
         </Card>
       </div>
@@ -142,39 +154,19 @@ export default async function Tablero() {
 }
 
 function Stat({
-  label,
-  valor,
-  icono,
-  tono = "muted",
+  label, valor, icono, tono = "muted",
 }: {
-  label: string;
-  valor: string;
-  icono: string;
-  tono?: "muted" | "success" | "danger";
+  label: string; valor: string; icono: string; tono?: "muted" | "success" | "danger";
 }) {
-  const color =
-    tono === "success"
-      ? "text-success"
-      : tono === "danger"
-        ? "text-danger"
-        : "text-foreground";
-  const iconBg =
-    tono === "success"
-      ? "bg-success-soft"
-      : tono === "danger"
-        ? "bg-danger-soft"
-        : "bg-primary-soft";
+  const color = tono === "success" ? "text-success" : tono === "danger" ? "text-danger" : "text-foreground";
+  const iconBg = tono === "success" ? "bg-success-soft" : tono === "danger" ? "bg-danger-soft" : "bg-primary-soft";
   return (
     <Card className="p-5 transition hover:shadow-elevated">
       <div className="flex items-start justify-between">
         <p className="text-[13px] font-medium text-muted">{label}</p>
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-base ${iconBg}`}>
-          {icono}
-        </span>
+        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-base ${iconBg}`}>{icono}</span>
       </div>
-      <p className={`mt-3 text-[28px] font-bold leading-none tracking-tight ${color}`}>
-        {valor}
-      </p>
+      <p className={`mt-3 text-[28px] font-bold leading-none tracking-tight ${color}`}>{valor}</p>
     </Card>
   );
 }

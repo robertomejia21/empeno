@@ -1,4 +1,5 @@
 import { iniciarSesion } from "@/lib/auth-actions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function LoginPage({
   searchParams,
@@ -8,7 +9,10 @@ export default async function LoginPage({
   const { error, next } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="bg-gold-gradient mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-soft">

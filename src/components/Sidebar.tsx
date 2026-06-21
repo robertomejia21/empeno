@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { navGroups } from "@/lib/nav";
 import { puedeAcceder, ROL_LABEL } from "@/lib/auth";
 import { cerrarSesion } from "@/lib/auth-actions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { RolUsuario } from "@/lib/types";
 
 interface UsuarioProp {
@@ -72,7 +73,10 @@ export function Sidebar({ usuario }: { usuario: UsuarioProp | null }) {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border px-4 py-4">
+      <div className="space-y-2 border-t border-sidebar-border px-4 py-4">
+        <div className="flex justify-end">
+          <ThemeToggle className="!border-sidebar-border !bg-sidebar-2 text-sidebar-fg hover:!bg-sidebar" />
+        </div>
         <div className="flex items-center gap-3 rounded-lg bg-sidebar-2 px-3 py-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm font-bold uppercase text-sidebar">
             {(usuario?.nombre ?? "A").charAt(0)}

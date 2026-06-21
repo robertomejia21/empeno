@@ -32,6 +32,34 @@
   --gold: #e9b949;
 }
 
+.dark {
+  --background: #0c0a09;
+  --surface: #1a1715;
+  --surface-2: #232020;
+  --foreground: #f5f3f0;
+  --muted: #a8a29e;
+  --border: #322d29;
+
+  --primary: #f59e0b;
+  --primary-2: #fbbf24;
+  --primary-fg: #1a1207;
+  --primary-soft: #3a2a12;
+
+  --success: #4ade80;
+  --success-soft: #0f2e1a;
+  --danger: #f87171;
+  --danger-soft: #3a1715;
+  --warning: #fbbf24;
+  --warning-soft: #332b10;
+  --info: #60a5fa;
+  --info-soft: #14233f;
+
+  /* El sidebar ya es oscuro; lo dejamos consistente */
+  --sidebar: #15120f;
+  --sidebar-2: #232020;
+  --sidebar-border: #322d29;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);

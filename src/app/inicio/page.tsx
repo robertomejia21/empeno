@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "@/components/Reveal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const metadata = {
   title: "Empeño Suite — Software para casas de empeño",
@@ -67,9 +68,23 @@ export default function LandingPage() {
             <a href="#precios" className="hover:text-foreground">Precios</a>
             <a href="#faq" className="hover:text-foreground">Preguntas</a>
           </nav>
-          <Link href="/login" className="bg-gold-gradient shadow-soft rounded-lg px-4 py-2 text-sm font-semibold text-primary-fg transition hover:brightness-105">
-            Iniciar sesión
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/login" className="bg-gold-gradient shadow-soft hidden rounded-lg px-4 py-2 text-sm font-semibold text-primary-fg transition hover:brightness-105 sm:inline-block">
+              Iniciar sesión
+            </Link>
+            {/* Menú móvil */}
+            <details className="relative md:hidden [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface text-base">☰</summary>
+              <div className="shadow-elevated absolute right-0 mt-2 w-44 rounded-xl border border-border bg-surface p-2 text-sm">
+                <a href="#funciones" className="block rounded-lg px-3 py-2 hover:bg-surface-2">Funciones</a>
+                <a href="#producto" className="block rounded-lg px-3 py-2 hover:bg-surface-2">Producto</a>
+                <a href="#precios" className="block rounded-lg px-3 py-2 hover:bg-surface-2">Precios</a>
+                <a href="#faq" className="block rounded-lg px-3 py-2 hover:bg-surface-2">Preguntas</a>
+                <Link href="/login" className="bg-gold-gradient mt-1 block rounded-lg px-3 py-2 text-center font-semibold text-primary-fg">Iniciar sesión</Link>
+              </div>
+            </details>
+          </div>
         </div>
       </header>
 

@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
+import { enviarRecordatorioWhatsApp } from "@/lib/actions";
+import { whatsappHabilitado } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, EmptyState } from "@/components/ui";
+import { ConfirmSubmit } from "@/components/actions-ui";
 
 export default async function RecordatoriosPage() {
   const empenos = await listarEmpenos();
@@ -18,6 +21,8 @@ export default async function RecordatoriosPage() {
     .filter((x) => !x.calc.vencido && x.calc.diasParaVencer > 7 && x.calc.diasParaVencer <= 30)
     .sort((a, b) => a.calc.diasParaVencer - b.calc.diasParaVencer);
 
+  const waOn = whatsappHabilitado();
+
   return (
     <div>
       <PageHeader
@@ -25,10 +30,16 @@ export default async function RecordatoriosPage() {
         subtitle="Seguimiento de vencimientos para contactar al cliente"
       />
 
+      {waOn && (
+        <div className="mb-6 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success">
+          ✅ WhatsApp conectado: puedes enviar recordatorios directamente desde aquí.
+        </div>
+      )}
+
       <div className="space-y-6">
-        <Grupo titulo="Vencidos" tono="danger" items={vencidos} vencido />
-        <Grupo titulo="Por vencer (≤ 7 días)" tono="warning" items={porVencer} />
-        <Grupo titulo="Próximos (8–30 días)" tono="info" items={proximos} />
+        <Grupo titulo="Vencidos" tono="danger" items={vencidos} vencido waOn={waOn} />
+        <Grupo titulo="Por vencer (≤ 7 días)" tono="warning" items={porVencer} waOn={waOn} />
+        <Grupo titulo="Próximos (8–30 días)" tono="info" items={proximos} waOn={waOn} />
       </div>
     </div>
   );
@@ -39,11 +50,13 @@ function Grupo({
   tono,
   items,
   vencido,
+  waOn,
 }: {
   titulo: string;
   tono: "danger" | "warning" | "info";
   items: { e: Awaited<ReturnType<typeof import("@/lib/db/repo").listarEmpenos>>[number]; calc: ReturnType<typeof calcularLiquidacion> }[];
   vencido?: boolean;
+  waOn?: boolean;
 }) {
   return (
     <Card>
@@ -74,21 +87,29 @@ function Grupo({
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</span>
                   {e.cliente.telefono ? (
-                    <div className="flex gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       <a
                         href={`tel:${tel}`}
                         className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-2"
                       >
                         📞 Llamar
                       </a>
-                      <a
-                        href={`https://wa.me/52${tel}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
-                      >
-                        WhatsApp
-                      </a>
+                      {waOn ? (
+                        <form action={enviarRecordatorioWhatsApp.bind(null, e.id)}>
+                          <ConfirmSubmit confirmacion={`¿Enviar recordatorio por WhatsApp a ${e.cliente.nombre}?`}>
+                            Enviar WhatsApp
+                          </ConfirmSubmit>
+                        </form>
+                      ) : (
+                        <a
+                          href={`https://wa.me/52${tel}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                        >
+                          WhatsApp
+                        </a>
+                      )}
                     </div>
                   ) : (
                     <span className="text-xs text-muted">sin teléfono</span>

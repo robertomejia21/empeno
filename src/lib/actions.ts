@@ -21,6 +21,9 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
+import { obtenerEmpeno, listarEmpenos } from "@/lib/db/repo";
+import { enviarWhatsApp } from "@/lib/whatsapp";
+import { formatMXN, formatFecha } from "@/lib/format";
 
 function s(form: FormData, key: string): string {
   return (form.get(key) as string | null)?.trim() ?? "";
@@ -552,6 +555,51 @@ export async function crearEmpenoGuiado(
   await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, empeno.folio);
   revalidatePaths();
   return { empenoId: empeno.id, folio: empeno.folio };
+}
+
+// ----------------- NOTIFICACIONES (WhatsApp) -----------------
+
+function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>): string {
+  if (!e) return "";
+  const calc = calcularLiquidacion(e);
+  const venc = calc.vencido ? "venció" : "vence";
+  return (
+    `Hola ${e.cliente.nombre}, le recordamos su empeño *${e.folio}* ` +
+    `(${e.prenda.descripcion}) que ${venc} el ${formatFecha(e.fechaVencimiento)}.\n\n` +
+    `• Refrendo (solo interés): ${formatMXN(calc.totalRefrendo)}\n` +
+    `• Liquidar (desempeño): ${formatMXN(calc.totalDesempeno)}\n\n` +
+    `Acuda a refrendar o liquidar para conservar su prenda. ¡Gracias!`
+  );
+}
+
+export async function enviarRecordatorioWhatsApp(empenoId: string) {
+  const e = await obtenerEmpeno(empenoId);
+  if (!e) return;
+  const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e));
+  await bitacoraAuto(
+    res.ok ? "Recordatorio WhatsApp enviado" : "Recordatorio WhatsApp falló",
+    res.ok ? `a ${e.cliente.nombre}` : res.error ?? null,
+    e.folio
+  );
+  revalidatePath("/recordatorios");
+}
+
+/** Envía recordatorios a todos los empeños vencidos o por vencer (≤3 días). Usado por el cron. */
+export async function enviarRecordatoriosPendientes(): Promise<{ enviados: number; fallidos: number }> {
+  const empenos = await listarEmpenos();
+  let enviados = 0;
+  let fallidos = 0;
+  for (const e of empenos) {
+    if (e.estado !== "activo" && e.estado !== "refrendado") continue;
+    const calc = calcularLiquidacion(e);
+    if (!(calc.vencido || calc.diasParaVencer <= 3)) continue;
+    if (!e.cliente.telefono) continue;
+    const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e));
+    if (res.ok) enviados++;
+    else fallidos++;
+  }
+  await bitacoraAuto("Recordatorios automáticos", `${enviados} enviados, ${fallidos} fallidos`, null);
+  return { enviados, fallidos };
 }
 
 // ----------------- FOTOS (STORAGE) -----------------

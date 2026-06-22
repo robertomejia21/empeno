@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
-import { Sidebar, MobileNav } from "@/components/Sidebar";
+import { Sidebar, MobileMenu } from "@/components/Sidebar";
 import { getUsuarioActual } from "@/lib/session";
 
 const geistSans = Geist({
@@ -54,10 +54,10 @@ export default async function RootLayout({
           <div className="flex min-h-screen">
             <Sidebar usuario={usuario} />
             <div className="flex min-w-0 flex-1 flex-col">
+              <MobileMenu usuario={usuario} />
               <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-10">
                 {children}
               </main>
-              <MobileNav usuario={usuario} />
             </div>
           </div>
         )}

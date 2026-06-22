@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navGroups } from "@/lib/nav";
@@ -104,31 +105,100 @@ export function Sidebar({ usuario }: { usuario: UsuarioProp | null }) {
   );
 }
 
-const mobilePrincipales = ["/", "/empenos", "/prendas", "/clientes", "/caja"];
-
-export function MobileNav({ usuario }: { usuario: UsuarioProp | null }) {
+export function MobileMenu({ usuario }: { usuario: UsuarioProp | null }) {
   const pathname = usePathname();
-  const items = navGroups
-    .flatMap((g) => g.items)
-    .filter((i) => mobilePrincipales.includes(i.href))
-    .filter((i) => !usuario || puedeAcceder(usuario.rol, i.href));
+  const [abierto, setAbierto] = useState(false);
+  const grupos = gruposVisibles(usuario?.rol);
+
   return (
-    <nav className="no-print sticky bottom-0 z-10 flex justify-around border-t border-sidebar-border bg-sidebar py-1.5 md:hidden">
-      {items.map((item) => {
-        const activo = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex flex-col items-center gap-0.5 rounded-lg px-3 py-1.5 text-[11px] transition ${
-              activo ? "text-gold" : "text-sidebar-muted"
-            }`}
+    <>
+      {/* Barra superior (solo móvil) */}
+      <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar px-4 py-2.5 text-sidebar-fg md:hidden">
+        <Link href="/" className="flex items-center gap-2">
+          <span className="bg-gold-gradient flex h-8 w-8 items-center justify-center rounded-lg text-base">⚖️</span>
+          <span className="text-sm font-bold text-white">Empeño<span className="text-gold-gradient"> Suite</span></span>
+        </Link>
+        <div className="flex items-center gap-2">
+          <ThemeToggle className="!border-sidebar-border !bg-sidebar-2 text-sidebar-fg hover:!bg-sidebar" />
+          <button
+            type="button"
+            onClick={() => setAbierto(true)}
+            aria-label="Abrir menú"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-2 text-lg text-white"
           >
-            <span className="text-lg">{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+            ☰
+          </button>
+        </div>
+      </header>
+
+      {/* Drawer */}
+      {abierto && (
+        <div className="no-print fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setAbierto(false)} />
+          <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-sidebar text-sidebar-fg shadow-elevated">
+            <div className="flex items-center justify-between border-b border-sidebar-border px-5 py-4">
+              <span className="text-sm font-bold text-white">Menú</span>
+              <button
+                type="button"
+                onClick={() => setAbierto(false)}
+                aria-label="Cerrar menú"
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-2 text-base text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+              {grupos.map((grupo) => (
+                <div key={grupo.titulo}>
+                  <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
+                    {grupo.titulo}
+                  </p>
+                  <div className="space-y-0.5">
+                    {grupo.items.map((item) => {
+                      const activo = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setAbierto(false)}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
+                            activo ? "bg-sidebar-2 font-semibold text-white" : "text-sidebar-muted"
+                          }`}
+                        >
+                          <span className="text-base">{item.icon}</span>
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+            <div className="border-t border-sidebar-border px-4 py-4">
+              <div className="flex items-center gap-3 rounded-lg bg-sidebar-2 px-3 py-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-sm font-bold uppercase text-sidebar">
+                  {(usuario?.nombre ?? "A").charAt(0)}
+                </span>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <p className="truncate text-sm font-medium text-white">{usuario?.nombre ?? "Administrador"}</p>
+                  <p className="truncate text-[11px] text-sidebar-muted">
+                    {usuario ? ROL_LABEL[usuario.rol] : "Sesión demo"}
+                  </p>
+                </div>
+                {usuario?.esSesionReal && (
+                  <form action={cerrarSesion}>
+                    <button type="submit" title="Cerrar sesión" className="rounded-md px-2 py-1 text-sidebar-muted hover:text-white">
+                      ⏻
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

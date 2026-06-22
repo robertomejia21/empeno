@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Reveal } from "@/components/Reveal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatedCounter, Parallax } from "@/components/landing-fx";
@@ -153,6 +154,48 @@ export default function LandingPage() {
               </div>
             </Reveal>
           ))}
+        </div>
+      </section>
+
+      {/* AVALÚO DE METALES — imagen generada */}
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <Reveal>
+            <div className="relative">
+              <div className="bg-gold-gradient absolute -inset-3 rounded-3xl opacity-20 blur-2xl" />
+              <Image
+                src="/img/avaluo-oro.png"
+                alt="Avalúo de metales: joyería de oro y reloj de lujo"
+                width={800}
+                height={600}
+                className="shadow-elevated relative w-full rounded-2xl border border-border object-cover"
+                priority
+              />
+            </div>
+          </Reveal>
+          <Reveal delay={120}>
+            <div>
+              <span className="bg-primary-soft inline-flex rounded-full px-3 py-1 text-xs font-semibold text-primary">
+                Avalúo inteligente
+              </span>
+              <h2 className="mt-4 text-3xl font-bold tracking-tight">Valúa metales preciosos en segundos</h2>
+              <p className="mt-3 text-muted">
+                Calcula el valor de oro y plata por gramaje y kilataje con precios de referencia,
+                y obtén el préstamo sugerido al instante. Menos errores, más confianza en el mostrador.
+              </p>
+              <ul className="mt-5 space-y-2.5 text-sm">
+                {["Cálculo por kilataje (10k–24k) y gramos", "Préstamo sugerido configurable", "Precio spot editable del día"].map((x) => (
+                  <li key={x} className="flex items-start gap-2">
+                    <span className="mt-0.5 text-success">✓</span>
+                    <span className="text-foreground">{x}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" className="bg-gold-gradient shadow-soft mt-7 inline-block rounded-xl px-6 py-3 text-sm font-semibold text-primary-fg transition hover:brightness-105">
+                Probar la calculadora →
+              </Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 

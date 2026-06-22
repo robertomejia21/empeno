@@ -61,6 +61,8 @@ export default async function EmpenoDetalle({
           </div>
         )}
 
+        {activo && <LineaTiempo inicio={empeno.fechaInicio} fin={empeno.fechaVencimiento} />}
+
         <div className="grid gap-6 md:grid-cols-3">
           {/* Liquidación */}
           <Card className="md:col-span-2">
@@ -162,6 +164,32 @@ export default async function EmpenoDetalle({
       {/* Boleta para imprimir */}
       <Boleta empeno={empeno} calc={calc} />
     </div>
+  );
+}
+
+function LineaTiempo({ inicio, fin }: { inicio: string; fin: string }) {
+  const msDia = 86400000;
+  const t0 = new Date(inicio + "T00:00:00").getTime();
+  const t1 = new Date(fin + "T00:00:00").getTime();
+  const ahora = Date.now();
+  const total = Math.max(1, Math.round((t1 - t0) / msDia));
+  const trans = Math.round((ahora - t0) / msDia);
+  const pct = Math.max(2, Math.min(100, (trans / total) * 100));
+  const vencido = ahora > t1;
+  return (
+    <Card className="mb-6 p-5">
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="font-medium text-foreground">Inicio · {formatFecha(inicio)}</span>
+        <span className="text-muted">{Math.max(0, total - trans)} días restantes</span>
+        <span className="font-medium text-foreground">Vence · {formatFecha(fin)}</span>
+      </div>
+      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
+        <div
+          className={`h-full rounded-full ${vencido ? "bg-danger" : "bg-gold-gradient"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </Card>
   );
 }
 

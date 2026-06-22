@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { listarClientes } from "@/lib/db/repo";
+import { listarClientes, listarEmpenos } from "@/lib/db/repo";
 import { formatFecha } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState, SearchForm } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
 
 export default async function ClientesPage({
   searchParams,
@@ -9,7 +9,11 @@ export default async function ClientesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const todos = await listarClientes();
+  const [todos, empenos] = await Promise.all([listarClientes(), listarEmpenos()]);
+  const conActivo = new Set(
+    empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado").map((e) => e.clienteId)
+  ).size;
+  const nuevosMes = todos.filter((c) => c.creadoEn.slice(0, 7) === new Date().toISOString().slice(0, 7)).length;
   const t = (q ?? "").toLowerCase().trim();
   const clientes = t
     ? todos.filter((c) =>
@@ -25,6 +29,14 @@ export default async function ClientesPage({
         title="Clientes"
         subtitle={t ? `${clientes.length} resultado(s) para "${q}"` : `${clientes.length} registrados`}
         action={<LinkButton href="/clientes/nuevo">+ Nuevo cliente</LinkButton>}
+      />
+      <ResumenChips
+        items={[
+          { label: "Total clientes", valor: todos.length },
+          { label: "Con empeño activo", valor: conActivo, tono: "success" },
+          { label: "Nuevos este mes", valor: nuevosMes, tono: "info" },
+          { label: "Empeños totales", valor: empenos.length, tono: "primary" },
+        ]}
       />
       <div className="mb-5">
         <SearchForm q={q} placeholder="Buscar por nombre, CURP, teléfono…" />

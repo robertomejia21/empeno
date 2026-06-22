@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listarPrendas } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState, Badge, SearchForm } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, Badge, SearchForm, ResumenChips } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 
 export default async function PrendasPage({
@@ -26,6 +26,14 @@ export default async function PrendasPage({
         title="Prendas"
         subtitle={t ? `${prendas.length} resultado(s) para "${q}"` : `${prendas.length} en inventario`}
         action={<LinkButton href="/prendas/nueva">+ Registrar prenda</LinkButton>}
+      />
+      <ResumenChips
+        items={[
+          { label: "En inventario", valor: todas.length },
+          { label: "Empeñadas", valor: todas.filter((p) => p.estado === "empenada").length, tono: "info" },
+          { label: "En venta", valor: todas.filter((p) => p.estado === "en_venta").length, tono: "primary" },
+          { label: "Apartadas", valor: todas.filter((p) => p.estado === "apartada").length, tono: "warning" },
+        ]}
       />
       <div className="mb-5">
         <SearchForm q={q} placeholder="Buscar por folio, descripción, marca…" />
@@ -59,14 +67,24 @@ export default async function PrendasPage({
                       <Link href={`/prendas/${p.id}`} className="hover:text-primary">{p.folio}</Link>
                     </td>
                     <td className="px-5 py-3">
-                      <Link href={`/prendas/${p.id}`} className="font-medium text-foreground hover:text-primary">
-                        {p.descripcion}
+                      <Link href={`/prendas/${p.id}`} className="flex items-center gap-3 hover:opacity-90">
+                        {p.fotos[0] ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={p.fotos[0]} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                        ) : (
+                          <span className="bg-surface-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base text-muted">
+                            📦
+                          </span>
+                        )}
+                        <span className="min-w-0">
+                          <span className="block font-medium text-foreground">{p.descripcion}</span>
+                          <span className="block text-xs text-muted">
+                            {[p.marca, p.submarca, p.modelo].filter(Boolean).join(" ") ||
+                              [p.metal, p.kilataje].filter(Boolean).join(" ") ||
+                              "—"}
+                          </span>
+                        </span>
                       </Link>
-                      <p className="text-xs text-muted">
-                        {[p.marca, p.submarca, p.modelo].filter(Boolean).join(" ") ||
-                          [p.metal, p.kilataje].filter(Boolean).join(" ") ||
-                          "—"}
-                      </p>
                     </td>
                     <td className="px-5 py-3">
                       <Badge tono="muted">{p.categoria}</Badge>

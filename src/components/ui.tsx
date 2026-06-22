@@ -116,6 +116,31 @@ export function LinkButton({
   );
 }
 
+export function ResumenChips({
+  items,
+}: {
+  items: { label: string; valor: string | number; tono?: Tono }[];
+}) {
+  const colores: Record<Tono, string> = {
+    primary: "text-primary",
+    success: "text-success",
+    danger: "text-danger",
+    warning: "text-warning",
+    info: "text-info",
+    muted: "text-foreground",
+  };
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {items.map((it) => (
+        <div key={it.label} className="shadow-soft rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{it.label}</p>
+          <p className={`mt-1 text-lg font-bold tracking-tight ${colores[it.tono ?? "muted"]}`}>{it.valor}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PageHeader({
   title,
   subtitle,

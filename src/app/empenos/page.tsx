@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
-import { Card, PageHeader, LinkButton, EmptyState, SearchForm } from "@/components/ui";
+import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 
 export default async function EmpenosPage({
@@ -21,6 +21,12 @@ export default async function EmpenosPage({
       )
     : todos;
 
+  const activos = todos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
+  const conCalc = activos.map((e) => calcularLiquidacion(e));
+  const nVencidos = conCalc.filter((c) => c.vencido).length;
+  const capital = activos.reduce((s, e) => s + e.montoPrestado, 0);
+  const aRecuperar = conCalc.reduce((s, c) => s + c.totalDesempeno, 0);
+
   return (
     <div>
       <PageHeader
@@ -35,6 +41,19 @@ export default async function EmpenosPage({
           </div>
         }
       />
+
+      <ResumenChips
+        items={[
+          { label: "Activos", valor: activos.length, tono: "success" },
+          { label: "Vencidos", valor: nVencidos, tono: nVencidos > 0 ? "danger" : "muted" },
+          { label: "Capital prestado", valor: formatMXN(capital) },
+          { label: "A recuperar", valor: formatMXN(aRecuperar), tono: "primary" },
+        ]}
+      />
+
+      <div className="mb-5">
+        <SearchForm q={q} placeholder="Buscar por folio, cliente, prenda…" />
+      </div>
 
       <Card>
         {empenos.length === 0 ? (

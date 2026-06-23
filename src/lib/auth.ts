@@ -90,7 +90,7 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
 const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   admin: "*",
   gerente: "*",
-  cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja"],
+  cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/cobranza"],
   valuador: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
   invitado: ["/oficina"],
 };

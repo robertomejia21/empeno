@@ -26,9 +26,17 @@ export default async function ClienteDetalle({
         title={`${cliente.nombre} ${cliente.apellidoPaterno} ${cliente.apellidoMaterno}`}
         subtitle={`Cliente desde ${formatFechaLarga(cliente.creadoEn)}`}
         action={
-          <LinkButton href={`/empenos/nuevo?cliente=${cliente.id}`}>
-            + Nuevo empeño
-          </LinkButton>
+          <div className="flex gap-2">
+            <a
+              href={`/api/estado/${cliente.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+            >
+              📄 Estado de cuenta
+            </a>
+            <LinkButton href={`/empenos/nuevo?cliente=${cliente.id}`}>+ Nuevo empeño</LinkButton>
+          </div>
         }
       />
 

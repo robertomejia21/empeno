@@ -24,6 +24,12 @@ import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, listarEmpenos } from "@/lib/db/repo";
 import { enviarWhatsApp } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
+import { getUsuarioActual } from "@/lib/session";
+
+/** En modo demo (invitado) las operaciones de escritura no surten efecto. */
+async function esInvitado(): Promise<boolean> {
+  return (await getUsuarioActual())?.rol === "invitado";
+}
 
 function s(form: FormData, key: string): string {
   return (form.get(key) as string | null)?.trim() ?? "";
@@ -40,6 +46,7 @@ function num(form: FormData, key: string): number {
 // ----------------- CLIENTES -----------------
 
 export async function crearCliente(form: FormData) {
+  if (await esInvitado()) return;
   const datos = {
     nombre: s(form, "nombre"),
     apellido_paterno: s(form, "apellidoPaterno"),
@@ -83,6 +90,7 @@ export async function crearCliente(form: FormData) {
 }
 
 export async function actualizarCliente(id: string, form: FormData) {
+  if (await esInvitado()) return;
   const datos = {
     nombre: s(form, "nombre"),
     apellido_paterno: s(form, "apellidoPaterno"),
@@ -125,6 +133,7 @@ export async function actualizarCliente(id: string, form: FormData) {
 // ----------------- PRENDAS / AVALÚOS -----------------
 
 export async function crearPrenda(form: FormData) {
+  if (await esInvitado()) return;
   const valorAvaluo = num(form, "valorAvaluo");
   const sugerido = form.get("montoPrestamoSugerido")
     ? num(form, "montoPrestamoSugerido")
@@ -184,6 +193,7 @@ export async function crearPrenda(form: FormData) {
 // ----------------- EMPEÑOS -----------------
 
 export async function crearEmpeno(form: FormData) {
+  if (await esInvitado()) return;
   const fechaInicio = s(form, "fechaInicio") || new Date().toISOString().slice(0, 10);
   const periodo = (s(form, "periodo") || "mensual") as PeriodoInteres;
   const plazoPeriodos = Math.max(1, Math.round(num(form, "plazoPeriodos")) || 1);
@@ -269,6 +279,7 @@ export async function crearEmpeno(form: FormData) {
 
 /** Refrendo: el cliente paga el interés y se renueva un periodo. */
 export async function refrendarEmpeno(id: string) {
+  if (await esInvitado()) return;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data, error } = await sb.from("empenos").select("*").eq("id", id).single();
@@ -327,6 +338,7 @@ export async function refrendarEmpeno(id: string) {
 
 /** Desempeño: el cliente liquida capital + interés y recupera su prenda. */
 export async function desempenarEmpeno(id: string) {
+  if (await esInvitado()) return;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data, error } = await sb.from("empenos").select("*").eq("id", id).single();
@@ -382,6 +394,7 @@ export async function desempenarEmpeno(id: string) {
 export async function crearEmpenoGuiado(
   data: EmpenoGuiadoPayload
 ): Promise<{ empenoId: string; folio: string }> {
+  if (await esInvitado()) throw new Error("Modo demo: solo lectura, no se puede guardar.");
   const fechaVencimiento = calcularVencimiento(data.fechaInicio, data.periodo, data.plazoPeriodos);
 
   if (supabaseConfigured) {
@@ -573,6 +586,7 @@ function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>): stri
 }
 
 export async function enviarRecordatorioWhatsApp(empenoId: string) {
+  if (await esInvitado()) return;
   const e = await obtenerEmpeno(empenoId);
   if (!e) return;
   const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e));
@@ -605,6 +619,7 @@ export async function enviarRecordatoriosPendientes(): Promise<{ enviados: numbe
 // ----------------- FOTOS (STORAGE) -----------------
 
 export async function subirFotoPrenda(prendaId: string, formData: FormData) {
+  if (await esInvitado()) return;
   const file = formData.get("foto") as File | null;
   if (!file || file.size === 0) return;
 
@@ -632,6 +647,7 @@ export async function subirFotoPrenda(prendaId: string, formData: FormData) {
 }
 
 export async function eliminarFotoPrenda(prendaId: string, url: string) {
+  if (await esInvitado()) return;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data: p } = await sb.from("prendas").select("fotos").eq("id", prendaId).single();
@@ -654,6 +670,7 @@ export async function eliminarFotoPrenda(prendaId: string, url: string) {
 
 /** Envía un empeño vencido a remate: la prenda pasa a estar en venta. */
 export async function enviarARemate(empenoId: string) {
+  if (await esInvitado()) return;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data, error } = await sb.from("empenos").select("prenda_id").eq("id", empenoId).single();
@@ -675,6 +692,7 @@ export async function enviarARemate(empenoId: string) {
 
 /** Registra la venta de una prenda en venta. */
 export async function registrarVenta(form: FormData) {
+  if (await esInvitado()) return;
   const prendaId = s(form, "prendaId");
   const precio = num(form, "precio");
   const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
@@ -740,6 +758,7 @@ export async function registrarVenta(form: FormData) {
 
 /** Compra directa: se adquiere un artículo (crea prenda en venta + salida de caja). */
 export async function crearCompra(form: FormData) {
+  if (await esInvitado()) return;
   const monto = num(form, "monto");
   const clienteId = sn(form, "clienteId");
   const prendaBase = {
@@ -842,6 +861,7 @@ export async function crearCompra(form: FormData) {
 
 /** Crea un apartado sobre una prenda en venta, con enganche inicial. */
 export async function crearApartado(form: FormData) {
+  if (await esInvitado()) return;
   const prendaId = s(form, "prendaId");
   const clienteId = s(form, "clienteId");
   const precioTotal = num(form, "precioTotal");
@@ -909,6 +929,7 @@ export async function crearApartado(form: FormData) {
 
 /** Registra un abono a un apartado; si se completa, se liquida (prenda vendida). */
 export async function abonarApartado(id: string, form: FormData) {
+  if (await esInvitado()) return;
   const monto = num(form, "monto");
 
   if (supabaseConfigured) {
@@ -958,6 +979,7 @@ export async function abonarApartado(id: string, form: FormData) {
 
 /** Cancela un apartado; la prenda vuelve a estar en venta. */
 export async function cancelarApartado(id: string) {
+  if (await esInvitado()) return;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data: a, error } = await sb.from("apartados").select("prenda_id").eq("id", id).single();
@@ -979,6 +1001,7 @@ export async function cancelarApartado(id: string) {
 // ----------------- CAJA -----------------
 
 export async function registrarMovimiento(form: FormData) {
+  if (await esInvitado()) return;
   const tipo = (s(form, "tipo") || "gasto") as TipoMovimiento;
   const entradas: TipoMovimiento[] = ["desempeno", "refrendo", "abono", "venta", "apertura", "deposito"];
   const datos = {

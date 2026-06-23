@@ -22,12 +22,6 @@ export async function middleware(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const sesion = await verificarSesion(token);
 
-  // Invitado (sin contraseña): solo puede ver la Oficina Virtual.
-  if (sesion?.rol === "invitado") {
-    if (pathname.startsWith("/oficina")) return conPathname(req);
-    return NextResponse.redirect(new URL("/oficina", req.url));
-  }
-
   // Página de login: si ya hay sesión, mandar al tablero
   if (pathname === "/login") {
     if (sesion) return NextResponse.redirect(new URL("/", req.url));

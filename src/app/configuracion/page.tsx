@@ -14,7 +14,7 @@ import { formatMXN } from "@/lib/format";
 
 export default async function ConfiguracionPage() {
   const actual = await getUsuarioActual();
-  if (!actual || (actual.rol !== "admin" && actual.rol !== "gerente")) redirect("/");
+  if (!actual || !["admin", "gerente", "invitado"].includes(actual.rol)) redirect("/");
 
   const niveles = [0, 4, 6].map((n) => tasaPorHistorial(n));
 

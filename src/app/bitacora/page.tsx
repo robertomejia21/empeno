@@ -8,7 +8,7 @@ import type { RolUsuario } from "@/lib/types";
 
 export default async function BitacoraPage() {
   const actual = await getUsuarioActual();
-  if (!actual || (actual.rol !== "admin" && actual.rol !== "gerente")) redirect("/");
+  if (!actual || !["admin", "gerente", "invitado"].includes(actual.rol)) redirect("/");
 
   const eventos = await listarBitacora(200);
 

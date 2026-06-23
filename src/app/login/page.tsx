@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { iniciarSesion } from "@/lib/auth-actions";
+import { iniciarSesion, entrarComoInvitado } from "@/lib/auth-actions";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default async function LoginPage({
@@ -80,6 +80,20 @@ export default async function LoginPage({
               Iniciar sesión
             </button>
           </form>
+
+          <div className="my-5 flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-border" /> o <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <form action={entrarComoInvitado}>
+            <button
+              type="submit"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-foreground transition hover:bg-surface-2"
+            >
+              🏢 Entrar a la Oficina Virtual
+            </button>
+          </form>
+          <p className="mt-2 text-center text-xs text-muted">Acceso sin contraseña · solo lectura</p>
 
           <p className="mt-6 text-center text-xs text-muted">
             Casa de empeño · acceso restringido al personal autorizado

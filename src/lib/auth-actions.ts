@@ -40,6 +40,19 @@ export async function iniciarSesion(form: FormData) {
   redirect(next.startsWith("/") ? next : "/");
 }
 
+export async function entrarComoInvitado() {
+  const token = await firmarSesion({ uid: "invitado", nombre: "Oficina Virtual", rol: "invitado" });
+  const store = await cookies();
+  store.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 6,
+  });
+  redirect("/oficina");
+}
+
 export async function cerrarSesion() {
   const store = await cookies();
   store.delete(SESSION_COOKIE);

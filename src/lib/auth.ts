@@ -83,6 +83,7 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
   gerente: "Gerente",
   cajero: "Cajero",
   valuador: "Valuador",
+  invitado: "Invitado",
 };
 
 /** Rutas permitidas por rol. admin/gerente ven todo. */
@@ -91,9 +92,14 @@ const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   gerente: "*",
   cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja"],
   valuador: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
+  invitado: ["/oficina"],
 };
 
 export function puedeAcceder(rol: RolUsuario, href: string): boolean {
+  // La Oficina Virtual es exclusiva del invitado (vista de solo lectura).
+  if (href.startsWith("/oficina")) return rol === "invitado";
+  // El invitado no accede a nada más.
+  if (rol === "invitado") return false;
   // La gestión de usuarios es exclusiva de admin.
   if (href.startsWith("/usuarios")) return rol === "admin";
   const p = PERMISOS[rol];

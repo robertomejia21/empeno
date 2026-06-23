@@ -13,6 +13,7 @@ export const navGroups: NavGroup[] = [
   {
     titulo: "Operación",
     items: [
+      { href: "/oficina", label: "Oficina virtual", icon: "🏢" },
       { href: "/", label: "Tablero", icon: "📊" },
       { href: "/empenos", label: "Empeños", icon: "🤝" },
       { href: "/prendas", label: "Prendas", icon: "💍" },

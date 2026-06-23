@@ -161,7 +161,7 @@ export interface Apartado {
   creadoEn: string;
 }
 
-export type RolUsuario = "admin" | "gerente" | "cajero" | "valuador";
+export type RolUsuario = "admin" | "gerente" | "cajero" | "valuador" | "invitado";
 
 export interface Usuario {
   id: ID;

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { obtenerCliente, listarEmpenos } from "@/lib/db/repo";
 import { tasaPorHistorial } from "@/lib/interes";
 import { formatFecha, formatFechaLarga, formatMXN } from "@/lib/format";
-import { Card, CardHeader, PageHeader, LinkButton, Badge } from "@/components/ui";
+import { Card, CardHeader, PageHeader, LinkButton, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 
 export default async function ClienteDetalle({
@@ -21,6 +21,7 @@ export default async function ClienteDetalle({
 
   return (
     <div className="mx-auto max-w-4xl">
+      <VolverLink href="/clientes" label="Clientes" />
       <PageHeader
         title={`${cliente.nombre} ${cliente.apellidoPaterno} ${cliente.apellidoMaterno}`}
         subtitle={`Cliente desde ${formatFechaLarga(cliente.creadoEn)}`}

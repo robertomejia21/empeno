@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { obtenerPrenda } from "@/lib/db/repo";
 import { subirFotoPrenda, eliminarFotoPrenda } from "@/lib/actions";
 import { formatMXN, formatFechaLarga } from "@/lib/format";
-import { Card, CardHeader, PageHeader } from "@/components/ui";
+import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
@@ -28,6 +28,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
 
   return (
     <div className="mx-auto max-w-4xl">
+      <VolverLink href="/prendas" label="Prendas" />
       <PageHeader
         title={p.descripcion}
         subtitle={`${p.folio} · registrada ${formatFechaLarga(p.creadoEn)}`}

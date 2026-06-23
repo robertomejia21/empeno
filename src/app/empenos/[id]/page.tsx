@@ -4,7 +4,7 @@ import { obtenerEmpeno } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
-import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
+import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { Boleta } from "./Boleta";
@@ -34,6 +34,7 @@ export default async function EmpenoDetalle({
   return (
     <div className="mx-auto max-w-4xl">
       <div className="no-print">
+        <VolverLink href="/empenos" label="Empeños" />
         <PageHeader
           title={`Empeño ${empeno.folio}`}
           subtitle={`Creado el ${formatFechaLarga(empeno.creadoEn)}`}

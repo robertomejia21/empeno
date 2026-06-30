@@ -61,8 +61,12 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   // Paso 5 — préstamo
   const [monto, setMonto] = useState("");
 
-  // Paso 6 — intereses
+  // Paso 6 — intereses y cargos
   const [tasa, setTasa] = useState(10.8);
+  const [almacenajePct, setAlmacenajePct] = useState(0);
+  const [ivaPct, setIvaPct] = useState(0);
+  const [metodoPago, setMetodoPago] = useState("efectivo");
+  const [comisionista, setComisionista] = useState("");
   const [periodo, setPeriodo] = useState<PeriodoInteres>("mensual");
   const [plazo, setPlazo] = useState(1);
   const [diasGracia, setDiasGracia] = useState(7);
@@ -156,10 +160,18 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
           fotos,
           funcionamientoValidado: funcionamiento,
           documentacionValidada: documentacion,
+          seguro: null,
+          gps: esVehiculo ? "Por verificar" : null,
+          garantia: esVehiculo ? bien.descripcion : null,
           notas: condiciones || null,
         },
         montoPrestado: montoNum,
         tasaInteres: tasa,
+        almacenajePct,
+        ivaPct,
+        metodoPago: metodoPago as "efectivo" | "tarjeta" | "transferencia" | "cheque",
+        comisionista: comisionista || null,
+        centroCosto: null,
         periodo,
         plazoPeriodos: plazo,
         diasGracia,
@@ -382,7 +394,18 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Campo label="Tasa de interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
+              <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
+              <Campo label="Almacenaje (% por periodo)" type="number" value={String(almacenajePct)} onChange={(v) => setAlmacenajePct(parseFloat(v) || 0)} />
+              <Campo label="IVA (%)" type="number" value={String(ivaPct)} onChange={(v) => setIvaPct(parseFloat(v) || 0)} />
+              <div>
+                <Label>Método de pago</Label>
+                <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className={inputCls}>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="tarjeta">Tarjeta</option>
+                </select>
+              </div>
               <div>
                 <Label>Periodo</Label>
                 <select value={periodo} onChange={(e) => setPeriodo(e.target.value as PeriodoInteres)} className={inputCls}>
@@ -397,6 +420,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 <Label>Fecha de inicio</Label>
                 <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className={inputCls} />
               </div>
+              <Campo label="Comisionista (opcional)" value={comisionista} onChange={setComisionista} />
             </div>
           </div>
         )}

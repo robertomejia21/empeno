@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerEmpeno } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
+import { refrendarEmpeno, desempenarEmpeno, abonarCapital } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -72,20 +72,18 @@ export default async function EmpenoDetalle({
               subtitle={`${calc.periodosTranscurridos} periodo(s) · ${calc.diasTranscurridos} días transcurridos`}
             />
             <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3">
-              <Celda etiqueta="Capital" valor={formatMXN(calc.capital)} />
+              <Celda etiqueta="Capital pendiente" valor={formatMXN(calc.capital)} />
               <Celda etiqueta="Interés acumulado" valor={formatMXN(calc.interesAcumulado)} />
-              <Celda
-                etiqueta="Total desempeño"
-                valor={formatMXN(calc.totalDesempeno)}
-                destacado
-              />
-              <Celda etiqueta="Refrendo (sólo interés)" valor={formatMXN(calc.totalRefrendo)} />
-              <Celda etiqueta="Tasa" valor={`${formatPorcentaje(empeno.tasaInteres)} ${periodoLabel[empeno.periodo].toLowerCase()}`} />
-              <Celda
-                etiqueta={calc.diasParaVencer >= 0 ? "Días para vencer" : "Días vencido"}
-                valor={Math.abs(calc.diasParaVencer).toString()}
-              />
+              <Celda etiqueta="Almacenaje" valor={formatMXN(calc.almacenajeAcumulado)} />
+              <Celda etiqueta="IVA" valor={formatMXN(calc.ivaAcumulado)} />
+              <Celda etiqueta="Refrendo (periodo)" valor={formatMXN(calc.totalRefrendo)} />
+              <Celda etiqueta="Total desempeño" valor={formatMXN(calc.totalDesempeno)} destacado />
             </div>
+            {empeno.abonoCapital > 0 && (
+              <p className="border-t border-border px-5 py-2 text-xs text-muted">
+                Abonos a capital aplicados: <strong className="text-success">{formatMXN(empeno.abonoCapital)}</strong>
+              </p>
+            )}
 
             {activo && (
               <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
@@ -104,6 +102,18 @@ export default async function EmpenoDetalle({
                     Desempeñar · {formatMXN(calc.totalDesempeno)}
                   </ConfirmSubmit>
                 </form>
+                <form action={abonarCapital.bind(null, empeno.id)} className="flex items-center gap-2">
+                  <input
+                    name="monto"
+                    type="number"
+                    step="0.01"
+                    placeholder="Abono a capital"
+                    className="w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm focus:border-primary-2 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary-2/20"
+                  />
+                  <ConfirmSubmit variante="secondary" confirmacion="¿Registrar abono a capital?">
+                    Abonar capital
+                  </ConfirmSubmit>
+                </form>
               </div>
             )}
           </Card>
@@ -117,6 +127,11 @@ export default async function EmpenoDetalle({
               <Linea etiqueta="Periodo" valor={periodoLabel[empeno.periodo]} />
               <Linea etiqueta="Plazo" valor={`${empeno.plazoPeriodos} periodo(s)`} />
               <Linea etiqueta="Días de gracia" valor={empeno.diasGracia.toString()} />
+              <Linea etiqueta="Método de pago" valor={empeno.metodoPago} />
+              {(empeno.almacenajePct > 0 || empeno.ivaPct > 0) && (
+                <Linea etiqueta="Cargos" valor={`Almacenaje ${empeno.almacenajePct}% · IVA ${empeno.ivaPct}%`} />
+              )}
+              {empeno.comisionista && <Linea etiqueta="Comisionista" valor={empeno.comisionista} />}
             </dl>
           </Card>
         </div>

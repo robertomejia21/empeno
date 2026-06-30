@@ -25,37 +25,45 @@ function diffDias(desde: string, hasta: Date): number {
  * - Desempeño (liquidar): capital + interés acumulado.
  * - Refrendo (renovar): sólo el interés acumulado del periodo en curso.
  */
-export function calcularLiquidacion(
-  empeno: Pick<
-    Empeno,
-    | "montoPrestado"
-    | "tasaInteres"
-    | "periodo"
-    | "fechaInicio"
-    | "fechaVencimiento"
-    | "diasGracia"
-  >,
-  aFecha: Date = new Date()
-): CalculoLiquidacion {
+type EmpenoCalc = Pick<
+  Empeno,
+  "montoPrestado" | "tasaInteres" | "periodo" | "fechaInicio" | "fechaVencimiento" | "diasGracia"
+> &
+  Partial<Pick<Empeno, "almacenajePct" | "ivaPct" | "abonoCapital">>;
+
+export function calcularLiquidacion(empeno: EmpenoCalc, aFecha: Date = new Date()): CalculoLiquidacion {
   const dias = Math.max(0, diffDias(empeno.fechaInicio, aFecha));
   const diasPeriodo = DIAS_POR_PERIODO[empeno.periodo];
 
   // Periodos transcurridos (mínimo 1: al pactar ya se devenga el primer periodo)
   const periodosTranscurridos = Math.max(1, Math.ceil(dias / diasPeriodo));
 
+  const almacenajePct = empeno.almacenajePct ?? 0;
+  const ivaPct = empeno.ivaPct ?? 0;
+  const abonoCapital = empeno.abonoCapital ?? 0;
+
   const interesPorPeriodo = empeno.montoPrestado * (empeno.tasaInteres / 100);
+  const almacenajePorPeriodo = empeno.montoPrestado * (almacenajePct / 100);
+  const ivaPorPeriodo = (interesPorPeriodo + almacenajePorPeriodo) * (ivaPct / 100);
+
   const interesAcumulado = interesPorPeriodo * periodosTranscurridos;
+  const almacenajeAcumulado = almacenajePorPeriodo * periodosTranscurridos;
+  const ivaAcumulado = ivaPorPeriodo * periodosTranscurridos;
+
+  const capitalPendiente = Math.max(0, empeno.montoPrestado - abonoCapital);
 
   const diasParaVencer = -diffDias(empeno.fechaVencimiento, aFecha);
   const vencido = diasParaVencer < -empeno.diasGracia;
 
   return {
-    capital: empeno.montoPrestado,
+    capital: round2(capitalPendiente),
     interesAcumulado: round2(interesAcumulado),
+    almacenajeAcumulado: round2(almacenajeAcumulado),
+    ivaAcumulado: round2(ivaAcumulado),
     periodosTranscurridos,
     diasTranscurridos: dias,
-    totalDesempeno: round2(empeno.montoPrestado + interesAcumulado),
-    totalRefrendo: round2(interesPorPeriodo), // interés de un periodo para renovar
+    totalDesempeno: round2(capitalPendiente + interesAcumulado + almacenajeAcumulado + ivaAcumulado),
+    totalRefrendo: round2(interesPorPeriodo + almacenajePorPeriodo + ivaPorPeriodo),
     vencido,
     diasParaVencer,
   };

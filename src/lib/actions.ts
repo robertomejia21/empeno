@@ -155,6 +155,9 @@ export async function crearPrenda(form: FormData) {
     monto_prestamo_sugerido: sugerido,
     estado: "en_avaluo",
     ubicacion_resguardo: sn(form, "ubicacionResguardo"),
+    seguro: form.get("seguro") ? num(form, "seguro") : null,
+    gps: sn(form, "gps"),
+    garantia: sn(form, "garantia"),
     notas: sn(form, "notas"),
   };
 
@@ -182,6 +185,9 @@ export async function crearPrenda(form: FormData) {
       estado: "en_avaluo",
       fotos: [],
       ubicacionResguardo: datos.ubicacion_resguardo,
+      seguro: datos.seguro,
+      gps: datos.gps,
+      garantia: datos.garantia,
       notas: datos.notas,
       creadoEn: new Date().toISOString(),
     };
@@ -202,6 +208,12 @@ export async function crearEmpeno(form: FormData) {
   const prendaId = s(form, "prendaId");
   const clienteId = s(form, "clienteId");
   const tasaInteres = num(form, "tasaInteres");
+  const almacenajePct = num(form, "almacenajePct");
+  const ivaPct = num(form, "ivaPct");
+  const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
+  const comisionista = sn(form, "comisionista");
+  const centroCosto = sn(form, "centroCosto");
+  const realSucursal = form.get("realSucursal") ? num(form, "realSucursal") : null;
   const diasGracia = form.get("diasGracia") ? Math.round(num(form, "diasGracia")) : 7;
   const fechaVencimiento = calcularVencimiento(fechaInicio, periodo, plazoPeriodos);
 
@@ -216,6 +228,12 @@ export async function crearEmpeno(form: FormData) {
         prenda_id: prendaId,
         monto_prestado: montoPrestado,
         tasa_interes: tasaInteres,
+        almacenaje_pct: almacenajePct,
+        iva_pct: ivaPct,
+        metodo_pago: metodoPago,
+        comisionista,
+        centro_costo: centroCosto,
+        real_sucursal: realSucursal,
         periodo,
         plazo_periodos: plazoPeriodos,
         fecha_inicio: fechaInicio,
@@ -246,6 +264,13 @@ export async function crearEmpeno(form: FormData) {
       prendaId,
       montoPrestado,
       tasaInteres,
+      almacenajePct,
+      ivaPct,
+      metodoPago,
+      abonoCapital: 0,
+      comisionista,
+      centroCosto,
+      realSucursal,
       periodo,
       plazoPeriodos,
       fechaInicio,
@@ -288,6 +313,9 @@ export async function refrendarEmpeno(id: string) {
     const calc = calcularLiquidacion({
       montoPrestado: Number(data.monto_prestado),
       tasaInteres: Number(data.tasa_interes),
+      almacenajePct: Number(data.almacenaje_pct ?? 0),
+      ivaPct: Number(data.iva_pct ?? 0),
+      abonoCapital: Number(data.abono_capital ?? 0),
       periodo: data.periodo,
       fechaInicio: data.fecha_inicio,
       fechaVencimiento: data.fecha_vencimiento,
@@ -347,6 +375,9 @@ export async function desempenarEmpeno(id: string) {
     const calc = calcularLiquidacion({
       montoPrestado: Number(data.monto_prestado),
       tasaInteres: Number(data.tasa_interes),
+      almacenajePct: Number(data.almacenaje_pct ?? 0),
+      ivaPct: Number(data.iva_pct ?? 0),
+      abonoCapital: Number(data.abono_capital ?? 0),
       periodo: data.periodo,
       fechaInicio: data.fecha_inicio,
       fechaVencimiento: data.fecha_vencimiento,
@@ -385,6 +416,35 @@ export async function desempenarEmpeno(id: string) {
   await bitacoraAuto("Desempeño registrado", null, `empeño ${id}`);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
+  revalidatePath("/caja");
+}
+
+/** Abono a capital: reduce el saldo del préstamo y entra a caja. */
+export async function abonarCapital(id: string, form: FormData) {
+  if (await esInvitado()) return;
+  const monto = num(form, "monto");
+  if (monto <= 0) return;
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data, error } = await sb.from("empenos").select("folio, abono_capital").eq("id", id).single();
+    if (error) throw error;
+    await sb.from("empenos").update({ abono_capital: Number(data.abono_capital ?? 0) + monto }).eq("id", id);
+    await sb.from("movimientos_caja").insert({
+      tipo: "abono", monto, es_entrada: true, concepto: `Abono a capital ${data.folio}`, empeno_id: id, referencia: data.folio,
+    });
+  } else {
+    const store = getStore();
+    const e = store.empenos.find((x) => x.id === id);
+    if (!e) return;
+    e.abonoCapital += monto;
+    store.movimientos.push({
+      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "abono", monto, esEntrada: true,
+      concepto: `Abono a capital ${e.folio}`, empenoId: e.id, referencia: e.folio, creadoEn: new Date().toISOString(),
+    });
+  }
+  await bitacoraAuto("Abono a capital", `${monto} MXN`, `empeño ${id}`);
+  revalidatePath(`/empenos/${id}`);
   revalidatePath("/caja");
 }
 
@@ -445,6 +505,9 @@ export async function crearEmpenoGuiado(
         estado: "empenada",
         fotos: data.prenda.fotos,
         ubicacion_resguardo: data.prenda.ubicacionResguardo,
+        seguro: data.prenda.seguro,
+        gps: data.prenda.gps,
+        garantia: data.prenda.garantia,
         notas: data.prenda.notas,
       })
       .select("id")
@@ -459,6 +522,11 @@ export async function crearEmpenoGuiado(
         prenda_id: p.id,
         monto_prestado: data.montoPrestado,
         tasa_interes: data.tasaInteres,
+        almacenaje_pct: data.almacenajePct,
+        iva_pct: data.ivaPct,
+        metodo_pago: data.metodoPago,
+        comisionista: data.comisionista,
+        centro_costo: data.centroCosto,
         periodo: data.periodo,
         plazo_periodos: data.plazoPeriodos,
         fecha_inicio: data.fechaInicio,
@@ -532,6 +600,9 @@ export async function crearEmpenoGuiado(
     estado: "empenada",
     fotos: data.prenda.fotos,
     ubicacionResguardo: data.prenda.ubicacionResguardo,
+    seguro: data.prenda.seguro,
+    gps: data.prenda.gps,
+    garantia: data.prenda.garantia,
     notas: data.prenda.notas,
     creadoEn: ts,
   };
@@ -544,6 +615,13 @@ export async function crearEmpenoGuiado(
     prendaId: prenda.id,
     montoPrestado: data.montoPrestado,
     tasaInteres: data.tasaInteres,
+    almacenajePct: data.almacenajePct,
+    ivaPct: data.ivaPct,
+    metodoPago: data.metodoPago,
+    abonoCapital: 0,
+    comisionista: data.comisionista,
+    centroCosto: data.centroCosto,
+    realSucursal: null,
     periodo: data.periodo,
     plazoPeriodos: data.plazoPeriodos,
     fechaInicio: data.fechaInicio,
@@ -824,6 +902,9 @@ export async function crearCompra(form: FormData) {
       estado: "en_venta",
       fotos: [],
       ubicacionResguardo: null,
+      seguro: null,
+      gps: null,
+      garantia: null,
       notas: sn(form, "notas"),
       creadoEn: new Date().toISOString(),
     };

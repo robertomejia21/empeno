@@ -66,6 +66,10 @@ export interface Prenda {
   estado: EstadoPrenda;
   fotos: string[]; // urls
   ubicacionResguardo: string | null; // dónde se almacena físicamente
+  // Vehículos
+  seguro: number | null;
+  gps: string | null; // estado del GPS (conectado/desconectado)
+  garantia: string | null; // descripción de la garantía (ej. auto)
   notas: string | null;
   creadoEn: string;
 }
@@ -86,7 +90,14 @@ export interface Empeno {
   clienteId: ID;
   prendaId: ID;
   montoPrestado: number; // capital entregado al cliente (MXN)
-  tasaInteres: number; // % por periodo (ej. 15 = 15% mensual)
+  tasaInteres: number; // % de interés por periodo
+  almacenajePct: number; // % de almacenaje por periodo
+  ivaPct: number; // % de IVA (sobre interés + almacenaje)
+  metodoPago: MetodoPago; // efectivo / transferencia / cheque
+  abonoCapital: number; // capital abonado acumulado (reduce el saldo)
+  comisionista: string | null;
+  centroCosto: string | null;
+  realSucursal: number | null; // monto real entregado en sucursal
   periodo: PeriodoInteres;
   plazoPeriodos: number; // número de periodos del contrato (ej. 1 mes)
   fechaInicio: string; // ISO date
@@ -121,7 +132,7 @@ export interface MovimientoCaja {
   creadoEn: string;
 }
 
-export type MetodoPago = "efectivo" | "tarjeta" | "transferencia";
+export type MetodoPago = "efectivo" | "tarjeta" | "transferencia" | "cheque";
 
 export interface Venta {
   id: ID;
@@ -233,6 +244,9 @@ export interface PrendaInput {
   fotos: string[];
   funcionamientoValidado: boolean;
   documentacionValidada: boolean;
+  seguro: number | null;
+  gps: string | null;
+  garantia: string | null;
   notas: string | null;
 }
 
@@ -242,6 +256,11 @@ export interface EmpenoGuiadoPayload {
   prenda: PrendaInput;
   montoPrestado: number;
   tasaInteres: number;
+  almacenajePct: number;
+  ivaPct: number;
+  metodoPago: MetodoPago;
+  comisionista: string | null;
+  centroCosto: string | null;
   periodo: PeriodoInteres;
   plazoPeriodos: number;
   diasGracia: number;
@@ -250,12 +269,14 @@ export interface EmpenoGuiadoPayload {
 }
 
 export interface CalculoLiquidacion {
-  capital: number;
+  capital: number; // capital pendiente (monto prestado - abonos a capital)
   interesAcumulado: number;
+  almacenajeAcumulado: number;
+  ivaAcumulado: number;
   periodosTranscurridos: number;
   diasTranscurridos: number;
-  totalDesempeno: number; // capital + interés para liquidar hoy
-  totalRefrendo: number; // sólo interés para renovar
+  totalDesempeno: number; // capital + interés + almacenaje + IVA para liquidar hoy
+  totalRefrendo: number; // interés + almacenaje + IVA de un periodo para renovar
   vencido: boolean;
   diasParaVencer: number; // negativo si ya venció
 }

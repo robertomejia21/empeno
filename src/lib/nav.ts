@@ -35,6 +35,7 @@ export const navGroups: NavGroup[] = [
     titulo: "Finanzas",
     items: [
       { href: "/caja", label: "Caja", icon: "💵" },
+      { href: "/corte", label: "Corte de caja", icon: "🧮" },
       { href: "/cobranza", label: "Cobranza", icon: "💳" },
       { href: "/reportes", label: "Reportes", icon: "📈" },
     ],

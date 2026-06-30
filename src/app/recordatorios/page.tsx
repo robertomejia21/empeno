@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { enviarRecordatorioWhatsApp } from "@/lib/actions";
+import { enviarRecordatorioWhatsApp, enviarRecordatoriosHoy } from "@/lib/actions";
 import { whatsappHabilitado } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, EmptyState } from "@/components/ui";
@@ -28,13 +28,24 @@ export default async function RecordatoriosPage() {
       <PageHeader
         title="Recordatorios"
         subtitle="Seguimiento de vencimientos para contactar al cliente"
+        action={
+          waOn ? (
+            <form action={enviarRecordatoriosHoy}>
+              <ConfirmSubmit confirmacion="¿Enviar por WhatsApp un recordatorio a todos los vencidos y por vencer (≤3 días)?">
+                📨 Enviar recordatorios de hoy
+              </ConfirmSubmit>
+            </form>
+          ) : undefined
+        }
       />
 
-      {waOn && (
-        <div className="mb-6 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success">
-          ✅ WhatsApp conectado: puedes enviar recordatorios directamente desde aquí.
-        </div>
-      )}
+      <div className="mb-6 rounded-xl border border-info/20 bg-info-soft px-5 py-3 text-sm text-info">
+        {waOn ? (
+          <>✅ WhatsApp conectado. Además, cada día a las 10:00 se envían los recordatorios automáticamente.</>
+        ) : (
+          <>⏳ WhatsApp aún no está vinculado: los botones abren WhatsApp Web. Escanea el QR para activar el envío automático diario (10:00 a.m.).</>
+        )}
+      </div>
 
       <div className="space-y-6">
         <Grupo titulo="Vencidos" tono="danger" items={vencidos} vencido waOn={waOn} />

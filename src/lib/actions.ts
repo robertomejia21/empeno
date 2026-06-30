@@ -16,12 +16,13 @@ import type {
   MetodoPago,
   Compra,
   Apartado,
+  CorteCaja,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, listarEmpenos } from "@/lib/db/repo";
+import { obtenerEmpeno, listarEmpenos, listarMovimientos } from "@/lib/db/repo";
 import { enviarWhatsApp } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
@@ -1029,6 +1030,47 @@ export async function registrarMovimiento(form: FormData) {
     getStore().movimientos.push(mov);
   }
   revalidatePath("/caja");
+}
+
+// ----------------- CORTE DE CAJA -----------------
+
+export async function registrarCorte(form: FormData) {
+  if (await esInvitado()) return;
+  const contado = num(form, "contado");
+  const notas = sn(form, "notas");
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const movs = await listarMovimientos();
+  const esperado = movs.reduce((s, m) => s + (m.esEntrada ? m.monto : -m.monto), 0);
+  const delDia = movs.filter((m) => m.fecha.slice(0, 10) === hoy);
+  const entradasDia = delDia.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0);
+  const salidasDia = delDia.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0);
+  const diferencia = Math.round((contado - esperado) * 100) / 100;
+  const u = await getUsuarioActual();
+
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("cortes_caja").insert({
+      esperado, contado, diferencia, entradas_dia: entradasDia, salidas_dia: salidasDia,
+      usuario_nombre: u?.nombre ?? null, notas,
+    });
+    if (error) throw error;
+  } else {
+    getStore().cortes.unshift({
+      id: nuevoId("ct"), fecha: hoy, esperado, contado, diferencia,
+      entradasDia, salidasDia, usuarioNombre: u?.nombre ?? null, notas,
+      creadoEn: new Date().toISOString(),
+    } as CorteCaja);
+  }
+  await bitacoraAuto("Corte de caja", `Esperado ${esperado} · contado ${contado} · dif ${diferencia}`, null);
+  revalidatePath("/corte");
+  revalidatePath("/caja");
+}
+
+/** Envía recordatorios de WhatsApp a todos los vencidos/por vencer (acción manual del día). */
+export async function enviarRecordatoriosHoy() {
+  if (await esInvitado()) return;
+  await enviarRecordatoriosPendientes();
+  revalidatePath("/recordatorios");
 }
 
 function revalidatePaths() {

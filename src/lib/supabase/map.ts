@@ -142,6 +142,21 @@ export function rowToBitacora(r: any): import("@/lib/types").Bitacora {
   };
 }
 
+export function rowToCorte(r: any): import("@/lib/types").CorteCaja {
+  return {
+    id: r.id,
+    fecha: r.fecha,
+    esperado: Number(r.esperado),
+    contado: Number(r.contado),
+    diferencia: Number(r.diferencia),
+    entradasDia: Number(r.entradas_dia),
+    salidasDia: Number(r.salidas_dia),
+    usuarioNombre: r.usuario_nombre,
+    notas: r.notas,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

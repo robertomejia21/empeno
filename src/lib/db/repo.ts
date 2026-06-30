@@ -7,7 +7,7 @@ import type {
   EmpenoConDetalle,
   MovimientoCaja,
 } from "@/lib/types";
-import type { Venta, Compra, Apartado, Usuario, Bitacora } from "@/lib/types";
+import type { Venta, Compra, Apartado, Usuario, Bitacora, CorteCaja } from "@/lib/types";
 import { getStore } from "./store";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import {
@@ -20,6 +20,7 @@ import {
   rowToApartado,
   rowToUsuario,
   rowToBitacora,
+  rowToCorte,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -237,6 +238,19 @@ export async function listarUsuarios(): Promise<Usuario[]> {
     return (data ?? []).map(rowToUsuario);
   }
   return [];
+}
+
+export async function listarCortes(): Promise<CorteCaja[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("cortes_caja")
+      .select("*")
+      .order("creado_en", { ascending: false })
+      .limit(60);
+    if (error) throw error;
+    return (data ?? []).map(rowToCorte);
+  }
+  return getStore().cortes.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 }
 
 export async function listarBitacora(limite = 200): Promise<Bitacora[]> {

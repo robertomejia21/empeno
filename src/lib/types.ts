@@ -172,6 +172,19 @@ export interface Usuario {
   creadoEn?: string;
 }
 
+export interface CorteCaja {
+  id: ID;
+  fecha: string;
+  esperado: number;
+  contado: number;
+  diferencia: number;
+  entradasDia: number;
+  salidasDia: number;
+  usuarioNombre: string | null;
+  notas: string | null;
+  creadoEn: string;
+}
+
 export interface Bitacora {
   id: ID;
   fecha: string;

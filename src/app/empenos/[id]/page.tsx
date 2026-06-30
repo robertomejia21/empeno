@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerEmpeno } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { refrendarEmpeno, desempenarEmpeno, abonarCapital } from "@/lib/actions";
+import { refrendarEmpeno, desempenarEmpeno, abonarCapital, enviarFotoVehiculo } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -163,7 +163,18 @@ export default async function EmpenoDetalle({
 
           {/* Prenda */}
           <Card>
-            <CardHeader title="Prenda en garantía" />
+            <CardHeader
+              title="Prenda en garantía"
+              action={
+                empeno.prenda.categoria === "Vehículos" ? (
+                  empeno.prenda.verificado ? (
+                    <Badge tono="success">✓ Verificado REPUVE</Badge>
+                  ) : (
+                    <Badge tono="danger">Sin verificar</Badge>
+                  )
+                ) : undefined
+              }
+            />
             <dl className="space-y-3 p-5 text-sm">
               <Linea etiqueta="Folio" valor={empeno.prenda.folio} />
               <Linea etiqueta="Descripción" valor={empeno.prenda.descripcion} />
@@ -172,7 +183,23 @@ export default async function EmpenoDetalle({
               {empeno.prenda.ubicacionResguardo && (
                 <Linea etiqueta="Resguardo" valor={empeno.prenda.ubicacionResguardo} />
               )}
+              {empeno.prenda.categoria === "Vehículos" && (
+                <>
+                  {empeno.prenda.gps && <Linea etiqueta="GPS" valor={empeno.prenda.gps} />}
+                  {empeno.prenda.repuveFolio && <Linea etiqueta="Folio REPUVE" valor={empeno.prenda.repuveFolio} />}
+                </>
+              )}
             </dl>
+            {empeno.prenda.categoria === "Vehículos" && activo && (
+              <div className="border-t border-border px-5 py-4">
+                <form action={enviarFotoVehiculo.bind(null, empeno.id)}>
+                  <ConfirmSubmit variante="secondary" confirmacion="¿Enviar la foto del vehículo al propietario por WhatsApp?">
+                    📷 Enviar foto al propietario
+                  </ConfirmSubmit>
+                </form>
+                <p className="mt-2 text-xs text-muted">Automático cada miércoles a las 10:00.</p>
+              </div>
+            )}
           </Card>
         </div>
       </div>

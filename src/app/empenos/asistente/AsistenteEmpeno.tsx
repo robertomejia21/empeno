@@ -79,6 +79,13 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [funcionamiento, setFuncionamiento] = useState(false);
   const [documentacion, setDocumentacion] = useState(false);
 
+  // Verificación de auto (REPUVE / robo / documentación)
+  const [repuveFolio, setRepuveFolio] = useState("");
+  const [sinRobo, setSinRobo] = useState(false);
+  const [docFactura, setDocFactura] = useState(false);
+  const [docTarjeta, setDocTarjeta] = useState(false);
+  const [docIdent, setDocIdent] = useState(false);
+
   // Finalización
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +130,14 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     }
   }
 
+  const autoVerificado = sinRobo && docFactura && docTarjeta && docIdent;
+
   async function finalizar() {
+    if (esVehiculo && !autoVerificado) {
+      setError("Para vehículos debes verificar REPUVE (sin reporte de robo) y la documentación completa.");
+      setPaso(8);
+      return;
+    }
     setGuardando(true);
     setError(null);
     try {
@@ -163,6 +177,8 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
           seguro: null,
           gps: esVehiculo ? "Por verificar" : null,
           garantia: esVehiculo ? bien.descripcion : null,
+          verificado: esVehiculo ? autoVerificado : true,
+          repuveFolio: esVehiculo ? repuveFolio || null : null,
           notas: condiciones || null,
         },
         montoPrestado: montoNum,
@@ -474,9 +490,28 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
               <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={3} className={inputCls} />
             </div>
             {esVehiculo && (
-              <div className="space-y-2 rounded-lg bg-surface-2 p-4">
-                <Check label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
-                <Check label="Documentación validada (factura, tarjeta de circulación)" checked={documentacion} onChange={setDocumentacion} />
+              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-soft p-4">
+                <p className="text-sm font-semibold text-warning">🚗 Verificación obligatoria del vehículo</p>
+                <a
+                  href="https://www2.repuve.gob.mx:8443/ciudadania/consulta/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-info underline-offset-2 hover:underline"
+                >
+                  🔎 Consultar en REPUVE (robo / situación legal) →
+                </a>
+                <Campo label="Folio de consulta REPUVE" value={repuveFolio} onChange={setRepuveFolio} placeholder="Folio o referencia de la consulta" />
+                <div className="space-y-2 border-t border-warning/20 pt-2">
+                  <Check label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />
+                  <Check label="Factura original verificada" checked={docFactura} onChange={setDocFactura} />
+                  <Check label="Tarjeta de circulación vigente" checked={docTarjeta} onChange={setDocTarjeta} />
+                  <Check label="Identificación del propietario coincide" checked={docIdent} onChange={setDocIdent} />
+                  <Check label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
+                  <Check label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
+                </div>
+                {!autoVerificado && (
+                  <p className="text-xs text-warning">Marca REPUVE sin robo + factura + tarjeta + identificación para poder registrar.</p>
+                )}
               </div>
             )}
             {error && <p className="text-sm text-danger">⚠️ {error}</p>}

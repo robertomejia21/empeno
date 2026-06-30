@@ -70,6 +70,9 @@ export interface Prenda {
   seguro: number | null;
   gps: string | null; // estado del GPS (conectado/desconectado)
   garantia: string | null; // descripción de la garantía (ej. auto)
+  // Verificación (autos): REPUVE / no reportado robado / documentación
+  verificado: boolean;
+  repuveFolio: string | null;
   notas: string | null;
   creadoEn: string;
 }
@@ -247,6 +250,8 @@ export interface PrendaInput {
   seguro: number | null;
   gps: string | null;
   garantia: string | null;
+  verificado: boolean;
+  repuveFolio: string | null;
   notas: string | null;
 }
 

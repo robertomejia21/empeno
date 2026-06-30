@@ -50,6 +50,29 @@ export async function enviarWhatsApp(telefono: string | null, texto: string): Pr
   }
 }
 
+/** Envía una imagen (por URL) por WhatsApp vía Evolution API. */
+export async function enviarWhatsAppMedia(
+  telefono: string | null,
+  urlImagen: string,
+  caption: string
+): Promise<ResultadoWA> {
+  if (!whatsappHabilitado()) return { ok: false, error: "WhatsApp no configurado" };
+  const numero = formatearNumeroMX(telefono);
+  if (!numero) return { ok: false, error: "Teléfono inválido" };
+  try {
+    const res = await fetch(`${URL}/message/sendMedia/${INSTANCE}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: KEY! },
+      body: JSON.stringify({ number: numero, mediatype: "image", media: urlImagen, caption }),
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: false, error: `Evolution ${res.status}: ${(await res.text()).slice(0, 120)}` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Error de red" };
+  }
+}
+
 /** ¿Está conectada la instancia de WhatsApp? */
 export async function estadoInstancia(): Promise<string> {
   if (!whatsappHabilitado()) return "no_configurado";

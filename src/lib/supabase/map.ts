@@ -56,6 +56,8 @@ export function rowToPrenda(r: any): Prenda {
     seguro: r.seguro == null ? null : Number(r.seguro),
     gps: r.gps ?? null,
     garantia: r.garantia ?? null,
+    verificado: Boolean(r.verificado),
+    repuveFolio: r.repuve_folio ?? null,
     notas: r.notas,
     creadoEn: r.creado_en,
   };

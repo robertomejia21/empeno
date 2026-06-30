@@ -23,7 +23,7 @@ import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, listarEmpenos, listarMovimientos } from "@/lib/db/repo";
-import { enviarWhatsApp } from "@/lib/whatsapp";
+import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
 
@@ -158,6 +158,8 @@ export async function crearPrenda(form: FormData) {
     seguro: form.get("seguro") ? num(form, "seguro") : null,
     gps: sn(form, "gps"),
     garantia: sn(form, "garantia"),
+    verificado: form.get("verificado") === "on",
+    repuve_folio: sn(form, "repuveFolio"),
     notas: sn(form, "notas"),
   };
 
@@ -188,6 +190,8 @@ export async function crearPrenda(form: FormData) {
       seguro: datos.seguro,
       gps: datos.gps,
       garantia: datos.garantia,
+      verificado: datos.verificado,
+      repuveFolio: datos.repuve_folio,
       notas: datos.notas,
       creadoEn: new Date().toISOString(),
     };
@@ -508,6 +512,8 @@ export async function crearEmpenoGuiado(
         seguro: data.prenda.seguro,
         gps: data.prenda.gps,
         garantia: data.prenda.garantia,
+        verificado: data.prenda.verificado,
+        repuve_folio: data.prenda.repuveFolio,
         notas: data.prenda.notas,
       })
       .select("id")
@@ -603,6 +609,8 @@ export async function crearEmpenoGuiado(
     seguro: data.prenda.seguro,
     gps: data.prenda.gps,
     garantia: data.prenda.garantia,
+    verificado: data.prenda.verificado,
+    repuveFolio: data.prenda.repuveFolio,
     notas: data.prenda.notas,
     creadoEn: ts,
   };
@@ -692,6 +700,43 @@ export async function enviarRecordatoriosPendientes(): Promise<{ enviados: numbe
     else fallidos++;
   }
   await bitacoraAuto("Recordatorios automáticos", `${enviados} enviados, ${fallidos} fallidos`, null);
+  return { enviados, fallidos };
+}
+
+/** Envía la foto del vehículo a su propietario por WhatsApp (prueba de resguardo). */
+export async function enviarFotoVehiculo(empenoId: string) {
+  if (await esInvitado()) return;
+  const e = await obtenerEmpeno(empenoId);
+  if (!e || !e.prenda.fotos[0]) return;
+  const caption =
+    `Hola ${e.cliente.nombre}, le compartimos la foto de su vehículo en resguardo ` +
+    `(${e.prenda.garantia ?? e.prenda.descripcion}). Empeño ${e.folio}. Su unidad está segura con nosotros.`;
+  const res = await enviarWhatsAppMedia(e.cliente.telefono, e.prenda.fotos[0], caption);
+  await bitacoraAuto(
+    res.ok ? "Foto de vehículo enviada" : "Foto de vehículo falló",
+    res.ok ? `a ${e.cliente.nombre}` : res.error ?? null,
+    e.folio
+  );
+  revalidatePath(`/empenos/${empenoId}`);
+}
+
+/** Envío semanal (miércoles): foto del vehículo a cada propietario con empeño activo. */
+export async function enviarFotosVehiculosSemanal(): Promise<{ enviados: number; fallidos: number }> {
+  const empenos = await listarEmpenos();
+  let enviados = 0;
+  let fallidos = 0;
+  for (const e of empenos) {
+    if (e.estado !== "activo" && e.estado !== "refrendado") continue;
+    if (e.prenda.categoria !== "Vehículos") continue;
+    if (!e.prenda.fotos[0] || !e.cliente.telefono) continue;
+    const caption =
+      `Hola ${e.cliente.nombre}, foto semanal de su vehículo en resguardo ` +
+      `(${e.prenda.garantia ?? e.prenda.descripcion}). Empeño ${e.folio}.`;
+    const res = await enviarWhatsAppMedia(e.cliente.telefono, e.prenda.fotos[0], caption);
+    if (res.ok) enviados++;
+    else fallidos++;
+  }
+  await bitacoraAuto("Fotos semanales de vehículos", `${enviados} enviadas, ${fallidos} fallidas`, null);
   return { enviados, fallidos };
 }
 
@@ -905,6 +950,8 @@ export async function crearCompra(form: FormData) {
       seguro: null,
       gps: null,
       garantia: null,
+      verificado: false,
+      repuveFolio: null,
       notas: sn(form, "notas"),
       creadoEn: new Date().toISOString(),
     };

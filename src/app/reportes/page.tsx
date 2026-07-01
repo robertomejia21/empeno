@@ -3,6 +3,15 @@ import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatPorcentaje, hoyISO } from "@/lib/format";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
+import { PrintButton } from "@/components/actions-ui";
+
+const EXPORTS = [
+  { tipo: "empenos", label: "Empeños" },
+  { tipo: "caja", label: "Caja" },
+  { tipo: "pagos", label: "Refrendos" },
+  { tipo: "clientes", label: "Clientes" },
+  { tipo: "prendas", label: "Prendas" },
+];
 
 export default async function ReportesPage() {
   const [empenos, movimientos, prendas, ventas] = await Promise.all([
@@ -83,7 +92,24 @@ export default async function ReportesPage() {
 
   return (
     <div>
-      <PageHeader title="Reportes" subtitle="Indicadores clave de la operación" />
+      <PageHeader
+        title="Reportes"
+        subtitle="Indicadores clave de la operación"
+        action={<PrintButton>🖨️ Imprimir / PDF</PrintButton>}
+      />
+
+      <div className="no-print mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+        <span className="text-sm font-medium text-muted">Descargar Excel/CSV:</span>
+        {EXPORTS.map((x) => (
+          <a
+            key={x.tipo}
+            href={`/api/export/${x.tipo}`}
+            className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium hover:bg-surface"
+          >
+            ⬇️ {x.label}
+          </a>
+        ))}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="Cartera activa" valor={formatMXN(carteraActiva)} hint="capital prestado vigente" />

@@ -1,0 +1,69 @@
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos } from "@/lib/db/repo";
+import { calcularLiquidacion } from "@/lib/interes";
+
+function csv(rows: (string | number | null)[][]): string {
+  const esc = (v: string | number | null) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n");
+}
+
+export async function GET(req: Request, { params }: { params: Promise<{ tipo: string }> }) {
+  const { tipo } = await params;
+  const q = (new URL(req.url).searchParams.get("q") ?? "").toLowerCase().trim();
+  const match = (s: string) => !q || s.toLowerCase().includes(q);
+
+  let rows: (string | number | null)[][] = [];
+  let nombre = tipo;
+
+  if (tipo === "empenos") {
+    nombre = "empenos";
+    const e = await listarEmpenos();
+    rows = [["Contrato", "Cliente", "Prenda", "Departamento", "Prestado", "Interes%", "Almacenaje%", "IVA%", "Metodo", "Inicio", "Vence", "Estado", "A liquidar"]];
+    for (const x of e) {
+      const nombreCli = `${x.cliente.nombre} ${x.cliente.apellidoPaterno} ${x.cliente.apellidoMaterno}`;
+      if (!match(`${x.folio} ${nombreCli} ${x.prenda.descripcion} ${x.estado}`)) continue;
+      const c = calcularLiquidacion(x);
+      rows.push([x.folio, nombreCli, x.prenda.descripcion, x.prenda.categoria, x.montoPrestado, x.tasaInteres, x.almacenajePct, x.ivaPct, x.metodoPago, x.fechaInicio, x.fechaVencimiento, x.estado, c.totalDesempeno]);
+    }
+  } else if (tipo === "movimientos" || tipo === "caja") {
+    nombre = "caja";
+    const m = await listarMovimientos();
+    rows = [["Fecha", "Tipo", "Concepto", "Entrada/Salida", "Monto", "Referencia"]];
+    for (const x of m) {
+      if (!match(`${x.concepto} ${x.tipo} ${x.referencia ?? ""}`)) continue;
+      rows.push([x.fecha, x.tipo, x.concepto, x.esEntrada ? "Entrada" : "Salida", x.monto, x.referencia]);
+    }
+  } else if (tipo === "clientes") {
+    const c = await listarClientes();
+    rows = [["Nombre", "CURP", "RFC", "Telefono", "Identificacion", "Numero", "Direccion"]];
+    for (const x of c) {
+      const nombreCli = `${x.nombre} ${x.apellidoPaterno} ${x.apellidoMaterno}`;
+      if (!match(`${nombreCli} ${x.curp ?? ""} ${x.telefono ?? ""}`)) continue;
+      rows.push([nombreCli, x.curp, x.rfc, x.telefono, x.tipoIdentificacion, x.numeroIdentificacion, x.direccion]);
+    }
+  } else if (tipo === "prendas") {
+    const p = await listarPrendas();
+    rows = [["Folio", "Descripcion", "Departamento", "Marca", "Modelo", "Serie", "Avaluo", "Estado", "Resguardo"]];
+    for (const x of p) {
+      if (!match(`${x.folio} ${x.descripcion} ${x.marca ?? ""} ${x.categoria}`)) continue;
+      rows.push([x.folio, x.descripcion, x.categoria, x.marca, x.modelo, x.serie, x.valorAvaluo, x.estado, x.ubicacionResguardo]);
+    }
+  } else if (tipo === "pagos") {
+    const pg = await listarPagos();
+    rows = [["Recibo", "Refrendo No", "Tipo", "Fecha", "Intereses", "Almacenaje", "Moratorios", "IVA", "Abono capital", "Total", "Metodo", "Usuario"]];
+    for (const x of pg) {
+      rows.push([x.reciboNo, x.refrendoNo, x.tipo, x.fecha, x.intereses, x.almacenaje, x.moratorios, x.iva, x.abonoCapital, x.total, x.metodoPago, x.usuarioNombre]);
+    }
+  } else {
+    return new Response("Tipo no válido", { status: 400 });
+  }
+
+  return new Response(csv(rows), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${nombre}.csv"`,
+    },
+  });
+}

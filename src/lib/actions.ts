@@ -879,6 +879,22 @@ export async function subirFotoPrenda(prendaId: string, formData: FormData) {
   revalidatePath("/prendas");
 }
 
+/** Actualiza la ubicación de resguardo (Matriz o externa, con pin de mapa). */
+export async function actualizarResguardo(prendaId: string, form: FormData) {
+  if (await esInvitado()) return;
+  const tipo = s(form, "tipoUbicacion") || "Matriz";
+  const detalle = s(form, "detalle");
+  const maps = sn(form, "mapsUrl");
+  const texto = [tipo, detalle, maps ? `📍 ${maps}` : null].filter(Boolean).join(" · ");
+  if (supabaseConfigured) {
+    await getServerSupabase().from("prendas").update({ ubicacion_resguardo: texto }).eq("id", prendaId);
+  } else {
+    const p = getStore().prendas.find((x) => x.id === prendaId);
+    if (p) p.ubicacionResguardo = texto;
+  }
+  revalidatePath(`/prendas/${prendaId}`);
+}
+
 export async function eliminarFotoPrenda(prendaId: string, url: string) {
   if (await esInvitado()) return;
   if (supabaseConfigured) {

@@ -19,6 +19,7 @@ export const navGroups: NavGroup[] = [
       { href: "/prendas", label: "Prendas", icon: "💍" },
       { href: "/clientes", label: "Clientes", icon: "👤" },
       { href: "/recordatorios", label: "Recordatorios", icon: "🔔" },
+      { href: "/conversaciones", label: "Conversaciones", icon: "💬" },
       { href: "/buscar", label: "Buscar", icon: "🔍" },
     ],
   },

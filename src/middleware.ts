@@ -16,8 +16,8 @@ export async function middleware(req: NextRequest) {
   // El cron se autentica por secreto propio, no por sesión.
   if (pathname.startsWith("/api/cron")) return conPathname(req);
 
-  // Landing pública
-  if (pathname === "/inicio") return conPathname(req);
+  // Rutas públicas
+  if (pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/")) return conPathname(req);
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const sesion = await verificarSesion(token);

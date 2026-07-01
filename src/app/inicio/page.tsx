@@ -53,6 +53,7 @@ export default function LandingPage() {
             <a href="#funciones" className="hover:text-foreground">Funciones</a>
             <a href="#producto" className="hover:text-foreground">Producto</a>
             <a href="#faq" className="hover:text-foreground">Preguntas</a>
+            <Link href="/tienda" className="hover:text-foreground">🛒 Remates</Link>
           </nav>
           <div className="flex items-center gap-2">
             <ThemeToggle />

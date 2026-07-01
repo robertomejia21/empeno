@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { obtenerPrenda } from "@/lib/db/repo";
-import { subirFotoPrenda, eliminarFotoPrenda } from "@/lib/actions";
+import { subirFotoPrenda, eliminarFotoPrenda, actualizarResguardo } from "@/lib/actions";
 import { formatMXN, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
@@ -45,8 +45,12 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {p.fotos.map((url) => (
                   <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={p.descripcion} className="aspect-square w-full object-cover" />
+                    {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? (
+                      <video src={url} controls className="aspect-square w-full object-cover" />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={url} alt={p.descripcion} className="aspect-square w-full object-cover" />
+                    )}
                     <form
                       action={eliminarFotoPrenda.bind(null, p.id, url)}
                       className="absolute right-1 top-1 opacity-0 transition group-hover:opacity-100"
@@ -68,11 +72,11 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
               <input
                 type="file"
                 name="foto"
-                accept="image/*"
+                accept="image/*,video/*"
                 required
                 className="block text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary"
               />
-              <ConfirmSubmit confirmacion="¿Subir esta foto?">Subir foto</ConfirmSubmit>
+              <ConfirmSubmit confirmacion="¿Subir este archivo?">Subir foto/video</ConfirmSubmit>
             </form>
           </div>
         </Card>
@@ -87,6 +91,20 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
             <div>
               <p className="text-xs text-muted">Préstamo sugerido</p>
               <p className="text-lg font-semibold text-primary">{formatMXN(p.montoPrestamoSugerido)}</p>
+            </div>
+            {/* Ubicación / pin */}
+            <div className="border-t border-border pt-3">
+              <p className="text-xs text-muted">Ubicación de resguardo</p>
+              <p className="text-sm font-medium text-foreground">{p.ubicacionResguardo ?? "Sin asignar"}</p>
+              <form action={actualizarResguardo.bind(null, p.id)} className="mt-3 space-y-2">
+                <select name="tipoUbicacion" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm">
+                  <option value="Matriz">📍 Matriz</option>
+                  <option value="Externa">📍 Externa / otra sucursal</option>
+                </select>
+                <input name="detalle" placeholder="Bóveda, estante, dirección…" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm" />
+                <input name="mapsUrl" placeholder="Link de Google Maps (opcional)" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm" />
+                <ConfirmSubmit variante="secondary" confirmacion="¿Actualizar la ubicación?">Guardar ubicación</ConfirmSubmit>
+              </form>
             </div>
           </div>
         </Card>

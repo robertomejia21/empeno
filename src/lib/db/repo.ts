@@ -263,6 +263,15 @@ export async function listarPagosCliente(clienteId: string): Promise<Pago[]> {
   return getStore().pagos.filter((p) => p.clienteId === clienteId).sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
+export async function listarPagos(): Promise<Pago[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase().from("pagos").select("*").order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToPago);
+  }
+  return getStore().pagos.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
 export async function contarRefrendos(empenoId: string): Promise<number> {
   if (supabaseConfigured) {
     const { count } = await getServerSupabase()

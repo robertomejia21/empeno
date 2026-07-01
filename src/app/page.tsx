@@ -51,6 +51,30 @@ export default async function Tablero() {
     { etiqueta: "En venta", valor: prendas.filter((p) => p.estado === "en_venta").length, color: "#b45309" },
   ];
 
+  // Cartera vencida y estadísticas
+  const carteraVencida = vencidos.reduce((s, x) => s + x.calc.totalDesempeno, 0);
+  const desempenados = empenos.filter((e) => e.estado === "desempenado").length;
+  const rematados = empenos.filter((e) => e.estado === "rematado").length;
+  const cerrados = desempenados + rematados;
+  const tasaRecuperacion = cerrados > 0 ? Math.round((desempenados / cerrados) * 100) : 0;
+  const claveMes = new Date().toISOString().slice(0, 7);
+  const ingresosMes = movimientos.filter((m) => m.esEntrada && m.fecha.slice(0, 7) === claveMes).reduce((s, m) => s + m.monto, 0);
+  const ticketPromedio = activos.length ? capitalPrestado / activos.length : 0;
+
+  // Mejores clientes por capital prestado
+  const porCliente = new Map<string, { nombre: string; capital: number; empenos: number }>();
+  for (const e of empenos) {
+    const k = e.clienteId;
+    const cur = porCliente.get(k) ?? { nombre: `${e.cliente.nombre} ${e.cliente.apellidoPaterno}`, capital: 0, empenos: 0 };
+    cur.capital += e.montoPrestado;
+    cur.empenos += 1;
+    porCliente.set(k, cur);
+  }
+  const mejoresClientes = [...porCliente.entries()]
+    .map(([id, v]) => ({ id, ...v }))
+    .sort((a, b) => b.capital - a.capital)
+    .slice(0, 6);
+
   return (
     <div>
       {/* Hero */}
@@ -100,6 +124,42 @@ export default async function Tablero() {
           <CardHeader title="Cartera" subtitle="Distribución actual" />
           <div className="p-5">
             <Dona segmentos={dona} />
+          </div>
+        </Card>
+      </div>
+
+      {/* Mejores clientes + estadísticas */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader title="Mejores clientes" subtitle="Por capital prestado" />
+          {mejoresClientes.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm text-muted">Aún no hay clientes con empeños.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {mejoresClientes.map((c, i) => (
+                <li key={c.id}>
+                  <Link href={`/clientes/${c.id}`} className="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-surface-2">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-xs font-bold text-primary">{i + 1}</span>
+                      <span className="truncate text-sm font-medium text-foreground">{c.nombre}</span>
+                      <span className="shrink-0 text-xs text-muted">{c.empenos} empeño(s)</span>
+                    </span>
+                    <span className="text-sm font-semibold text-foreground">{formatMXN(c.capital)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader title="Estadísticas" />
+          <div className="space-y-4 p-5">
+            <EstLinea etiqueta="Cartera vencida" valor={formatMXN(carteraVencida)} tono={carteraVencida > 0 ? "danger" : "muted"} />
+            <EstLinea etiqueta="Tasa de recuperación" valor={`${tasaRecuperacion}%`} tono="success" />
+            <EstLinea etiqueta="Ingresos del mes" valor={formatMXN(ingresosMes)} />
+            <EstLinea etiqueta="Ticket promedio" valor={formatMXN(ticketPromedio)} />
+            <EstLinea etiqueta="Desempeñados / Rematados" valor={`${desempenados} / ${rematados}`} />
           </div>
         </Card>
       </div>
@@ -168,6 +228,16 @@ function Stat({
       </div>
       <p className={`mt-3 text-[28px] font-bold leading-none tracking-tight ${color}`}>{valor}</p>
     </Card>
+  );
+}
+
+function EstLinea({ etiqueta, valor, tono = "muted" }: { etiqueta: string; valor: string; tono?: "muted" | "success" | "danger" }) {
+  const color = tono === "success" ? "text-success" : tono === "danger" ? "text-danger" : "text-foreground";
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="text-muted">{etiqueta}</span>
+      <span className={`font-semibold ${color}`}>{valor}</span>
+    </div>
   );
 }
 

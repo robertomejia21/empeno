@@ -186,6 +186,38 @@ export interface Usuario {
   creadoEn?: string;
 }
 
+export type TipoPago = "refrendo" | "abono" | "desempeno";
+
+export interface Pago {
+  id: ID;
+  reciboNo: number;
+  refrendoNo: number;
+  empenoId: ID;
+  clienteId: ID | null;
+  tipo: TipoPago;
+  abonoCapital: number;
+  intereses: number;
+  almacenaje: number;
+  gastosAdmin: number;
+  moratorios: number;
+  rentaGps: number;
+  rentaSeguro: number;
+  gastosVenta: number;
+  pension: number;
+  iva: number;
+  descuento: number;
+  subtotal: number;
+  total: number;
+  efectivo: number;
+  tarjeta: number;
+  transferencia: number;
+  cambio: number;
+  metodoPago: MetodoPago;
+  usuarioNombre: string | null;
+  fecha: string;
+  creadoEn: string;
+}
+
 export interface CorteCaja {
   id: ID;
   fecha: string;

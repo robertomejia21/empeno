@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerEmpeno } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { refrendarEmpeno, desempenarEmpeno, abonarCapital, enviarFotoVehiculo } from "@/lib/actions";
+import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -86,32 +86,42 @@ export default async function EmpenoDetalle({
             )}
 
             {activo && (
-              <div className="flex flex-wrap gap-3 border-t border-border px-5 py-4">
-                <form action={refrendar}>
-                  <ConfirmSubmit
-                    variante="secondary"
-                    confirmacion={`¿Registrar refrendo por ${formatMXN(calc.totalRefrendo)}? Se renovará el plazo.`}
-                  >
-                    Refrendar · {formatMXN(calc.totalRefrendo)}
-                  </ConfirmSubmit>
+              <div className="space-y-4 border-t border-border px-5 py-4">
+                {/* Refrendo / abono mensual con recibo */}
+                <form action={refrendar} className="rounded-xl bg-surface-2 p-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Refrendo / abono mensual</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <label className="flex flex-col gap-1 text-xs text-muted">
+                      Método de pago
+                      <select name="metodoPago" defaultValue={empeno.metodoPago} className={campoCls}>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="tarjeta">Tarjeta</option>
+                      </select>
+                    </label>
+                    <CampoNum name="moratorios" label="Moratorios" />
+                    <CampoNum name="gastosAdmin" label="Gastos admin." />
+                    <CampoNum name="abonoCapital" label="Abono a capital" />
+                    <CampoNum name="descuento" label="Descuento" />
+                    <CampoNum name="recibido" label="Efectivo recibido" />
+                  </div>
+                  <p className="mt-3 text-xs text-muted">
+                    Intereses {formatMXN(calc.totalRefrendo)} (interés + almacenaje + IVA por periodo). El total se
+                    calcula con moratorios/abono/descuento y se genera el recibo.
+                  </p>
+                  <div className="mt-3">
+                    <ConfirmSubmit confirmacion="¿Registrar el refrendo/abono y generar el recibo?">
+                      Registrar y entregar recibo
+                    </ConfirmSubmit>
+                  </div>
                 </form>
                 <form action={desempenar}>
                   <ConfirmSubmit
+                    variante="secondary"
                     confirmacion={`¿Registrar desempeño por ${formatMXN(calc.totalDesempeno)}? El cliente recupera su prenda.`}
                   >
                     Desempeñar · {formatMXN(calc.totalDesempeno)}
-                  </ConfirmSubmit>
-                </form>
-                <form action={abonarCapital.bind(null, empeno.id)} className="flex items-center gap-2">
-                  <input
-                    name="monto"
-                    type="number"
-                    step="0.01"
-                    placeholder="Abono a capital"
-                    className="w-32 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm focus:border-primary-2 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary-2/20"
-                  />
-                  <ConfirmSubmit variante="secondary" confirmacion="¿Registrar abono a capital?">
-                    Abonar capital
                   </ConfirmSubmit>
                 </form>
               </div>
@@ -207,6 +217,18 @@ export default async function EmpenoDetalle({
       {/* Boleta para imprimir */}
       <Boleta empeno={empeno} calc={calc} />
     </div>
+  );
+}
+
+const campoCls =
+  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
+
+function CampoNum({ name, label }: { name: string; label: string }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-muted">
+      {label}
+      <input name={name} type="number" step="0.01" placeholder="0.00" className={campoCls} />
+    </label>
   );
 }
 

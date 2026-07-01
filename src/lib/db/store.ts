@@ -28,6 +28,7 @@ interface Store {
   apartados: Apartado[];
   bitacora: Bitacora[];
   cortes: CorteCaja[];
+  pagos: import("@/lib/types").Pago[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -45,6 +46,7 @@ export function getStore(): Store {
       apartados: [],
       bitacora: [],
       cortes: [],
+      pagos: [],
     };
   }
   return g.__empenoStore;

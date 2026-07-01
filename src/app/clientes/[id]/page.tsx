@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerCliente, listarEmpenos } from "@/lib/db/repo";
+import { obtenerCliente, listarEmpenos, listarPagosCliente } from "@/lib/db/repo";
+import { formatFechaHora } from "@/lib/format";
 import { tasaPorHistorial } from "@/lib/interes";
 import { formatFecha, formatFechaLarga, formatMXN } from "@/lib/format";
 import { Card, CardHeader, PageHeader, LinkButton, Badge, VolverLink } from "@/components/ui";
@@ -15,8 +16,10 @@ export default async function ClienteDetalle({
   const cliente = await obtenerCliente(id);
   if (!cliente) notFound();
 
-  const empenos = (await listarEmpenos()).filter((e) => e.clienteId === id);
+  const [empenosAll, pagos] = await Promise.all([listarEmpenos(), listarPagosCliente(id)]);
+  const empenos = empenosAll.filter((e) => e.clienteId === id);
   const previos = empenos.length;
+  const totalAbonado = pagos.reduce((s, p) => s + p.total, 0);
   const { tasa, nivel, requiereAutorizacion } = tasaPorHistorial(previos);
 
   return (
@@ -112,6 +115,50 @@ export default async function ClienteDetalle({
               </li>
             ))}
           </ul>
+        )}
+      </Card>
+
+      {/* Abonos y refrendos */}
+      <Card className="mt-6">
+        <CardHeader
+          title="Abonos y refrendos"
+          subtitle={`${pagos.length} pagos · ${formatMXN(totalAbonado)} abonado`}
+        />
+        {pagos.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-muted">Sin abonos ni refrendos registrados.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-5 py-3 font-medium">Recibo</th>
+                  <th className="px-5 py-3 font-medium">Fecha</th>
+                  <th className="px-5 py-3 font-medium">Tipo</th>
+                  <th className="px-5 py-3 text-right font-medium">Total</th>
+                  <th className="px-5 py-3 text-right font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {pagos.map((p) => (
+                  <tr key={p.id} className="hover:bg-surface-2">
+                    <td className="px-5 py-3 font-mono text-xs text-muted">
+                      #{p.reciboNo}{p.tipo === "refrendo" ? ` · Ref. ${p.refrendoNo}` : ""}
+                    </td>
+                    <td className="px-5 py-3 text-muted">{formatFechaHora(p.fecha)}</td>
+                    <td className="px-5 py-3">
+                      <Badge tono={p.tipo === "refrendo" ? "info" : p.tipo === "desempeno" ? "success" : "muted"}>{p.tipo}</Badge>
+                    </td>
+                    <td className="px-5 py-3 text-right font-semibold text-foreground">{formatMXN(p.total)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <a href={`/api/recibo-pago/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-primary hover:underline">
+                        🧾 Recibo
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Card>
     </div>

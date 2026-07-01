@@ -7,7 +7,7 @@ import type {
   EmpenoConDetalle,
   MovimientoCaja,
 } from "@/lib/types";
-import type { Venta, Compra, Apartado, Usuario, Bitacora, CorteCaja } from "@/lib/types";
+import type { Venta, Compra, Apartado, Usuario, Bitacora, CorteCaja, Pago } from "@/lib/types";
 import { getStore } from "./store";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import {
@@ -21,6 +21,7 @@ import {
   rowToUsuario,
   rowToBitacora,
   rowToCorte,
+  rowToPago,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -238,6 +239,40 @@ export async function listarUsuarios(): Promise<Usuario[]> {
     return (data ?? []).map(rowToUsuario);
   }
   return [];
+}
+
+export async function obtenerPago(id: string): Promise<Pago | null> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase().from("pagos").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? rowToPago(data) : null;
+  }
+  return getStore().pagos.find((p) => p.id === id) ?? null;
+}
+
+export async function listarPagosCliente(clienteId: string): Promise<Pago[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("pagos")
+      .select("*")
+      .eq("cliente_id", clienteId)
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToPago);
+  }
+  return getStore().pagos.filter((p) => p.clienteId === clienteId).sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+export async function contarRefrendos(empenoId: string): Promise<number> {
+  if (supabaseConfigured) {
+    const { count } = await getServerSupabase()
+      .from("pagos")
+      .select("id", { count: "exact", head: true })
+      .eq("empeno_id", empenoId)
+      .eq("tipo", "refrendo");
+    return count ?? 0;
+  }
+  return getStore().pagos.filter((p) => p.empenoId === empenoId && p.tipo === "refrendo").length;
 }
 
 export async function listarCortes(): Promise<CorteCaja[]> {

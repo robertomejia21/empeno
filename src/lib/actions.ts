@@ -22,7 +22,7 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, listarEmpenos, listarMovimientos } from "@/lib/db/repo";
+import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
@@ -30,6 +30,10 @@ import { getUsuarioActual } from "@/lib/session";
 /** En modo demo (invitado) las operaciones de escritura no surten efecto. */
 async function esInvitado(): Promise<boolean> {
   return (await getUsuarioActual())?.rol === "invitado";
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 function s(form: FormData, key: string): string {
@@ -307,66 +311,112 @@ export async function crearEmpeno(form: FormData) {
   redirect(`/empenos/${empenoId}`);
 }
 
-/** Refrendo: el cliente paga el interés y se renueva un periodo. */
-export async function refrendarEmpeno(id: string) {
+/**
+ * Refrendo: el cliente paga intereses/almacenaje/IVA (+ moratorios, abono a
+ * capital, descuento), se renueva el periodo y se genera el recibo digital.
+ */
+export async function refrendarEmpeno(id: string, form?: FormData) {
   if (await esInvitado()) return;
+  const e = await obtenerEmpeno(id);
+  if (!e) return;
+
+  // Desglose de un periodo
+  const interesP = round2(e.montoPrestado * (e.tasaInteres / 100));
+  const almacenajeP = round2(e.montoPrestado * (e.almacenajePct / 100));
+  const ivaP = round2((interesP + almacenajeP) * (e.ivaPct / 100));
+
+  const g = (k: string) => {
+    const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
+    return Number.isFinite(v) ? v : 0;
+  };
+  const abonoCapital = g("abonoCapital");
+  const moratorios = g("moratorios");
+  const descuento = g("descuento");
+  const gastosAdmin = g("gastosAdmin");
+  const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
+
+  const subtotal = round2(interesP + almacenajeP + gastosAdmin + moratorios + ivaP);
+  const total = round2(subtotal + abonoCapital - descuento);
+  const recibido = g("recibido");
+  const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
+  const tarjeta = metodoPago === "tarjeta" ? total : 0;
+  const transferencia = metodoPago === "transferencia" || metodoPago === "cheque" ? total : 0;
+  const cambio = recibido > total ? round2(recibido - total) : 0;
+
+  const refrendoNo = (await contarRefrendos(id)) + 1;
+  const u = await getUsuarioActual();
+  const hoy = new Date().toISOString().slice(0, 10);
+  const nuevoVenc = calcularVencimiento(hoy, e.periodo, e.plazoPeriodos);
+
+  const pagoBase = {
+    empeno_id: id,
+    cliente_id: e.clienteId,
+    refrendo_no: refrendoNo,
+    tipo: "refrendo",
+    abono_capital: abonoCapital,
+    intereses: interesP,
+    almacenaje: almacenajeP,
+    gastos_admin: gastosAdmin,
+    moratorios,
+    iva: ivaP,
+    descuento,
+    subtotal,
+    total,
+    efectivo,
+    tarjeta,
+    transferencia,
+    cambio,
+    metodo_pago: metodoPago,
+    usuario_nombre: u?.nombre ?? null,
+  };
+
+  let pagoId = "";
   if (supabaseConfigured) {
     const sb = getServerSupabase();
-    const { data, error } = await sb.from("empenos").select("*").eq("id", id).single();
+    const { data: pago, error } = await sb.from("pagos").insert(pagoBase).select("id").single();
     if (error) throw error;
-    const calc = calcularLiquidacion({
-      montoPrestado: Number(data.monto_prestado),
-      tasaInteres: Number(data.tasa_interes),
-      almacenajePct: Number(data.almacenaje_pct ?? 0),
-      ivaPct: Number(data.iva_pct ?? 0),
-      abonoCapital: Number(data.abono_capital ?? 0),
-      periodo: data.periodo,
-      fechaInicio: data.fecha_inicio,
-      fechaVencimiento: data.fecha_vencimiento,
-      diasGracia: data.dias_gracia,
-    });
-    const hoy = new Date().toISOString().slice(0, 10);
+    pagoId = pago.id;
     await sb
       .from("empenos")
       .update({
         fecha_inicio: hoy,
-        fecha_vencimiento: calcularVencimiento(hoy, data.periodo, data.plazo_periodos),
+        fecha_vencimiento: nuevoVenc,
         estado: "refrendado",
+        abono_capital: e.abonoCapital + abonoCapital,
       })
       .eq("id", id);
     await sb.from("movimientos_caja").insert({
-      tipo: "refrendo",
-      monto: calc.totalRefrendo,
-      es_entrada: true,
-      concepto: `Refrendo empeño ${data.folio}`,
-      empeno_id: id,
-      referencia: data.folio,
+      tipo: "refrendo", monto: total, es_entrada: true,
+      concepto: `Refrendo ${e.folio} (recibo)`, empeno_id: id, referencia: e.folio,
     });
   } else {
     const store = getStore();
-    const e = store.empenos.find((x) => x.id === id);
-    if (!e) return;
-    const calc = calcularLiquidacion(e);
-    const hoy = new Date().toISOString().slice(0, 10);
-    e.fechaInicio = hoy;
-    e.fechaVencimiento = calcularVencimiento(hoy, e.periodo, e.plazoPeriodos);
-    e.estado = "refrendado";
+    pagoId = nuevoId("pg");
+    const emp = store.empenos.find((x) => x.id === id);
+    if (emp) {
+      emp.fechaInicio = hoy;
+      emp.fechaVencimiento = nuevoVenc;
+      emp.estado = "refrendado";
+      emp.abonoCapital += abonoCapital;
+    }
+    store.pagos.unshift({
+      id: pagoId, reciboNo: 2554 + store.pagos.length, refrendoNo, empenoId: id, clienteId: e.clienteId,
+      tipo: "refrendo", abonoCapital, intereses: interesP, almacenaje: almacenajeP, gastosAdmin,
+      moratorios, rentaGps: 0, rentaSeguro: 0, gastosVenta: 0, pension: 0, iva: ivaP, descuento,
+      subtotal, total, efectivo, tarjeta, transferencia, cambio, metodoPago,
+      usuarioNombre: u?.nombre ?? null, fecha: new Date().toISOString(), creadoEn: new Date().toISOString(),
+    });
     store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "refrendo",
-      monto: calc.totalRefrendo,
-      esEntrada: true,
-      concepto: `Refrendo empeño ${e.folio}`,
-      empenoId: e.id,
-      referencia: e.folio,
-      creadoEn: new Date().toISOString(),
+      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "refrendo", monto: total, esEntrada: true,
+      concepto: `Refrendo ${e.folio} (recibo)`, empenoId: id, referencia: e.folio, creadoEn: new Date().toISOString(),
     });
   }
-  await bitacoraAuto("Refrendo registrado", null, `empeño ${id}`);
+  await bitacoraAuto("Refrendo registrado", `${total} MXN`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
+  if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
+  redirect(`/api/recibo-pago/${pagoId}`);
 }
 
 /** Desempeño: el cliente liquida capital + interés y recupera su prenda. */

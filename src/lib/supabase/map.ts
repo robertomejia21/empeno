@@ -154,6 +154,39 @@ export function rowToBitacora(r: any): import("@/lib/types").Bitacora {
   };
 }
 
+export function rowToPago(r: any): import("@/lib/types").Pago {
+  const n = (v: any) => Number(v ?? 0);
+  return {
+    id: r.id,
+    reciboNo: Number(r.recibo_no),
+    refrendoNo: Number(r.refrendo_no),
+    empenoId: r.empeno_id,
+    clienteId: r.cliente_id,
+    tipo: r.tipo,
+    abonoCapital: n(r.abono_capital),
+    intereses: n(r.intereses),
+    almacenaje: n(r.almacenaje),
+    gastosAdmin: n(r.gastos_admin),
+    moratorios: n(r.moratorios),
+    rentaGps: n(r.renta_gps),
+    rentaSeguro: n(r.renta_seguro),
+    gastosVenta: n(r.gastos_venta),
+    pension: n(r.pension),
+    iva: n(r.iva),
+    descuento: n(r.descuento),
+    subtotal: n(r.subtotal),
+    total: n(r.total),
+    efectivo: n(r.efectivo),
+    tarjeta: n(r.tarjeta),
+    transferencia: n(r.transferencia),
+    cambio: n(r.cambio),
+    metodoPago: r.metodo_pago,
+    usuarioNombre: r.usuario_nombre,
+    fecha: r.fecha,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToCorte(r: any): import("@/lib/types").CorteCaja {
   return {
     id: r.id,

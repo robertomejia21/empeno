@@ -28,6 +28,7 @@ export function rowToCliente(r: any): Cliente {
     numeroIdentificacion: r.numero_identificacion,
     direccion: r.direccion,
     fechaNacimiento: r.fecha_nacimiento,
+    foto: r.foto ?? null,
     notas: r.notas,
     creadoEn: r.creado_en,
   };

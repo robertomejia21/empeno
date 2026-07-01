@@ -26,6 +26,12 @@ import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos } from
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
+import { extraerDatosINE, type DatosINE } from "@/lib/gemini";
+
+function dividirDataUrl(dataUrl: string): { mime: string; base64: string } | null {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  return m ? { mime: m[1], base64: m[2] } : null;
+}
 
 /** En modo demo (invitado) las operaciones de escritura no surten efecto. */
 async function esInvitado(): Promise<boolean> {
@@ -34,6 +40,20 @@ async function esInvitado(): Promise<boolean> {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** Ley antilavado: ninguna entrada/salida de caja debe superar $999,999. */
+const TOPE_AML = 999999;
+function dividirMontoAML(total: number): number[] {
+  if (total <= TOPE_AML) return [round2(total)];
+  const partes: number[] = [];
+  let resto = round2(total);
+  while (resto > 0.009) {
+    const parte = Math.min(resto, TOPE_AML);
+    partes.push(round2(parte));
+    resto = round2(resto - parte);
+  }
+  return partes;
 }
 
 function s(form: FormData, key: string): string {
@@ -64,6 +84,7 @@ export async function crearCliente(form: FormData) {
     numero_identificacion: s(form, "numeroIdentificacion"),
     direccion: sn(form, "direccion"),
     fecha_nacimiento: sn(form, "fechaNacimiento"),
+    foto: sn(form, "fotoCliente"),
     notas: sn(form, "notas"),
   };
 
@@ -85,6 +106,7 @@ export async function crearCliente(form: FormData) {
       numeroIdentificacion: datos.numero_identificacion,
       direccion: datos.direccion,
       fechaNacimiento: datos.fecha_nacimiento,
+      foto: datos.foto,
       notas: datos.notas,
       creadoEn: new Date().toISOString(),
     };
@@ -133,6 +155,31 @@ export async function actualizarCliente(id: string, form: FormData) {
   }
   revalidatePath("/clientes");
   redirect(`/clientes/${id}`);
+}
+
+// ----------------- INE / FOTO DE CLIENTE (IA) -----------------
+
+/** Lee una INE (imagen dataURL) con IA y devuelve los datos para autollenar. */
+export async function analizarINE(dataUrl: string): Promise<DatosINE | null> {
+  if (await esInvitado()) return null;
+  const p = dividirDataUrl(dataUrl);
+  if (!p) return null;
+  return extraerDatosINE(p.base64, p.mime);
+}
+
+/** Sube la foto del cliente al Storage y devuelve su URL pública. */
+export async function subirFotoCliente(dataUrl: string): Promise<string | null> {
+  if (await esInvitado()) return null;
+  const p = dividirDataUrl(dataUrl);
+  if (!p || !supabaseConfigured) return null;
+  const sb = getServerSupabase();
+  const ext = p.mime.split("/")[1] || "jpg";
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage
+    .from("clientes")
+    .upload(path, Buffer.from(p.base64, "base64"), { contentType: p.mime, upsert: false });
+  if (error) return null;
+  return sb.storage.from("clientes").getPublicUrl(path).data.publicUrl;
 }
 
 // ----------------- PRENDAS / AVALÚOS -----------------
@@ -255,14 +302,17 @@ export async function crearEmpeno(form: FormData) {
     if (error) throw error;
     empenoId = data.id;
     await sb.from("prendas").update({ estado: "empenada" }).eq("id", prendaId);
-    await sb.from("movimientos_caja").insert({
-      tipo: "prestamo",
-      monto: montoPrestado,
-      es_entrada: false,
-      concepto: `Préstamo empeño ${data.folio}`,
-      empeno_id: empenoId,
-      referencia: data.folio,
-    });
+    const partes = dividirMontoAML(montoPrestado);
+    for (let i = 0; i < partes.length; i++) {
+      await sb.from("movimientos_caja").insert({
+        tipo: "prestamo",
+        monto: partes[i],
+        es_entrada: false,
+        concepto: `Préstamo empeño ${data.folio}${partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : ""}`,
+        empeno_id: empenoId,
+        referencia: data.folio,
+      });
+    }
   } else {
     const store = getStore();
     const empeno: Empeno = {
@@ -291,17 +341,19 @@ export async function crearEmpeno(form: FormData) {
     store.empenos.push(empeno);
     const prenda = store.prendas.find((p) => p.id === prendaId);
     if (prenda) prenda.estado = "empenada";
-    store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "prestamo",
-      monto: montoPrestado,
-      esEntrada: false,
-      concepto: `Préstamo empeño ${empeno.folio}`,
-      empenoId: empeno.id,
-      referencia: empeno.folio,
-      creadoEn: new Date().toISOString(),
-    });
+    dividirMontoAML(montoPrestado).forEach((m, i, arr) =>
+      store.movimientos.push({
+        id: nuevoId("m"),
+        fecha: new Date().toISOString(),
+        tipo: "prestamo",
+        monto: m,
+        esEntrada: false,
+        concepto: `Préstamo empeño ${empeno.folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
+        empenoId: empeno.id,
+        referencia: empeno.folio,
+        creadoEn: new Date().toISOString(),
+      })
+    );
     empenoId = empeno.id;
   }
 
@@ -531,6 +583,7 @@ export async function crearEmpenoGuiado(
           email: cn.email,
           tipo_identificacion: cn.tipoIdentificacion,
           numero_identificacion: cn.numeroIdentificacion,
+          foto: cn.foto,
         })
         .select("id")
         .single();
@@ -595,15 +648,18 @@ export async function crearEmpenoGuiado(
       .single();
     if (ee) throw ee;
 
-    // 4) Salida de caja
-    await sb.from("movimientos_caja").insert({
-      tipo: "prestamo",
-      monto: data.montoPrestado,
-      es_entrada: false,
-      concepto: `Préstamo empeño ${e.folio}`,
-      empeno_id: e.id,
-      referencia: e.folio,
-    });
+    // 4) Salida de caja (dividida por tope antilavado si aplica)
+    const partesSb = dividirMontoAML(data.montoPrestado);
+    for (let i = 0; i < partesSb.length; i++) {
+      await sb.from("movimientos_caja").insert({
+        tipo: "prestamo",
+        monto: partesSb[i],
+        es_entrada: false,
+        concepto: `Préstamo empeño ${e.folio}${partesSb.length > 1 ? ` (parte ${i + 1}/${partesSb.length})` : ""}`,
+        empeno_id: e.id,
+        referencia: e.folio,
+      });
+    }
 
     await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, e.folio);
     revalidatePaths();
@@ -629,6 +685,7 @@ export async function crearEmpenoGuiado(
       numeroIdentificacion: cn.numeroIdentificacion,
       direccion: cn.direccion,
       fechaNacimiento: null,
+      foto: cn.foto,
       notas: null,
       creadoEn: ts,
     };
@@ -690,17 +747,19 @@ export async function crearEmpenoGuiado(
     creadoEn: ts,
   };
   store.empenos.push(empeno);
-  store.movimientos.push({
-    id: nuevoId("m"),
-    fecha: ts,
-    tipo: "prestamo",
-    monto: data.montoPrestado,
-    esEntrada: false,
-    concepto: `Préstamo empeño ${empeno.folio}`,
-    empenoId: empeno.id,
-    referencia: empeno.folio,
-    creadoEn: ts,
-  });
+  dividirMontoAML(data.montoPrestado).forEach((m, i, arr) =>
+    store.movimientos.push({
+      id: nuevoId("m"),
+      fecha: ts,
+      tipo: "prestamo",
+      monto: m,
+      esEntrada: false,
+      concepto: `Préstamo empeño ${empeno.folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
+      empenoId: empeno.id,
+      referencia: empeno.folio,
+      creadoEn: ts,
+    })
+  );
 
   await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, empeno.folio);
   revalidatePaths();

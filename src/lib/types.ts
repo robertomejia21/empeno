@@ -23,6 +23,7 @@ export interface Cliente {
   numeroIdentificacion: string;
   direccion: string | null;
   fechaNacimiento: string | null; // ISO date
+  foto: string | null; // foto del cliente (URL)
   notas: string | null;
   creadoEn: string; // ISO datetime
 }
@@ -260,6 +261,7 @@ export interface ClienteNuevoInput {
   email: string | null;
   tipoIdentificacion: TipoIdentificacion;
   numeroIdentificacion: string;
+  foto: string | null;
 }
 
 export interface PrendaInput {

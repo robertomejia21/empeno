@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { crearEmpenoGuiado } from "@/lib/actions";
+import { crearEmpenoGuiado, analizarINE, subirFotoCliente } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, prestamoSugerido } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { Card } from "@/components/ui";
@@ -47,6 +47,57 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     curp: "", telefono: "", direccion: "", email: "",
     tipoIdentificacion: "INE" as TipoIdentificacion, numeroIdentificacion: "",
   });
+  const [fotoCliente, setFotoCliente] = useState<string | null>(null);
+  const [escaneando, setEscaneando] = useState(false);
+  const [ineMsg, setIneMsg] = useState<string | null>(null);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+
+  const leerArchivo = (f: File): Promise<string> =>
+    new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(f);
+    });
+
+  async function onEscanearINE(f: File | undefined) {
+    if (!f) return;
+    setEscaneando(true);
+    setIneMsg(null);
+    try {
+      const datos = await analizarINE(await leerArchivo(f));
+      if (!datos) {
+        setIneMsg("No se pudo leer la INE. Captura los datos manualmente.");
+      } else {
+        setCn((c) => ({
+          ...c,
+          nombre: datos.nombre ?? c.nombre,
+          apellidoPaterno: datos.apellidoPaterno ?? c.apellidoPaterno,
+          apellidoMaterno: datos.apellidoMaterno ?? c.apellidoMaterno,
+          curp: datos.curp ?? c.curp,
+          direccion: datos.domicilio ?? c.direccion,
+          numeroIdentificacion: datos.claveElector ?? c.numeroIdentificacion,
+          tipoIdentificacion: "INE",
+        }));
+        setIneMsg("✓ Datos extraídos de la INE. Revísalos y corrige lo necesario.");
+      }
+    } catch {
+      setIneMsg("Error al procesar la INE.");
+    } finally {
+      setEscaneando(false);
+    }
+  }
+
+  async function onFotoCliente(f: File | undefined) {
+    if (!f) return;
+    setSubiendoFoto(true);
+    try {
+      const url = await subirFotoCliente(await leerArchivo(f));
+      if (url) setFotoCliente(url);
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
 
   // Paso 3 — departamento
   const [categoria, setCategoria] = useState<CategoriaPrenda | "">("");
@@ -155,6 +206,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 email: cn.email || null,
                 tipoIdentificacion: cn.tipoIdentificacion,
                 numeroIdentificacion: cn.numeroIdentificacion,
+                foto: fotoCliente,
               }
             : null,
         prenda: {
@@ -278,6 +330,25 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
+                {/* Escaneo de INE + foto del cliente */}
+                <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
+                  <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:opacity-90">
+                    {escaneando ? "Leyendo INE…" : "🪪 Escanear INE"}
+                    <input type="file" accept="image/*" capture="environment" className="hidden" disabled={escaneando}
+                      onChange={(e) => onEscanearINE(e.target.files?.[0])} />
+                  </label>
+                  <label className="cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
+                    {subiendoFoto ? "Subiendo…" : fotoCliente ? "✓ Foto tomada" : "📸 Foto del cliente"}
+                    <input type="file" accept="image/*" capture="user" className="hidden" disabled={subiendoFoto}
+                      onChange={(e) => onFotoCliente(e.target.files?.[0])} />
+                  </label>
+                  {fotoCliente && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={fotoCliente} alt="Cliente" className="h-12 w-12 rounded-full object-cover" />
+                  )}
+                  {ineMsg && <p className="w-full text-xs text-muted">{ineMsg}</p>}
+                  {!ineMsg && <p className="w-full text-xs text-muted">La INE autollena los campos con IA; la foto identifica al cliente cuando llegue.</p>}
+                </div>
                 <Campo label="Nombre(s)" req value={cn.nombre} onChange={(v) => setCn({ ...cn, nombre: v })} />
                 <Campo label="Apellido paterno" req value={cn.apellidoPaterno} onChange={(v) => setCn({ ...cn, apellidoPaterno: v })} />
                 <Campo label="Apellido materno" value={cn.apellidoMaterno} onChange={(v) => setCn({ ...cn, apellidoMaterno: v })} />

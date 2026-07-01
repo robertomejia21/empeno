@@ -46,6 +46,16 @@ export default async function ClienteDetalle({
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">
           <CardHeader title="Información del cliente" />
+          {cliente.foto && (
+            <div className="flex items-center gap-4 border-b border-border px-5 py-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={cliente.foto} alt={cliente.nombre} className="h-20 w-20 rounded-xl object-cover" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{cliente.nombre} {cliente.apellidoPaterno}</p>
+                <p className="text-xs text-muted">Foto de identificación en sistema</p>
+              </div>
+            </div>
+          )}
           <dl className="grid gap-4 p-5 sm:grid-cols-2">
             <Dato etiqueta="CURP" valor={cliente.curp} mono />
             <Dato etiqueta="RFC" valor={cliente.rfc} mono />

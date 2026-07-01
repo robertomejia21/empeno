@@ -13,12 +13,17 @@ export default async function EmpenosPage({
   const { q } = await searchParams;
   const todos = await listarEmpenos();
   const t = (q ?? "").toLowerCase().trim();
+  const tDigits = t.replace(/\D/g, "");
   const empenos = t
-    ? todos.filter((e) =>
-        [e.folio, e.prenda.descripcion, e.estado, `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`]
+    ? todos.filter((e) => {
+        const texto = [e.folio, e.prenda.descripcion, e.estado, `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`]
           .filter(Boolean)
-          .some((v) => v.toLowerCase().includes(t))
-      )
+          .some((v) => v.toLowerCase().includes(t));
+        // Coincidencia por número de contrato (ignora prefijo/ceros): "835" ↔ EM-0835
+        const porContrato =
+          tDigits.length > 0 && String(parseInt(e.folio.replace(/\D/g, "") || "0", 10)) === String(parseInt(tDigits, 10));
+        return texto || porContrato;
+      })
     : todos;
 
   const activos = todos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
@@ -52,7 +57,7 @@ export default async function EmpenosPage({
       />
 
       <div className="mb-5">
-        <SearchForm q={q} placeholder="Buscar por folio, cliente, prenda…" />
+        <SearchForm q={q} placeholder="Buscar por contrato/folio, cliente, prenda…" />
       </div>
 
       <Card>

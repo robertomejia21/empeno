@@ -52,6 +52,12 @@ export const EMPRESA = {
   rfc: "XAXX010101000",
   registroProfeco: "RPCE-PENDIENTE",
   nom: "NOM-179-SCFI-2016",
+  // Encabezado y pie de los tickets impresos
+  sucursal: "MATRIZ",
+  direccion: "Blvd. Lázaro Cárdenas #4101",
+  colonia: "Col. Islas Agrarias",
+  cp: "21230",
+  telefono: "686 592 8288",
 };
 
 /** Precio de referencia de metales (MXN/gramo de oro puro 24k). Editable. */

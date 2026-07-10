@@ -269,13 +269,19 @@ export function SearchForm({
   placeholder = "Buscar…",
   q,
   action,
+  ocultos,
 }: {
   placeholder?: string;
   q?: string;
   action?: string;
+  /** Filtros activos que la búsqueda debe conservar (ej. la categoría). */
+  ocultos?: Record<string, string | undefined>;
 }) {
   return (
     <form action={action} className="flex w-full max-w-sm items-center gap-2">
+      {Object.entries(ocultos ?? {}).map(([k, v]) =>
+        v ? <input key={k} type="hidden" name={k} value={v} /> : null
+      )}
       <input
         name="q"
         defaultValue={q}

@@ -5,16 +5,23 @@ import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 
+const pastillaCls = (activa: boolean) =>
+  `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
+    activa
+      ? "border-primary bg-primary-soft text-primary"
+      : "border-border bg-surface text-foreground hover:bg-surface-2"
+  }`;
+
 export default async function EmpenosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, cat } = await searchParams;
   const todos = await listarEmpenos();
   const t = (q ?? "").toLowerCase().trim();
   const tDigits = t.replace(/\D/g, "");
-  const empenos = t
+  const porTexto = t
     ? todos.filter((e) => {
         const texto = [e.folio, e.prenda.descripcion, e.estado, `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`]
           .filter(Boolean)
@@ -25,6 +32,21 @@ export default async function EmpenosPage({
         return texto || porContrato;
       })
     : todos;
+  const empenos = cat ? porTexto.filter((e) => e.prenda.categoria === cat) : porTexto;
+
+  // Categorías presentes, con su conteo (sobre el resultado de la búsqueda)
+  const conteoPorCategoria = new Map<string, number>();
+  for (const e of porTexto) {
+    conteoPorCategoria.set(e.prenda.categoria, (conteoPorCategoria.get(e.prenda.categoria) ?? 0) + 1);
+  }
+  const categorias = [...conteoPorCategoria.entries()].sort((a, b) => b[1] - a[1]);
+  const liga = (c?: string) => {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (c) p.set("cat", c);
+    const s = p.toString();
+    return s ? `/empenos?${s}` : "/empenos";
+  };
 
   const activos = todos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const conCalc = activos.map((e) => calcularLiquidacion(e));
@@ -36,7 +58,12 @@ export default async function EmpenosPage({
     <div>
       <PageHeader
         title="Empeños"
-        subtitle={t ? `${empenos.length} resultado(s) para "${q}"` : `${empenos.length} contratos`}
+        subtitle={[
+          t ? `${empenos.length} resultado(s) para "${q}"` : `${empenos.length} contrato(s)`,
+          cat ? `categoría ${cat}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
         action={
           <div className="flex gap-2">
             <LinkButton href="/empenos/nuevo" variante="secondary">
@@ -56,9 +83,23 @@ export default async function EmpenosPage({
         ]}
       />
 
-      <div className="mb-5">
-        <SearchForm q={q} placeholder="Buscar por contrato/folio, cliente, prenda…" />
+      <div className="mb-4">
+        <SearchForm q={q} ocultos={{ cat }} placeholder="Buscar por contrato/folio, cliente, prenda…" />
       </div>
+
+      {categorias.length > 1 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted">Categoría</span>
+          <Link href={liga()} className={pastillaCls(!cat)}>
+            Todas <span className="text-muted">{porTexto.length}</span>
+          </Link>
+          {categorias.map(([c, n]) => (
+            <Link key={c} href={liga(c)} className={pastillaCls(cat === c)}>
+              {c} <span className="text-muted">{n}</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <Card>
         {empenos.length === 0 ? (

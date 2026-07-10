@@ -41,9 +41,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   // Encabezado
   center(EMPRESA.nombre.toUpperCase(), 12, bold);
-  center("SUCURSAL: MATRIZ", 8);
-  center(EMPRESA.razonSocial, 7, font, gris);
-  center(`R.F.C.: ${EMPRESA.rfc}`, 7, font, gris);
+  center(`SUCURSAL: ${EMPRESA.sucursal}`, 8);
+  center(EMPRESA.direccion.toUpperCase(), 7, font, gris);
+  center(`${EMPRESA.colonia.toUpperCase()}, C.P.: ${EMPRESA.cp}`, 7, font, gris);
+  center(`R.F.C.: ${EMPRESA.rfc}  TEL.: ${EMPRESA.telefono}`, 7, font, gris);
   y -= 4;
   center(tituloTipo[pago.tipo] ?? "PAGO", 13, bold);
   y -= 2;
@@ -54,9 +55,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   left(`FECHA: ${fechaHora(pago.fecha)}`); y -= 12;
   left(`CLIENTE: ${emp ? `${emp.cliente.nombre} ${emp.cliente.apellidoPaterno} ${emp.cliente.apellidoMaterno}` : "—"}`); y -= 16;
 
-  // Conceptos
+  // En el ticket en papel los importes en cero se dejan en blanco.
+  const imp = (v: number) => (v > 0 ? mxn.format(v) : "");
+  const esDesempeno = pago.tipo === "desempeno";
+
+  // En desempeño se liquida el préstamo íntegro y los abonos previos se restan abajo;
+  // en refrendo el abono a capital es un cargo más de la exhibición.
   const conceptos: [string, number][] = [
-    ["ABONO CAPITAL:", pago.abonoCapital],
+    esDesempeno
+      ? ["PRÉSTAMO:", emp?.montoPrestado ?? 0]
+      : ["ABONO CAPITAL:", pago.abonoCapital],
     ["INTERESES:", pago.intereses],
     ["ALMACENAJE:", pago.almacenaje],
     ["GASTOS ADMIN.:", pago.gastosAdmin],
@@ -67,26 +75,29 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ["PENSIÓN:", pago.pension],
     ["IVA:", pago.iva],
   ];
-  for (const [l, v] of conceptos) row(l, mxn.format(v));
+  for (const [l, v] of conceptos) row(l, imp(v));
 
   dashed();
   row("SUBTOTAL:", mxn.format(pago.subtotal), bold);
-  row("DESCUENTO:", mxn.format(pago.descuento));
+  if (esDesempeno) row("ABONOS:", imp(pago.abonoCapital));
   dashed();
   page.drawText("TOTAL:", { x: 14, y, size: 12, font: bold, color: negro });
   const tw = bold.widthOfTextAtSize(mxn.format(pago.total), 12);
   page.drawText(mxn.format(pago.total), { x: W - 14 - tw, y, size: 12, font: bold, color: negro });
   y -= 18;
 
-  row("EFECTIVO:", mxn.format(pago.efectivo));
-  row("TARJETA:", mxn.format(pago.tarjeta));
-  row("TRANSFERENCIA:", mxn.format(pago.transferencia));
+  row("EFECTIVO:", imp(pago.efectivo));
+  row("TARJETA:", imp(pago.tarjeta));
+  row("TRANSFERENCIA:", imp(pago.transferencia));
   row("CAMBIO:", mxn.format(pago.cambio), bold);
+  row("DESCUENTO:", imp(pago.descuento));
   y -= 8;
-  left(`USUARIO: ${pago.usuarioNombre ?? "—"}`, 7, font); y -= 20;
+  left(`USUARIO: ${(pago.usuarioNombre ?? "—").toUpperCase()}`, 7, font); y -= 10;
+  left(`CAJA: ${EMPRESA.sucursal}`, 7, font); y -= 20;
 
-  center("¡GRACIAS POR SU PREFERENCIA!", 8, bold);
-  center("VUELVA PRONTO", 7, font, gris);
+  center("¡GRACIAS POR TU PREFERENCIA,", 8, bold);
+  center("VUELVA PRONTO!", 8, bold);
+  center(`${EMPRESA.nombre.toUpperCase()} ${EMPRESA.sucursal}`, 7, font, gris);
 
   const bytes = await doc.save();
   return new Response(Buffer.from(bytes), {

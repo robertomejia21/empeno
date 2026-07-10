@@ -116,13 +116,39 @@ export default async function EmpenoDetalle({
                     </ConfirmSubmit>
                   </div>
                 </form>
-                <form action={desempenar}>
-                  <ConfirmSubmit
-                    variante="secondary"
-                    confirmacion={`¿Registrar desempeño por ${formatMXN(calc.totalDesempeno)}? El cliente recupera su prenda.`}
-                  >
-                    Desempeñar · {formatMXN(calc.totalDesempeno)}
-                  </ConfirmSubmit>
+                <form action={desempenar} className="rounded-xl border border-border bg-surface-2/40 p-4">
+                  <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <label className="flex flex-col gap-1 text-xs text-muted">
+                      Método de pago
+                      <select name="metodoPago" defaultValue={empeno.metodoPago} className={campoCls}>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="tarjeta">Tarjeta</option>
+                      </select>
+                    </label>
+                    <CampoNum name="moratorios" label="Moratorios" />
+                    <CampoNum name="gastosAdmin" label="Gastos admin." />
+                    <CampoNum name="rentaGps" label="Renta GPS" />
+                    <CampoNum name="rentaSeguro" label="Renta seguro" />
+                    <CampoNum name="pension" label="Pensión" />
+                    <CampoNum name="gastosVenta" label="Gastos venta" />
+                    <CampoNum name="descuento" label="Descuento" />
+                    <CampoNum name="recibido" label="Efectivo recibido" />
+                  </div>
+                  <p className="mt-3 text-xs text-muted">
+                    A liquidar hoy: <strong>{formatMXN(calc.totalDesempeno)}</strong> (capital + interés + almacenaje +
+                    IVA). Los cargos extra se suman y se genera el ticket de desempeño.
+                  </p>
+                  <div className="mt-3">
+                    <ConfirmSubmit
+                      variante="secondary"
+                      confirmacion={`¿Registrar desempeño por ${formatMXN(calc.totalDesempeno)}? El cliente recupera su prenda.`}
+                    >
+                      Desempeñar y entregar ticket
+                    </ConfirmSubmit>
+                  </div>
                 </form>
               </div>
             )}

@@ -479,57 +479,104 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
 }
 
 /** Desempeño: el cliente liquida capital + interés y recupera su prenda. */
-export async function desempenarEmpeno(id: string) {
+export async function desempenarEmpeno(id: string, form?: FormData) {
   if (await esInvitado()) return;
+  const e = await obtenerEmpeno(id);
+  if (!e) return;
+
+  const calc = calcularLiquidacion(e);
+
+  const g = (k: string) => {
+    const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
+    return Number.isFinite(v) ? v : 0;
+  };
+  const moratorios = g("moratorios");
+  const gastosAdmin = g("gastosAdmin");
+  const rentaGps = g("rentaGps");
+  const rentaSeguro = g("rentaSeguro");
+  const gastosVenta = g("gastosVenta");
+  const pension = g("pension");
+  const descuento = g("descuento");
+  const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
+
+  // El ticket muestra el PRÉSTAMO íntegro y resta los ABONOS a capital por separado,
+  // igual que el formato en papel. El neto coincide con el capital pendiente.
+  const subtotal = round2(
+    e.montoPrestado + calc.interesAcumulado + calc.almacenajeAcumulado +
+    gastosAdmin + moratorios + rentaGps + rentaSeguro + gastosVenta + pension + calc.ivaAcumulado
+  );
+  const total = round2(subtotal - e.abonoCapital - descuento);
+  const recibido = g("recibido");
+  const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
+  const tarjeta = metodoPago === "tarjeta" ? total : 0;
+  const transferencia = metodoPago === "transferencia" || metodoPago === "cheque" ? total : 0;
+  const cambio = recibido > total ? round2(recibido - total) : 0;
+
+  const u = await getUsuarioActual();
+  const pagoBase = {
+    empeno_id: id,
+    cliente_id: e.clienteId,
+    refrendo_no: 0,
+    tipo: "desempeno",
+    abono_capital: e.abonoCapital,
+    intereses: calc.interesAcumulado,
+    almacenaje: calc.almacenajeAcumulado,
+    gastos_admin: gastosAdmin,
+    moratorios,
+    renta_gps: rentaGps,
+    renta_seguro: rentaSeguro,
+    gastos_venta: gastosVenta,
+    pension,
+    iva: calc.ivaAcumulado,
+    descuento,
+    subtotal,
+    total,
+    efectivo,
+    tarjeta,
+    transferencia,
+    cambio,
+    metodo_pago: metodoPago,
+    usuario_nombre: u?.nombre ?? null,
+  };
+
+  let pagoId = "";
   if (supabaseConfigured) {
     const sb = getServerSupabase();
-    const { data, error } = await sb.from("empenos").select("*").eq("id", id).single();
+    const { data: pago, error } = await sb.from("pagos").insert(pagoBase).select("id").single();
     if (error) throw error;
-    const calc = calcularLiquidacion({
-      montoPrestado: Number(data.monto_prestado),
-      tasaInteres: Number(data.tasa_interes),
-      almacenajePct: Number(data.almacenaje_pct ?? 0),
-      ivaPct: Number(data.iva_pct ?? 0),
-      abonoCapital: Number(data.abono_capital ?? 0),
-      periodo: data.periodo,
-      fechaInicio: data.fecha_inicio,
-      fechaVencimiento: data.fecha_vencimiento,
-      diasGracia: data.dias_gracia,
-    });
+    pagoId = pago.id;
     await sb.from("empenos").update({ estado: "desempenado" }).eq("id", id);
-    await sb.from("prendas").update({ estado: "desempenada" }).eq("id", data.prenda_id);
+    await sb.from("prendas").update({ estado: "desempenada" }).eq("id", e.prendaId);
     await sb.from("movimientos_caja").insert({
-      tipo: "desempeno",
-      monto: calc.totalDesempeno,
-      es_entrada: true,
-      concepto: `Desempeño empeño ${data.folio}`,
-      empeno_id: id,
-      referencia: data.folio,
+      tipo: "desempeno", monto: total, es_entrada: true,
+      concepto: `Desempeño empeño ${e.folio}`, empeno_id: id, referencia: e.folio,
     });
   } else {
     const store = getStore();
-    const e = store.empenos.find((x) => x.id === id);
-    if (!e) return;
-    const calc = calcularLiquidacion(e);
-    e.estado = "desempenado";
+    pagoId = nuevoId("pg");
+    const emp = store.empenos.find((x) => x.id === id);
+    if (emp) emp.estado = "desempenado";
     const prenda = store.prendas.find((p) => p.id === e.prendaId);
     if (prenda) prenda.estado = "desempenada";
+    store.pagos.unshift({
+      id: pagoId, reciboNo: 2554 + store.pagos.length, refrendoNo: 0, empenoId: id, clienteId: e.clienteId,
+      tipo: "desempeno", abonoCapital: e.abonoCapital, intereses: calc.interesAcumulado,
+      almacenaje: calc.almacenajeAcumulado, gastosAdmin, moratorios, rentaGps, rentaSeguro,
+      gastosVenta, pension, iva: calc.ivaAcumulado, descuento,
+      subtotal, total, efectivo, tarjeta, transferencia, cambio, metodoPago,
+      usuarioNombre: u?.nombre ?? null, fecha: new Date().toISOString(), creadoEn: new Date().toISOString(),
+    });
     store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "desempeno",
-      monto: calc.totalDesempeno,
-      esEntrada: true,
-      concepto: `Desempeño empeño ${e.folio}`,
-      empenoId: e.id,
-      referencia: e.folio,
-      creadoEn: new Date().toISOString(),
+      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "desempeno", monto: total, esEntrada: true,
+      concepto: `Desempeño empeño ${e.folio}`, empenoId: e.id, referencia: e.folio, creadoEn: new Date().toISOString(),
     });
   }
-  await bitacoraAuto("Desempeño registrado", null, `empeño ${id}`);
+  await bitacoraAuto("Desempeño registrado", `${total} MXN`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
+  if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
+  redirect(`/api/recibo-pago/${pagoId}`);
 }
 
 /** Abono a capital: reduce el saldo del préstamo y entra a caja. */
@@ -1003,9 +1050,14 @@ export async function enviarARemate(empenoId: string) {
     const p = store.prendas.find((x) => x.id === e.prendaId);
     if (p) p.estado = "en_venta";
   }
+  await bitacoraAuto("Empeño enviado a remate", null, `empeño ${empenoId}`);
   revalidatePath("/remates");
   revalidatePath("/empenos");
   revalidatePath("/prendas");
+  revalidatePath("/ventas");
+  revalidatePath("/tienda"); // catálogo público de remates
+  // La prenda ya está a la venta: el cajero continúa en el punto de venta.
+  redirect("/ventas");
 }
 
 /** Registra la venta de una prenda en venta. */
@@ -1070,6 +1122,7 @@ export async function registrarVenta(form: FormData) {
   revalidatePath("/prendas");
   revalidatePath("/caja");
   revalidatePath("/remates");
+  revalidatePath("/tienda"); // la prenda vendida sale del catálogo público
 }
 
 // ----------------- COMPRA DIRECTA -----------------

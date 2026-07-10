@@ -17,7 +17,8 @@ export const navGroups: NavGroup[] = [
       { href: "/mostrador", label: "Mostrador", icon: "🏪" },
       { href: "/", label: "Tablero", icon: "📊" },
       { href: "/empenos", label: "Empeños", icon: "🤝" },
-      { href: "/prendas", label: "Comprar", icon: "🛍️" },
+      // Oculto temporalmente (la ruta /prendas sigue activa):
+      // { href: "/prendas", label: "Comprar", icon: "🛍️" },
       { href: "/clientes", label: "Clientes", icon: "👤" },
       { href: "/recordatorios", label: "Recordatorios", icon: "🔔" },
       { href: "/conversaciones", label: "Conversaciones", icon: "💬" },

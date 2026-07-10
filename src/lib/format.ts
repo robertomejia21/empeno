@@ -31,19 +31,39 @@ const fechaHora = new Intl.DateTimeFormat("es-MX", {
   minute: "2-digit",
 });
 
+/**
+ * Convierte una cadena ISO a Date sin corrimiento de zona horaria.
+ * `new Date("2026-07-09")` se interpreta como medianoche UTC; en Mexicali
+ * (UTC-7) eso cae el día 8. Las fechas de sólo día se arman en hora local.
+ */
+export function parseFechaLocal(iso: string): Date {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [a, m, d] = iso.split("-").map(Number);
+    return new Date(a, m - 1, d);
+  }
+  return new Date(iso);
+}
+
+/** Fecha ISO (YYYY-MM-DD) de un Date, en hora local. */
+export function aISOLocal(d: Date): string {
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
+}
+
 export function formatFecha(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return fechaCorta.format(new Date(iso));
+  return fechaCorta.format(parseFechaLocal(iso));
 }
 
 export function formatFechaLarga(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return fechaLarga.format(new Date(iso));
+  return fechaLarga.format(parseFechaLocal(iso));
 }
 
 export function formatFechaHora(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return fechaHora.format(new Date(iso));
+  return fechaHora.format(parseFechaLocal(iso));
 }
 
 export function formatPorcentaje(n: number): string {
@@ -52,5 +72,5 @@ export function formatPorcentaje(n: number): string {
 
 /** Fecha ISO (YYYY-MM-DD) de hoy en zona local */
 export function hoyISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return aISOLocal(new Date());
 }

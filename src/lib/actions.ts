@@ -17,6 +17,7 @@ import type {
   Compra,
   Apartado,
   CorteCaja,
+  Resguardo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -24,9 +25,11 @@ import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
-import { formatMXN, formatFecha } from "@/lib/format";
+import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
-import { extraerDatosINE, type DatosINE } from "@/lib/gemini";
+import { RESGUARDO_VACIO, resumenResguardo } from "@/lib/resguardo";
+import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
+import { extraerDatosINE, type ResultadoINE } from "@/lib/gemini";
 
 function dividirDataUrl(dataUrl: string): { mime: string; base64: string } | null {
   const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -160,10 +163,12 @@ export async function actualizarCliente(id: string, form: FormData) {
 // ----------------- INE / FOTO DE CLIENTE (IA) -----------------
 
 /** Lee una INE (imagen dataURL) con IA y devuelve los datos para autollenar. */
-export async function analizarINE(dataUrl: string): Promise<DatosINE | null> {
-  if (await esInvitado()) return null;
+export async function analizarINE(dataUrl: string): Promise<ResultadoINE> {
+  if (await esInvitado()) {
+    return { ok: false, error: "En la demo de sólo lectura no se procesan identificaciones." };
+  }
   const p = dividirDataUrl(dataUrl);
-  if (!p) return null;
+  if (!p) return { ok: false, error: "El archivo no es una imagen válida." };
   return extraerDatosINE(p.base64, p.mime);
 }
 
@@ -238,6 +243,8 @@ export async function crearPrenda(form: FormData) {
       estado: "en_avaluo",
       fotos: [],
       ubicacionResguardo: datos.ubicacion_resguardo,
+      resguardo: RESGUARDO_VACIO,
+      ...CAMPOS_VEHICULO_VACIOS,
       seguro: datos.seguro,
       gps: datos.gps,
       garantia: datos.garantia,
@@ -256,7 +263,7 @@ export async function crearPrenda(form: FormData) {
 
 export async function crearEmpeno(form: FormData) {
   if (await esInvitado()) return;
-  const fechaInicio = s(form, "fechaInicio") || new Date().toISOString().slice(0, 10);
+  const fechaInicio = s(form, "fechaInicio") || hoyISO();
   const periodo = (s(form, "periodo") || "mensual") as PeriodoInteres;
   const plazoPeriodos = Math.max(1, Math.round(num(form, "plazoPeriodos")) || 1);
   const montoPrestado = num(form, "montoPrestado");
@@ -397,7 +404,7 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
 
   const refrendoNo = (await contarRefrendos(id)) + 1;
   const u = await getUsuarioActual();
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
   const nuevoVenc = calcularVencimiento(hoy, e.periodo, e.plazoPeriodos);
 
   const pagoBase = {
@@ -581,6 +588,7 @@ export async function crearEmpenoGuiado(
           telefono: cn.telefono,
           direccion: cn.direccion,
           email: cn.email,
+          fecha_nacimiento: cn.fechaNacimiento,
           tipo_identificacion: cn.tipoIdentificacion,
           numero_identificacion: cn.numeroIdentificacion,
           foto: cn.foto,
@@ -615,6 +623,24 @@ export async function crearEmpenoGuiado(
         seguro: data.prenda.seguro,
         gps: data.prenda.gps,
         garantia: data.prenda.garantia,
+        tipo_vehiculo: data.prenda.tipoVehiculo,
+        transmision: data.prenda.transmision,
+        numero_motor: data.prenda.numeroMotor,
+        kilometraje: data.prenda.kilometraje,
+        cilindros: data.prenda.cilindros,
+        clave_vehicular: data.prenda.claveVehicular,
+        nivel_gasolina: data.prenda.nivelGasolina,
+        numero_factura: data.prenda.numeroFactura,
+        emisor_factura: data.prenda.emisorFactura,
+        valor_factura: data.prenda.valorFactura,
+        fecha_factura: data.prenda.fechaFactura,
+        aseguradora: data.prenda.aseguradora,
+        poliza: data.prenda.poliza,
+        danios: data.prenda.danios,
+        gps_ubicacion: data.prenda.gpsUbicacion,
+        seguro_mensual: data.prenda.seguroMensual,
+        pension_mensual: data.prenda.pensionMensual,
+        gps_mensual: data.prenda.gpsMensual,
         verificado: data.prenda.verificado,
         repuve_folio: data.prenda.repuveFolio,
         notas: data.prenda.notas,
@@ -684,7 +710,7 @@ export async function crearEmpenoGuiado(
       tipoIdentificacion: cn.tipoIdentificacion,
       numeroIdentificacion: cn.numeroIdentificacion,
       direccion: cn.direccion,
-      fechaNacimiento: null,
+      fechaNacimiento: cn.fechaNacimiento,
       foto: cn.foto,
       notas: null,
       creadoEn: ts,
@@ -713,9 +739,28 @@ export async function crearEmpenoGuiado(
     estado: "empenada",
     fotos: data.prenda.fotos,
     ubicacionResguardo: data.prenda.ubicacionResguardo,
+    resguardo: RESGUARDO_VACIO,
     seguro: data.prenda.seguro,
     gps: data.prenda.gps,
     garantia: data.prenda.garantia,
+    tipoVehiculo: data.prenda.tipoVehiculo,
+    transmision: data.prenda.transmision,
+    numeroMotor: data.prenda.numeroMotor,
+    kilometraje: data.prenda.kilometraje,
+    cilindros: data.prenda.cilindros,
+    claveVehicular: data.prenda.claveVehicular,
+    nivelGasolina: data.prenda.nivelGasolina,
+    numeroFactura: data.prenda.numeroFactura,
+    emisorFactura: data.prenda.emisorFactura,
+    valorFactura: data.prenda.valorFactura,
+    fechaFactura: data.prenda.fechaFactura,
+    aseguradora: data.prenda.aseguradora,
+    poliza: data.prenda.poliza,
+    danios: data.prenda.danios,
+    gpsUbicacion: data.prenda.gpsUbicacion,
+    seguroMensual: data.prenda.seguroMensual,
+    pensionMensual: data.prenda.pensionMensual,
+    gpsMensual: data.prenda.gpsMensual,
     verificado: data.prenda.verificado,
     repuveFolio: data.prenda.repuveFolio,
     notas: data.prenda.notas,
@@ -882,15 +927,39 @@ export async function subirFotoPrenda(prendaId: string, formData: FormData) {
 /** Actualiza la ubicación de resguardo (Matriz o externa, con pin de mapa). */
 export async function actualizarResguardo(prendaId: string, form: FormData) {
   if (await esInvitado()) return;
-  const tipo = s(form, "tipoUbicacion") || "Matriz";
-  const detalle = s(form, "detalle");
-  const maps = sn(form, "mapsUrl");
-  const texto = [tipo, detalle, maps ? `📍 ${maps}` : null].filter(Boolean).join(" · ");
+  const resguardo: Resguardo = {
+    tipo: (s(form, "tipoUbicacion") || "Matriz") as Resguardo["tipo"],
+    calle: sn(form, "calle"),
+    numero: sn(form, "numero"),
+    colonia: sn(form, "colonia"),
+    ciudad: sn(form, "ciudad"),
+    cp: sn(form, "cp"),
+    referencia: sn(form, "referencia"),
+    mapsUrl: sn(form, "mapsUrl"),
+  };
+  const resumen = resumenResguardo(resguardo);
+
   if (supabaseConfigured) {
-    await getServerSupabase().from("prendas").update({ ubicacion_resguardo: texto }).eq("id", prendaId);
+    await getServerSupabase()
+      .from("prendas")
+      .update({
+        ubicacion_resguardo: resumen,
+        resguardo_tipo: resguardo.tipo,
+        resguardo_calle: resguardo.calle,
+        resguardo_numero: resguardo.numero,
+        resguardo_colonia: resguardo.colonia,
+        resguardo_ciudad: resguardo.ciudad,
+        resguardo_cp: resguardo.cp,
+        resguardo_referencia: resguardo.referencia,
+        resguardo_maps_url: resguardo.mapsUrl,
+      })
+      .eq("id", prendaId);
   } else {
     const p = getStore().prendas.find((x) => x.id === prendaId);
-    if (p) p.ubicacionResguardo = texto;
+    if (p) {
+      p.ubicacionResguardo = resumen;
+      p.resguardo = resguardo;
+    }
   }
   revalidatePath(`/prendas/${prendaId}`);
 }
@@ -1072,6 +1141,8 @@ export async function crearCompra(form: FormData) {
       estado: "en_venta",
       fotos: [],
       ubicacionResguardo: null,
+      resguardo: RESGUARDO_VACIO,
+      ...CAMPOS_VEHICULO_VACIOS,
       seguro: null,
       gps: null,
       garantia: null,
@@ -1291,7 +1362,7 @@ export async function registrarCorte(form: FormData) {
   if (await esInvitado()) return;
   const contado = num(form, "contado");
   const notas = sn(form, "notas");
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = hoyISO();
 
   const movs = await listarMovimientos();
   const esperado = movs.reduce((s, m) => s + (m.esEntrada ? m.monto : -m.monto), 0);

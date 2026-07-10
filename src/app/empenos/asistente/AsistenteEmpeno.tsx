@@ -5,6 +5,8 @@ import Link from "next/link";
 import { crearEmpenoGuiado, analizarINE, subirFotoCliente } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, prestamoSugerido } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
+import { normalizarImagen } from "@/lib/imagen";
+import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
 import { Card } from "@/components/ui";
 import type { CategoriaPrenda, PeriodoInteres, TipoIdentificacion } from "@/lib/types";
 import { PASOS } from "./pasos";
@@ -45,44 +47,44 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [cn, setCn] = useState({
     nombre: "", apellidoPaterno: "", apellidoMaterno: "",
     curp: "", telefono: "", direccion: "", email: "",
+    fechaNacimiento: "",
     tipoIdentificacion: "INE" as TipoIdentificacion, numeroIdentificacion: "",
   });
   const [fotoCliente, setFotoCliente] = useState<string | null>(null);
   const [escaneando, setEscaneando] = useState(false);
-  const [ineMsg, setIneMsg] = useState<string | null>(null);
+  const [ineMsg, setIneMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
-
-  const leerArchivo = (f: File): Promise<string> =>
-    new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result as string);
-      r.onerror = rej;
-      r.readAsDataURL(f);
-    });
 
   async function onEscanearINE(f: File | undefined) {
     if (!f) return;
     setEscaneando(true);
     setIneMsg(null);
     try {
-      const datos = await analizarINE(await leerArchivo(f));
-      if (!datos) {
-        setIneMsg("No se pudo leer la INE. Captura los datos manualmente.");
-      } else {
-        setCn((c) => ({
-          ...c,
-          nombre: datos.nombre ?? c.nombre,
-          apellidoPaterno: datos.apellidoPaterno ?? c.apellidoPaterno,
-          apellidoMaterno: datos.apellidoMaterno ?? c.apellidoMaterno,
-          curp: datos.curp ?? c.curp,
-          direccion: datos.domicilio ?? c.direccion,
-          numeroIdentificacion: datos.claveElector ?? c.numeroIdentificacion,
-          tipoIdentificacion: "INE",
-        }));
-        setIneMsg("✓ Datos extraídos de la INE. Revísalos y corrige lo necesario.");
+      const r = await analizarINE(await normalizarImagen(f));
+      if (!r.ok) {
+        setIneMsg({ ok: false, texto: `${r.error} Puedes capturar los datos a mano.` });
+        return;
       }
+      const d = r.datos;
+      const leidos = Object.values(d).filter(Boolean).length;
+      setCn((c) => ({
+        ...c,
+        nombre: d.nombre ?? c.nombre,
+        apellidoPaterno: d.apellidoPaterno ?? c.apellidoPaterno,
+        apellidoMaterno: d.apellidoMaterno ?? c.apellidoMaterno,
+        curp: d.curp ?? c.curp,
+        direccion: d.domicilio ?? c.direccion,
+        fechaNacimiento: d.fechaNacimiento ?? c.fechaNacimiento,
+        numeroIdentificacion: d.claveElector ?? c.numeroIdentificacion,
+        tipoIdentificacion: "INE",
+      }));
+      setIneMsg(
+        leidos === 0
+          ? { ok: false, texto: "No se distinguió ningún dato. Toma la foto de frente y con buena luz." }
+          : { ok: true, texto: `✓ ${leidos} campo(s) autollenados desde la INE. Revísalos antes de continuar.` }
+      );
     } catch {
-      setIneMsg("Error al procesar la INE.");
+      setIneMsg({ ok: false, texto: "Error al procesar la INE. Intenta con otra foto." });
     } finally {
       setEscaneando(false);
     }
@@ -92,7 +94,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     if (!f) return;
     setSubiendoFoto(true);
     try {
-      const url = await subirFotoCliente(await leerArchivo(f));
+      const url = await subirFotoCliente(await normalizarImagen(f, 800));
       if (url) setFotoCliente(url);
     } finally {
       setSubiendoFoto(false);
@@ -108,6 +110,17 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     serie: "", placas: "", metal: "", kilataje: "", gramos: "",
   });
   const [valorAvaluo, setValorAvaluo] = useState("");
+  // Paso 4 — comentarios del bien (daños, faltantes, estado)
+  const [comentariosBien, setComentariosBien] = useState("");
+
+  // Paso 4 — ficha del vehículo
+  const [veh, setVeh] = useState({
+    tipoVehiculo: "", transmision: "", numeroMotor: "", kilometraje: "",
+    cilindros: "", claveVehicular: "", nivelGasolina: "",
+    numeroFactura: "", emisorFactura: "", valorFactura: "", fechaFactura: "",
+    aseguradora: "", poliza: "", danios: "", gpsUbicacion: "",
+    seguroMensual: "", pensionMensual: "", gpsMensual: "",
+  });
 
   // Paso 5 — préstamo
   const [monto, setMonto] = useState("");
@@ -204,6 +217,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 telefono: cn.telefono || null,
                 direccion: cn.direccion || null,
                 email: cn.email || null,
+                fechaNacimiento: cn.fechaNacimiento || null,
                 tipoIdentificacion: cn.tipoIdentificacion,
                 numeroIdentificacion: cn.numeroIdentificacion,
                 foto: fotoCliente,
@@ -229,9 +243,31 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
           seguro: null,
           gps: esVehiculo ? "Por verificar" : null,
           garantia: esVehiculo ? bien.descripcion : null,
+          ...(esVehiculo
+            ? {
+                tipoVehiculo: veh.tipoVehiculo || null,
+                transmision: veh.transmision || null,
+                numeroMotor: veh.numeroMotor || null,
+                kilometraje: veh.kilometraje ? parseFloat(veh.kilometraje) : null,
+                cilindros: veh.cilindros || null,
+                claveVehicular: veh.claveVehicular || null,
+                nivelGasolina: veh.nivelGasolina || null,
+                numeroFactura: veh.numeroFactura || null,
+                emisorFactura: veh.emisorFactura || null,
+                valorFactura: veh.valorFactura ? parseFloat(veh.valorFactura) : null,
+                fechaFactura: veh.fechaFactura || null,
+                aseguradora: veh.aseguradora || null,
+                poliza: veh.poliza || null,
+                danios: veh.danios || null,
+                gpsUbicacion: veh.gpsUbicacion || null,
+                seguroMensual: veh.seguroMensual ? parseFloat(veh.seguroMensual) : null,
+                pensionMensual: veh.pensionMensual ? parseFloat(veh.pensionMensual) : null,
+                gpsMensual: veh.gpsMensual ? parseFloat(veh.gpsMensual) : null,
+              }
+            : CAMPOS_VEHICULO_VACIOS),
           verificado: esVehiculo ? autoVerificado : true,
           repuveFolio: esVehiculo ? repuveFolio || null : null,
-          notas: condiciones || null,
+          notas: [comentariosBien, condiciones].filter(Boolean).join("\n") || null,
         },
         montoPrestado: montoNum,
         tasaInteres: tasa,
@@ -346,14 +382,26 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={fotoCliente} alt="Cliente" className="h-12 w-12 rounded-full object-cover" />
                   )}
-                  {ineMsg && <p className="w-full text-xs text-muted">{ineMsg}</p>}
-                  {!ineMsg && <p className="w-full text-xs text-muted">La INE autollena los campos con IA; la foto identifica al cliente cuando llegue.</p>}
+                  {ineMsg ? (
+                    <p className={`w-full text-xs ${ineMsg.ok ? "text-success" : "text-danger"}`}>{ineMsg.texto}</p>
+                  ) : (
+                    <p className="w-full text-xs text-muted">La INE autollena los campos con IA; la foto identifica al cliente cuando llegue.</p>
+                  )}
                 </div>
                 <Campo label="Nombre(s)" req value={cn.nombre} onChange={(v) => setCn({ ...cn, nombre: v })} />
                 <Campo label="Apellido paterno" req value={cn.apellidoPaterno} onChange={(v) => setCn({ ...cn, apellidoPaterno: v })} />
                 <Campo label="Apellido materno" value={cn.apellidoMaterno} onChange={(v) => setCn({ ...cn, apellidoMaterno: v })} />
                 <Campo label="CURP" value={cn.curp} onChange={(v) => setCn({ ...cn, curp: v })} />
                 <Campo label="Teléfono" value={cn.telefono} onChange={(v) => setCn({ ...cn, telefono: v })} />
+                <div>
+                  <Label>Fecha de nacimiento</Label>
+                  <input
+                    type="date"
+                    value={cn.fechaNacimiento}
+                    onChange={(e) => setCn({ ...cn, fechaNacimiento: e.target.value })}
+                    className={inputCls}
+                  />
+                </div>
                 <div>
                   <Label>Tipo de identificación</Label>
                   <select
@@ -403,14 +451,66 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
               placeholder={esVehiculo ? "Ej. Automóvil sedán 4 puertas" : "Ej. Anillo de oro 14k"} />
 
             {esVehiculo ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} placeholder="Nissan" />
-                <Campo label="Submarca / línea" value={bien.submarca} onChange={(v) => setBien({ ...bien, submarca: v })} placeholder="Versa" />
-                <Campo label="Modelo (año)" value={bien.modelo} onChange={(v) => setBien({ ...bien, modelo: v })} placeholder="2020" />
-                <Campo label="Color" value={bien.color} onChange={(v) => setBien({ ...bien, color: v })} />
-                <Campo label="Número de serie (NIV)" value={bien.serie} onChange={(v) => setBien({ ...bien, serie: v })} />
-                <Campo label="Placas" value={bien.placas} onChange={(v) => setBien({ ...bien, placas: v })} />
-              </div>
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Campo label="Tipo de vehículo" value={veh.tipoVehiculo} onChange={(v) => setVeh({ ...veh, tipoVehiculo: v })} placeholder="Sedán / Pick-up / SUV" />
+                  <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} placeholder="Nissan" />
+                  <Campo label="Submarca / línea" value={bien.submarca} onChange={(v) => setBien({ ...bien, submarca: v })} placeholder="Versa" />
+                  <Campo label="Modelo (año)" value={bien.modelo} onChange={(v) => setBien({ ...bien, modelo: v })} placeholder="2020" />
+                  <Campo label="Color" value={bien.color} onChange={(v) => setBien({ ...bien, color: v })} />
+                  <Campo label="Transmisión" value={veh.transmision} onChange={(v) => setVeh({ ...veh, transmision: v })} placeholder="Estándar / Automática" />
+                  <Campo label="Número de serie (NIV)" value={bien.serie} onChange={(v) => setBien({ ...bien, serie: v })} />
+                  <Campo label="Número de motor" value={veh.numeroMotor} onChange={(v) => setVeh({ ...veh, numeroMotor: v })} />
+                  <Campo label="Kilometraje" type="number" value={veh.kilometraje} onChange={(v) => setVeh({ ...veh, kilometraje: v })} />
+                  <Campo label="Cilindros" value={veh.cilindros} onChange={(v) => setVeh({ ...veh, cilindros: v })} placeholder="4" />
+                  <Campo label="Placas" value={bien.placas} onChange={(v) => setBien({ ...bien, placas: v })} />
+                  <Campo label="Clave vehicular" value={veh.claveVehicular} onChange={(v) => setVeh({ ...veh, claveVehicular: v })} />
+                  <Campo label="Nivel de gasolina" value={veh.nivelGasolina} onChange={(v) => setVeh({ ...veh, nivelGasolina: v })} placeholder="1/2 tanque" />
+                </div>
+
+                <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
+                  <p className="text-sm font-semibold text-foreground">🧾 Factura</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Campo label="No. de factura" value={veh.numeroFactura} onChange={(v) => setVeh({ ...veh, numeroFactura: v })} />
+                    <Campo label="Emisor de la factura" value={veh.emisorFactura} onChange={(v) => setVeh({ ...veh, emisorFactura: v })} />
+                    <Campo label="Valor de factura (MXN)" type="number" value={veh.valorFactura} onChange={(v) => setVeh({ ...veh, valorFactura: v })} />
+                    <div>
+                      <Label>Fecha de factura</Label>
+                      <input type="date" value={veh.fechaFactura} onChange={(e) => setVeh({ ...veh, fechaFactura: e.target.value })} className={inputCls} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
+                  <p className="text-sm font-semibold text-foreground">🛡️ Seguro, pensión y GPS</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Campo label="Aseguradora" value={veh.aseguradora} onChange={(v) => setVeh({ ...veh, aseguradora: v })} />
+                    <Campo label="Póliza" value={veh.poliza} onChange={(v) => setVeh({ ...veh, poliza: v })} />
+                    <Campo label="Seguro mensual (MXN)" type="number" value={veh.seguroMensual} onChange={(v) => setVeh({ ...veh, seguroMensual: v })} />
+                    <Campo label="Pensión mensual (MXN)" type="number" value={veh.pensionMensual} onChange={(v) => setVeh({ ...veh, pensionMensual: v })} />
+                    <Campo label="GPS mensual (MXN)" type="number" value={veh.gpsMensual} onChange={(v) => setVeh({ ...veh, gpsMensual: v })} />
+                    <Campo label="Ubicación del GPS" value={veh.gpsUbicacion} onChange={(v) => setVeh({ ...veh, gpsUbicacion: v })} placeholder="Coordenadas o liga de Maps" />
+                  </div>
+                  {veh.gpsUbicacion && (
+                    <a
+                      href={/^https?:\/\//.test(veh.gpsUbicacion)
+                        ? veh.gpsUbicacion
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(veh.gpsUbicacion)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex text-sm font-medium text-info underline-offset-2 hover:underline"
+                    >
+                      📍 Ver ubicación en el mapa →
+                    </a>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Daños visibles</Label>
+                  <textarea value={veh.danios} onChange={(e) => setVeh({ ...veh, danios: e.target.value })} rows={2}
+                    placeholder="Ej. Rayón en puerta trasera derecha, parabrisas estrellado" className={inputCls} />
+                </div>
+              </>
             ) : esJoyeria ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Campo label="Metal" value={bien.metal} onChange={(v) => setBien({ ...bien, metal: v })} placeholder="Oro" />
@@ -426,6 +526,22 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 <Campo label="Color" value={bien.color} onChange={(v) => setBien({ ...bien, color: v })} />
               </div>
             )}
+
+            <div>
+              <Label>{esVehiculo ? "Comentarios sobre el automóvil" : "Comentarios del bien"}</Label>
+              <textarea
+                value={comentariosBien}
+                onChange={(e) => setComentariosBien(e.target.value)}
+                rows={3}
+                placeholder={esVehiculo
+                  ? "Estado general, fallas mecánicas, accesorios incluidos, observaciones…"
+                  : "¿Está dañado? Golpes, rayones, piezas faltantes, si enciende o no…"}
+                className={inputCls}
+              />
+              <p className="mt-1 text-xs text-muted">
+                Queda registrado en el expediente del bien y en su ficha.
+              </p>
+            </div>
 
             <Campo label="Valor de avalúo (MXN)" req type="number" value={valorAvaluo} onChange={setValorAvaluo} />
             {avaluoNum > 0 && (
@@ -564,7 +680,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
               <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-soft p-4">
                 <p className="text-sm font-semibold text-warning">🚗 Verificación obligatoria del vehículo</p>
                 <a
-                  href="https://www2.repuve.gob.mx:8443/ciudadania/consulta/"
+                  href="https://www.gob.mx/repuve/acciones-y-programas/consulta-ciudadana-repuve"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-info underline-offset-2 hover:underline"

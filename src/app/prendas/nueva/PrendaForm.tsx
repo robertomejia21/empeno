@@ -132,9 +132,9 @@ export function PrendaForm() {
             placeholder="Ej. Bóveda - Caja 3 / Estacionamiento"
           />
           <TextArea
-            label="Notas / condiciones físicas"
+            label="Comentarios del bien (estado y daños)"
             name="notas"
-            placeholder="Estado físico, accesorios, observaciones..."
+            placeholder="¿Está dañado? Golpes, rayones, piezas faltantes, si enciende, accesorios incluidos..."
           />
         </div>
       </Card>

@@ -46,6 +46,20 @@ export type EstadoPrenda =
   | "apartada" // reservada en un apartado
   | "vendida";
 
+export type TipoResguardo = "Matriz" | "Externa";
+
+/** Dónde está físicamente resguardado el bien, con la dirección desglosada. */
+export interface Resguardo {
+  tipo: TipoResguardo;
+  calle: string | null;
+  numero: string | null;
+  colonia: string | null;
+  ciudad: string | null;
+  cp: string | null;
+  referencia: string | null;
+  mapsUrl: string | null;
+}
+
 export interface Prenda {
   id: ID;
   folio: string;
@@ -66,15 +80,35 @@ export interface Prenda {
   montoPrestamoSugerido: number; // % del avalúo (préstamo recomendado)
   estado: EstadoPrenda;
   fotos: string[]; // urls
-  ubicacionResguardo: string | null; // dónde se almacena físicamente
+  ubicacionResguardo: string | null; // resumen legible (listados/exportes)
+  resguardo: Resguardo; // desglose de la dirección
   // Vehículos
   seguro: number | null;
   gps: string | null; // estado del GPS (conectado/desconectado)
   garantia: string | null; // descripción de la garantía (ej. auto)
+  // Vehículos — ficha ampliada
+  tipoVehiculo: string | null; // sedán, pick-up, SUV…
+  transmision: string | null; // estándar / automática
+  numeroMotor: string | null;
+  kilometraje: number | null;
+  cilindros: string | null;
+  claveVehicular: string | null;
+  nivelGasolina: string | null;
+  numeroFactura: string | null;
+  emisorFactura: string | null;
+  valorFactura: number | null;
+  fechaFactura: string | null;
+  aseguradora: string | null;
+  poliza: string | null;
+  danios: string | null; // daños visibles
+  gpsUbicacion: string | null; // coordenadas o liga de Maps del GPS
+  seguroMensual: number | null;
+  pensionMensual: number | null;
+  gpsMensual: number | null;
   // Verificación (autos): REPUVE / no reportado robado / documentación
   verificado: boolean;
   repuveFolio: string | null;
-  notas: string | null;
+  notas: string | null; // comentarios / estado del bien
   creadoEn: string;
 }
 
@@ -232,6 +266,50 @@ export interface CorteCaja {
   creadoEn: string;
 }
 
+// ---- Cotizaciones / valuaciones (sin contrato de empeño) ----
+
+export type TipoCotizacion = "articulo" | "vehiculo";
+
+export type CondicionArticulo = "excelente" | "bueno" | "regular" | "malo";
+
+export type EstadoCotizacion = "vigente" | "vencida" | "convertida" | "rechazada";
+
+export interface Cotizacion {
+  id: ID;
+  folio: string; // COT-0001
+  tipo: TipoCotizacion;
+  categoria: CategoriaPrenda;
+  descripcion: string;
+  // Prospecto: no requiere cliente registrado
+  clienteId: ID | null;
+  prospectoNombre: string | null;
+  prospectoTelefono: string | null;
+  // Ficha del bien
+  marca: string | null;
+  submarca: string | null;
+  modelo: string | null; // año (vehículo) o modelo
+  serie: string | null;
+  placas: string | null;
+  kilometraje: number | null;
+  condicion: CondicionArticulo;
+  // Joyería
+  metal: string | null;
+  kilataje: string | null;
+  gramos: number | null;
+  // Valuación
+  valorMercado: number; // valor comercial de referencia
+  valorEstimado: number; // ajustado por condición / kilometraje
+  porcentajePrestamo: number; // % ofrecido sobre el valor estimado
+  prestamoOfrecido: number;
+  vigenciaDias: number;
+  vigenciaHasta: string; // ISO date
+  estado: EstadoCotizacion;
+  fotos: string[];
+  valuadorNombre: string | null;
+  notas: string | null;
+  creadoEn: string;
+}
+
 export interface Bitacora {
   id: ID;
   fecha: string;
@@ -259,6 +337,7 @@ export interface ClienteNuevoInput {
   telefono: string | null;
   direccion: string | null;
   email: string | null;
+  fechaNacimiento: string | null;
   tipoIdentificacion: TipoIdentificacion;
   numeroIdentificacion: string;
   foto: string | null;
@@ -284,6 +363,24 @@ export interface PrendaInput {
   seguro: number | null;
   gps: string | null;
   garantia: string | null;
+  tipoVehiculo: string | null;
+  transmision: string | null;
+  numeroMotor: string | null;
+  kilometraje: number | null;
+  cilindros: string | null;
+  claveVehicular: string | null;
+  nivelGasolina: string | null;
+  numeroFactura: string | null;
+  emisorFactura: string | null;
+  valorFactura: number | null;
+  fechaFactura: string | null;
+  aseguradora: string | null;
+  poliza: string | null;
+  danios: string | null;
+  gpsUbicacion: string | null;
+  seguroMensual: number | null;
+  pensionMensual: number | null;
+  gpsMensual: number | null;
   verificado: boolean;
   repuveFolio: string | null;
   notas: string | null;

@@ -1,8 +1,9 @@
 // Lógica de cálculo de intereses y liquidaciones de empeños
 import type { Empeno, CalculoLiquidacion, PeriodoInteres } from "./types";
+import { parseFechaLocal, aISOLocal } from "./format";
 
 const DIAS_POR_PERIODO: Record<PeriodoInteres, number> = {
-  mensual: 30,
+  mensual: 30, // referencia para costo diario; el vencimiento usa mes calendario
   quincenal: 15,
   semanal: 7,
 };
@@ -11,10 +12,36 @@ export function diasPorPeriodo(periodo: PeriodoInteres): number {
   return DIAS_POR_PERIODO[periodo];
 }
 
+/** Días completos entre dos fechas, comparando días de calendario (sin horas). */
 function diffDias(desde: string, hasta: Date): number {
-  const d0 = new Date(desde + (desde.length === 10 ? "T00:00:00" : ""));
-  const ms = hasta.getTime() - d0.getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
+  const d0 = parseFechaLocal(desde);
+  const a = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()).getTime();
+  const b = new Date(hasta.getFullYear(), hasta.getMonth(), hasta.getDate()).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
+/**
+ * Suma `n` periodos a una fecha.
+ * Mensual = mes calendario (el 08/jul vence el 08/ago), no 30 días.
+ * Si el día no existe en el mes destino (31/ene → feb) se ajusta al último día.
+ */
+export function sumarPeriodos(fechaISO: string, periodo: PeriodoInteres, n: number): string {
+  const f = parseFechaLocal(fechaISO);
+  if (periodo === "mensual") {
+    const dia = f.getDate();
+    const ultimoDiaDestino = new Date(f.getFullYear(), f.getMonth() + n + 1, 0).getDate();
+    return aISOLocal(new Date(f.getFullYear(), f.getMonth() + n, Math.min(dia, ultimoDiaDestino)));
+  }
+  return aISOLocal(
+    new Date(f.getFullYear(), f.getMonth(), f.getDate() + DIAS_POR_PERIODO[periodo] * n)
+  );
+}
+
+/** Periodos devengados: el 1.º se cobra al pactar; luego uno por cada vencimiento alcanzado. */
+function periodosDevengados(inicioISO: string, periodo: PeriodoInteres, aFecha: Date): number {
+  let n = 1;
+  while (n < 600 && diffDias(sumarPeriodos(inicioISO, periodo, n), aFecha) > 0) n++;
+  return n;
 }
 
 /**
@@ -33,10 +60,9 @@ type EmpenoCalc = Pick<
 
 export function calcularLiquidacion(empeno: EmpenoCalc, aFecha: Date = new Date()): CalculoLiquidacion {
   const dias = Math.max(0, diffDias(empeno.fechaInicio, aFecha));
-  const diasPeriodo = DIAS_POR_PERIODO[empeno.periodo];
 
   // Periodos transcurridos (mínimo 1: al pactar ya se devenga el primer periodo)
-  const periodosTranscurridos = Math.max(1, Math.ceil(dias / diasPeriodo));
+  const periodosTranscurridos = periodosDevengados(empeno.fechaInicio, empeno.periodo, aFecha);
 
   const almacenajePct = empeno.almacenajePct ?? 0;
   const ivaPct = empeno.ivaPct ?? 0;
@@ -75,10 +101,7 @@ export function calcularVencimiento(
   periodo: PeriodoInteres,
   plazoPeriodos: number
 ): string {
-  const inicio = new Date(fechaInicioISO + "T00:00:00");
-  const dias = DIAS_POR_PERIODO[periodo] * plazoPeriodos;
-  inicio.setDate(inicio.getDate() + dias);
-  return inicio.toISOString().slice(0, 10);
+  return sumarPeriodos(fechaInicioISO, periodo, plazoPeriodos);
 }
 
 /** Préstamo sugerido como % del avalúo (default 50% — práctica común). */

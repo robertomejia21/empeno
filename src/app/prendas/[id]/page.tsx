@@ -6,6 +6,9 @@ import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
+const campoCls =
+  "w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm";
+
 export default async function PrendaDetalle({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = await obtenerPrenda(id);
@@ -25,6 +28,27 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
     ["Gramos", p.gramos != null ? `${p.gramos} g` : null],
     ["Resguardo", p.ubicacionResguardo],
   ];
+
+  const esVehiculo = p.categoria === "Vehículos";
+  const fichaVehiculo: [string, string | null][] = [
+    ["Tipo de vehículo", p.tipoVehiculo],
+    ["Transmisión", p.transmision],
+    ["Número de motor", p.numeroMotor],
+    ["Kilometraje", p.kilometraje != null ? `${p.kilometraje.toLocaleString("es-MX")} km` : null],
+    ["Cilindros", p.cilindros],
+    ["Clave vehicular", p.claveVehicular],
+    ["Nivel de gasolina", p.nivelGasolina],
+    ["No. de factura", p.numeroFactura],
+    ["Emisor de factura", p.emisorFactura],
+    ["Valor de factura", p.valorFactura != null ? formatMXN(p.valorFactura) : null],
+    ["Fecha de factura", p.fechaFactura ? formatFechaLarga(p.fechaFactura) : null],
+    ["Aseguradora", p.aseguradora],
+    ["Póliza", p.poliza],
+    ["Seguro mensual", p.seguroMensual != null ? formatMXN(p.seguroMensual) : null],
+    ["Pensión mensual", p.pensionMensual != null ? formatMXN(p.pensionMensual) : null],
+    ["GPS mensual", p.gpsMensual != null ? formatMXN(p.gpsMensual) : null],
+  ];
+  const tieneFicha = fichaVehiculo.some(([, v]) => v) || p.danios || p.gpsUbicacion;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -96,19 +120,69 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
             <div className="border-t border-border pt-3">
               <p className="text-xs text-muted">Ubicación de resguardo</p>
               <p className="text-sm font-medium text-foreground">{p.ubicacionResguardo ?? "Sin asignar"}</p>
+              {p.resguardo.mapsUrl && (
+                <a href={p.resguardo.mapsUrl} target="_blank" rel="noopener noreferrer"
+                  className="mt-1 inline-flex text-xs font-medium text-info underline-offset-2 hover:underline">
+                  📍 Ver en el mapa →
+                </a>
+              )}
               <form action={actualizarResguardo.bind(null, p.id)} className="mt-3 space-y-2">
-                <select name="tipoUbicacion" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm">
+                <select name="tipoUbicacion" defaultValue={p.resguardo.tipo} className={campoCls}>
                   <option value="Matriz">📍 Matriz</option>
                   <option value="Externa">📍 Externa / otra sucursal</option>
                 </select>
-                <input name="detalle" placeholder="Bóveda, estante, dirección…" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm" />
-                <input name="mapsUrl" placeholder="Link de Google Maps (opcional)" className="w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input name="calle" defaultValue={p.resguardo.calle ?? ""} placeholder="Calle" className={`col-span-2 ${campoCls}`} />
+                  <input name="numero" defaultValue={p.resguardo.numero ?? ""} placeholder="Número" className={campoCls} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input name="colonia" defaultValue={p.resguardo.colonia ?? ""} placeholder="Colonia" className={campoCls} />
+                  <input name="ciudad" defaultValue={p.resguardo.ciudad ?? ""} placeholder="Ciudad" className={campoCls} />
+                </div>
+                <input name="cp" defaultValue={p.resguardo.cp ?? ""} placeholder="Código postal" className={campoCls} />
+                <input name="referencia" defaultValue={p.resguardo.referencia ?? ""} placeholder="Referencia (bóveda, estante, estacionamiento…)" className={campoCls} />
+                <input name="mapsUrl" defaultValue={p.resguardo.mapsUrl ?? ""} placeholder="Link de Google Maps (opcional)" className={campoCls} />
                 <ConfirmSubmit variante="secondary" confirmacion="¿Actualizar la ubicación?">Guardar ubicación</ConfirmSubmit>
               </form>
             </div>
           </div>
         </Card>
       </div>
+
+      {esVehiculo && tieneFicha && (
+        <Card className="mt-6">
+          <CardHeader title="Ficha del vehículo" subtitle="Datos técnicos, factura y seguro" />
+          <dl className="grid gap-4 p-5 sm:grid-cols-3">
+            {fichaVehiculo.filter(([, v]) => v).map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-xs uppercase tracking-wide text-muted">{k}</dt>
+                <dd className="mt-0.5 text-sm text-foreground">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {p.gpsUbicacion && (
+            <div className="border-t border-border px-5 py-4">
+              <p className="text-xs uppercase tracking-wide text-muted">Ubicación del GPS</p>
+              <a
+                href={/^https?:\/\//.test(p.gpsUbicacion)
+                  ? p.gpsUbicacion
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.gpsUbicacion)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex text-sm font-medium text-info underline-offset-2 hover:underline"
+              >
+                📍 {p.gpsUbicacion} →
+              </a>
+            </div>
+          )}
+          {p.danios && (
+            <div className="border-t border-border px-5 py-4">
+              <p className="text-xs uppercase tracking-wide text-muted">Daños visibles</p>
+              <p className="mt-1 text-sm text-foreground">{p.danios}</p>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card className="mt-6">
         <CardHeader title="Detalles" />

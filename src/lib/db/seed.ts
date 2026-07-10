@@ -5,11 +5,14 @@ import type {
   Empeno,
   MovimientoCaja,
 } from "@/lib/types";
+import { aISOLocal } from "@/lib/format";
+import { RESGUARDO_VACIO } from "@/lib/resguardo";
+import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
 
 const dias = (n: number) => {
   const d = new Date();
   d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+  return aISOLocal(d);
 };
 const ahora = (n = 0) => {
   const d = new Date();
@@ -96,6 +99,8 @@ export const prendasSeed: Prenda[] = [
     verificado: false,
     repuveFolio: null,
     ubicacionResguardo: "Bóveda - Caja 3",
+    resguardo: RESGUARDO_VACIO,
+    ...CAMPOS_VEHICULO_VACIOS,
     notas: "Peso verificado en báscula calibrada.",
     creadoEn: ahora(-40),
   },
@@ -123,6 +128,8 @@ export const prendasSeed: Prenda[] = [
     verificado: false,
     repuveFolio: null,
     ubicacionResguardo: "Estante B - Nivel 2",
+    resguardo: RESGUARDO_VACIO,
+    ...CAMPOS_VEHICULO_VACIOS,
     notas: null,
     creadoEn: ahora(-25),
   },
@@ -150,6 +157,8 @@ export const prendasSeed: Prenda[] = [
     verificado: false,
     repuveFolio: null,
     ubicacionResguardo: null,
+    resguardo: RESGUARDO_VACIO,
+    ...CAMPOS_VEHICULO_VACIOS,
     notas: null,
     creadoEn: ahora(-2),
   },

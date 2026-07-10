@@ -90,8 +90,8 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
 const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   admin: "*",
   gerente: "*",
-  cajero: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza"],
-  valuador: ["/", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
+  cajero: ["/", "/mostrador", "/empenos", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza"],
+  valuador: ["/", "/mostrador", "/empenos", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
   // Invitado (demo): ve TODO en solo lectura (las escrituras se bloquean aparte).
   invitado: "*",
 };

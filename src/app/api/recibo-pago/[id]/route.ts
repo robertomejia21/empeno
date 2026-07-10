@@ -39,6 +39,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   };
   const dashed = () => { page.drawText("- ".repeat(24), { x: 14, y: y + 2, size: 7, font, color: gris }); y -= 8; };
 
+  // Logo: cubo isométrico de la marca. Trazado, no imagen, para que salga
+  // nítido en la impresora térmica sin depender de escala de grises.
+  const LOGO = 0.6; // escala sobre el viewBox de 48px
+  const logoX = (W - 48 * LOGO) / 2;
+  for (const d of [
+    "M24 4 L42 13.5 L24 23 L6 13.5 Z", // cara superior
+    "M6 13.5 L24 23 L24 44 L6 34.5 Z", // cara izquierda
+    "M42 13.5 L24 23 L24 44 L42 34.5 Z", // cara derecha
+  ]) {
+    page.drawSvgPath(d, { x: logoX, y, scale: LOGO, borderColor: negro, borderWidth: 1.1 });
+  }
+  // El cubo baja hasta y-44*LOGO; el nombre necesita hueco para su ascendente.
+  y -= 44 * LOGO + 16;
+
   // Encabezado
   center(EMPRESA.nombre.toUpperCase(), 12, bold);
   center(`SUCURSAL: ${EMPRESA.sucursal}`, 8);

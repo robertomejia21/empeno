@@ -23,9 +23,9 @@ export default async function PrendasPage({
   return (
     <div>
       <PageHeader
-        title="Prendas"
-        subtitle={t ? `${prendas.length} resultado(s) para "${q}"` : `${prendas.length} en inventario`}
-        action={<LinkButton href="/prendas/nueva">+ Registrar prenda</LinkButton>}
+        title="Comprar"
+        subtitle={t ? `${prendas.length} resultado(s) para "${q}"` : `${prendas.length} artículo(s) en inventario`}
+        action={<LinkButton href="/prendas/nueva">+ Registrar artículo</LinkButton>}
       />
       <ResumenChips
         items={[
@@ -42,9 +42,9 @@ export default async function PrendasPage({
       <Card>
         {prendas.length === 0 ? (
           <EmptyState
-            titulo="Sin prendas"
-            descripcion="Registra una prenda para realizar su avalúo."
-            action={<LinkButton href="/prendas/nueva">Registrar prenda</LinkButton>}
+            titulo="Sin artículos"
+            descripcion="Registra un artículo para su avalúo o compra."
+            action={<LinkButton href="/prendas/nueva">Registrar artículo</LinkButton>}
           />
         ) : (
           <div className="overflow-x-auto">

@@ -10,7 +10,7 @@ const EXPORTS = [
   { tipo: "caja", label: "Caja" },
   { tipo: "pagos", label: "Refrendos" },
   { tipo: "clientes", label: "Clientes" },
-  { tipo: "prendas", label: "Prendas" },
+  { tipo: "prendas", label: "Inventario" },
 ];
 
 export default async function ReportesPage() {

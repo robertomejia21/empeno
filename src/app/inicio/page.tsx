@@ -21,7 +21,7 @@ const features = [
 ];
 
 const modulos = [
-  "Tablero", "Empeños", "Prendas", "Clientes", "Recordatorios", "Remates",
+  "Tablero", "Empeños", "Comprar", "Clientes", "Recordatorios", "Remates",
   "Ventas (POS)", "Compra directa", "Apartados", "Caja", "Reportes",
   "Cumplimiento PLD", "Avalúo de metales", "Usuarios y roles", "Bitácora", "Boletas PDF",
 ];

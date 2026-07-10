@@ -5,8 +5,8 @@ export default function NuevaPrenda() {
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader
-        title="Registrar prenda"
-        subtitle="Captura del bien prendario y avalúo"
+        title="Registrar artículo"
+        subtitle="Captura del bien y su avalúo (empeño o compra)"
       />
       <PrendaForm />
     </div>

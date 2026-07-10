@@ -52,7 +52,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
 
   return (
     <div className="mx-auto max-w-4xl">
-      <VolverLink href="/prendas" label="Prendas" />
+      <VolverLink href="/prendas" label="Comprar" />
       <PageHeader
         title={p.descripcion}
         subtitle={`${p.folio} · registrada ${formatFechaLarga(p.creadoEn)}`}

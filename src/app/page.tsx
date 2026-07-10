@@ -9,7 +9,7 @@ import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
 const accesos = [
   { href: "/empenos/asistente", icon: "🤝", label: "Nuevo empeño", tono: "bg-primary-soft text-primary" },
   { href: "/ventas", icon: "🛒", label: "Punto de venta", tono: "bg-info-soft text-info" },
-  { href: "/prendas/nueva", icon: "💍", label: "Registrar prenda", tono: "bg-warning-soft text-warning" },
+  { href: "/prendas/nueva", icon: "🛍️", label: "Comprar / registrar", tono: "bg-warning-soft text-warning" },
   { href: "/clientes/nuevo", icon: "👤", label: "Nuevo cliente", tono: "bg-success-soft text-success" },
 ];
 

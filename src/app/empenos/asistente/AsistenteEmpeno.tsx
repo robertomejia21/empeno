@@ -7,6 +7,7 @@ import { tasaPorHistorial, calcularVencimiento, prestamoSugerido } from "@/lib/i
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen } from "@/lib/imagen";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
+import { MapaResguardo } from "@/components/MapaResguardo";
 import { Card } from "@/components/ui";
 import type { CategoriaPrenda, PeriodoInteres, TipoIdentificacion } from "@/lib/types";
 import { PASOS } from "./pasos";
@@ -671,7 +672,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 (En esta demo se guardan los nombres; con Supabase Storage se subirán las imágenes.)
               </p>
             </div>
-            <Campo label="Ubicación de resguardo" value={ubicacion} onChange={setUbicacion} placeholder="Ej. Bóveda - Caja 3 / Estacionamiento B" />
+            <MapaResguardo onChange={setUbicacion} />
             <div>
               <Label>Condiciones físicas / observaciones</Label>
               <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={3} className={inputCls} />

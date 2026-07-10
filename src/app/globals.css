@@ -8,11 +8,17 @@
   --muted: #79716b;
   --border: #ece9e4;
 
-  /* Acento dorado/ámbar — identidad premium de casa de empeño */
-  --primary: #b45309;
-  --primary-2: #d97706;
+  /* Naranja de la marca Turbo Presta */
+  --primary: #d96a10;
+  --primary-2: #f7941d;
   --primary-fg: #ffffff;
-  --primary-soft: #fdf0d8;
+  --primary-soft: #fdeedb;
+
+  /* Azul de la marca (cintillo del logo) */
+  --brand: #1b6fb8;
+  --brand-2: #2e9be0;
+  --brand-fg: #ffffff;
+  --brand-soft: #e3f0fa;
 
   --success: #15803d;
   --success-soft: #dcfce7;
@@ -40,10 +46,15 @@
   --muted: #a8a29e;
   --border: #322d29;
 
-  --primary: #f59e0b;
-  --primary-2: #fbbf24;
+  --primary: #f7941d;
+  --primary-2: #fbb040;
   --primary-fg: #1a1207;
   --primary-soft: #3a2a12;
+
+  --brand: #4aa8e8;
+  --brand-2: #6fc0f2;
+  --brand-fg: #06182a;
+  --brand-soft: #12283c;
 
   --success: #4ade80;
   --success-soft: #0f2e1a;
@@ -71,6 +82,10 @@
   --color-primary-2: var(--primary-2);
   --color-primary-fg: var(--primary-fg);
   --color-primary-soft: var(--primary-soft);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-fg: var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
@@ -105,10 +120,13 @@ body {
   background-image: linear-gradient(135deg, var(--primary-2) 0%, var(--primary) 100%);
 }
 .text-gold-gradient {
-  background-image: linear-gradient(135deg, #f0c14b 0%, #e9b949 50%, #c8901f 100%);
+  background-image: linear-gradient(135deg, #fbb040 0%, #f7941d 50%, #d96a10 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+.bg-brand-gradient {
+  background-image: linear-gradient(135deg, var(--brand-2) 0%, var(--brand) 100%);
 }
 .shadow-soft {
   box-shadow:

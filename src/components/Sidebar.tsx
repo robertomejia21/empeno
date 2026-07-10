@@ -7,6 +7,7 @@ import { navGroups } from "@/lib/nav";
 import { puedeAcceder, ROL_LABEL } from "@/lib/auth";
 import { cerrarSesion } from "@/lib/auth-actions";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MarcaIcono } from "@/components/Marca";
 import type { RolUsuario } from "@/lib/types";
 
 interface UsuarioProp {
@@ -29,14 +30,14 @@ export function Sidebar({ usuario }: { usuario: UsuarioProp | null }) {
   return (
     <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-fg md:flex">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-        <span className="bg-gold-gradient flex h-10 w-10 items-center justify-center rounded-xl text-lg shadow-soft">
-          ⚖️
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-soft">
+          <MarcaIcono className="h-7 w-7" />
         </span>
         <div className="leading-tight">
           <p className="text-[15px] font-bold tracking-tight text-white">
-            Empeño<span className="text-gold-gradient"> Suite</span>
+            Turbo<span className="text-gold-gradient"> Presta</span>
           </p>
-          <p className="text-[11px] uppercase tracking-widest text-sidebar-muted">Gestión premium</p>
+          <p className="text-[11px] uppercase tracking-widest text-sidebar-muted">El Dorado</p>
         </div>
       </div>
 
@@ -115,8 +116,10 @@ export function MobileMenu({ usuario }: { usuario: UsuarioProp | null }) {
       {/* Barra superior (solo móvil) */}
       <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar px-4 py-2.5 text-sidebar-fg md:hidden">
         <Link href="/" className="flex items-center gap-2">
-          <span className="bg-gold-gradient flex h-8 w-8 items-center justify-center rounded-lg text-base">⚖️</span>
-          <span className="text-sm font-bold text-white">Empeño<span className="text-gold-gradient"> Suite</span></span>
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
+            <MarcaIcono className="h-6 w-6" />
+          </span>
+          <span className="text-sm font-bold text-white">Turbo<span className="text-gold-gradient"> Presta</span></span>
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle className="!border-sidebar-border !bg-sidebar-2 text-sidebar-fg hover:!bg-sidebar" />

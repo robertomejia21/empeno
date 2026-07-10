@@ -2,9 +2,10 @@ import Link from "next/link";
 import { listarPrendasEnVenta } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
 import { EMPRESA } from "@/lib/compliance";
+import { MarcaIcono } from "@/components/Marca";
 
 export const metadata = {
-  title: "Remates y oportunidades — Empeño Suite",
+  title: "Remates y oportunidades — Turbo Presta El Dorado",
   description: "Artículos en venta a precio de remate: joyería, electrónica, herramientas y más.",
 };
 
@@ -17,10 +18,20 @@ export default async function TiendaPage() {
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link href="/tienda" className="flex items-center gap-2.5">
-            <span className="bg-gold-gradient flex h-9 w-9 items-center justify-center rounded-xl text-lg shadow-soft">🛒</span>
-            <span className="text-[17px] font-bold tracking-tight">Remates<span className="text-gold-gradient"> · {EMPRESA.nombre}</span></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white shadow-soft">
+              <MarcaIcono className="h-6 w-6" />
+            </span>
+            <span className="text-[17px] font-bold tracking-tight">
+              Turbo<span className="text-gold-gradient"> Presta</span>
+              <span className="ml-1.5 text-[11px] font-bold uppercase tracking-widest text-brand">El Dorado</span>
+            </span>
           </Link>
-          <Link href="/login" className="text-sm font-medium text-muted hover:text-foreground">Personal →</Link>
+          <div className="flex items-center gap-4">
+            <a href={`tel:+${EMPRESA.whatsapp}`} className="hidden text-sm font-medium text-muted hover:text-foreground sm:block">
+              📞 {EMPRESA.telefono}
+            </a>
+            <Link href="/login" className="text-sm font-medium text-muted hover:text-foreground">Personal →</Link>
+          </div>
         </div>
       </header>
 
@@ -61,12 +72,14 @@ export default async function TiendaPage() {
                     <p className="mt-0.5 line-clamp-2 text-sm font-semibold text-foreground">{p.descripcion}</p>
                     <p className="mt-2 text-lg font-bold text-primary">{formatMXN(p.valorAvaluo)}</p>
                     <a
-                      href={`https://wa.me/?text=${encodeURIComponent(`Hola, me interesa el artículo: ${p.descripcion} (${p.folio}) a ${formatMXN(p.valorAvaluo)}`)}`}
+                      href={`https://wa.me/${EMPRESA.whatsapp}?text=${encodeURIComponent(
+                        `Hola ${EMPRESA.nombre}, me interesa el artículo: ${p.descripcion} (${p.folio}) a ${formatMXN(p.valorAvaluo)}`
+                      )}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 block rounded-lg bg-success px-3 py-2 text-center text-xs font-semibold text-white transition hover:opacity-90"
                     >
-                      Me interesa
+                      💬 Me interesa
                     </a>
                   </div>
                 </div>
@@ -77,8 +90,14 @@ export default async function TiendaPage() {
       </section>
 
       <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-5 text-center text-xs text-muted">
-          © 2026 · {EMPRESA.razonSocial} · Precios sujetos a disponibilidad.
+        <div className="mx-auto max-w-6xl space-y-1.5 px-5 text-center text-xs text-muted">
+          <p className="font-semibold text-foreground">
+            {EMPRESA.nombre} · Sucursal {EMPRESA.sucursal}
+          </p>
+          <p>
+            {EMPRESA.direccion}, {EMPRESA.colonia}, C.P. {EMPRESA.cp}, {EMPRESA.ciudad} · Tel. {EMPRESA.telefono}
+          </p>
+          <p>© 2026 · {EMPRESA.razonSocial} · Precios sujetos a disponibilidad.</p>
         </div>
       </footer>
     </div>

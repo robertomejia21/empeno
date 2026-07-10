@@ -22,8 +22,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Empeño Suite",
-  description: "Sistema de gestión para casas de empeño",
+  title: "Turbo Presta El Dorado",
+  description: "Casa de empeño en Mexicali · préstamos sobre autos, motos, electrónica y más",
 };
 
 export default async function RootLayout({
@@ -39,6 +39,9 @@ export default async function RootLayout({
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      // El script del tema añade la clase `dark` antes de hidratar, así que el
+      // className del servidor y el del cliente no coinciden por diseño.
+      suppressHydrationWarning
     >
       <head>
         <script

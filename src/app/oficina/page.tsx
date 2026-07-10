@@ -4,7 +4,7 @@ import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { Dona } from "@/components/Charts";
 
-export const metadata = { title: "Oficina Virtual — Empeño Suite" };
+export const metadata = { title: "Oficina Virtual — Turbo Presta El Dorado" };
 
 export default async function OficinaVirtual() {
   const [empenos, movimientos, clientes, prendas] = await Promise.all([

@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { MarcaIcono } from "@/components/Marca";
 import Image from "next/image";
 import { Reveal } from "@/components/Reveal";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatedCounter, Parallax } from "@/components/landing-fx";
 
 export const metadata = {
-  title: "Empeño Suite — Software para casas de empeño",
+  title: "Turbo Presta El Dorado — Casa de empeño en Mexicali",
   description:
     "La suite todo-en-uno para casas de empeño en México: empeños, inventario, punto de venta, caja, cumplimiento PLD y notificaciones por WhatsApp.",
 };
@@ -46,8 +47,8 @@ export default function LandingPage() {
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="bg-gold-gradient flex h-9 w-9 items-center justify-center rounded-xl text-lg shadow-soft">⚖️</span>
-            <span className="text-[17px] font-bold tracking-tight">Empeño<span className="text-gold-gradient"> Suite</span></span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white shadow-soft"><MarcaIcono className="h-6 w-6" /></span>
+            <span className="text-[17px] font-bold tracking-tight">Turbo<span className="text-gold-gradient"> Presta</span></span>
           </div>
           <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
             <a href="#funciones" className="hover:text-foreground">Funciones</a>
@@ -314,8 +315,8 @@ export default function LandingPage() {
       <footer className="border-t border-border py-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 text-sm text-muted md:flex-row">
           <div className="flex items-center gap-2">
-            <span className="bg-gold-gradient flex h-7 w-7 items-center justify-center rounded-lg text-sm">⚖️</span>
-            <span className="font-semibold text-foreground">Empeño Suite</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-white"><MarcaIcono className="h-5 w-5" /></span>
+            <span className="font-semibold text-foreground">Turbo Presta El Dorado</span>
           </div>
           <p>© 2026 · Software para casas de empeño · México</p>
         </div>

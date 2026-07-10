@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { iniciarSesion, entrarComoInvitado } from "@/lib/auth-actions";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MarcaIcono } from "@/components/Marca";
 
 export default async function LoginPage({
   searchParams,
@@ -30,13 +31,14 @@ export default async function LoginPage({
         </div>
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
-            <span className="bg-gold-gradient mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-2xl shadow-soft">
-              ⚖️
+            <span className="shadow-card mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl border border-border bg-white">
+              <MarcaIcono className="h-11 w-11" />
             </span>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Empeño<span className="text-gold-gradient"> Suite</span>
+              Turbo<span className="text-gold-gradient"> Presta</span>
             </h1>
-            <p className="mt-1 text-sm text-muted">Ingresa a tu cuenta</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">El Dorado</p>
+            <p className="mt-2 text-sm text-muted">Ingresa a tu cuenta</p>
           </div>
 
           <form action={iniciarSesion} className="shadow-card space-y-4 rounded-2xl border border-border bg-surface p-6">

@@ -45,19 +45,22 @@ export function evaluarPLD(monto: number): EvaluacionPLD {
   return { nivel: "ok", requiereIdentificacion: false, requiereAviso: false, etiqueta: "Sin obligación" };
 }
 
-/** Datos de la empresa (placeholder editable en Configuración). */
+/** Datos de la empresa (editables en Configuración). */
 export const EMPRESA = {
-  nombre: "Empeño Suite",
-  razonSocial: "Casa de Empeño Demo, S.A. de C.V.",
-  rfc: "XAXX010101000",
+  nombre: "Turbo Presta",
+  nombreCorto: "Turbo Presta",
+  razonSocial: "Turbo Presta El Dorado, S.A. de C.V.",
+  rfc: "WOR110209AA4",
   registroProfeco: "RPCE-PENDIENTE",
   nom: "NOM-179-SCFI-2016",
   // Encabezado y pie de los tickets impresos
-  sucursal: "MATRIZ",
+  sucursal: "EL DORADO",
   direccion: "Blvd. Lázaro Cárdenas #4101",
   colonia: "Col. Islas Agrarias",
+  ciudad: "Mexicali, B.C.",
   cp: "21230",
   telefono: "686 592 8288",
+  whatsapp: "526865928288", // formato internacional, para las ligas wa.me
 };
 
 /** Precio de referencia de metales (MXN/gramo de oro puro 24k). Editable. */

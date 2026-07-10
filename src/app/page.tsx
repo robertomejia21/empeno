@@ -112,6 +112,19 @@ export default async function Tablero() {
         <Stat label="Vencidos" valor={vencidos.length.toString()} icono="⚠️" tono={vencidos.length > 0 ? "danger" : "muted"} />
       </div>
 
+      {saldoCaja < 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+          <span className="font-semibold">La caja está en números rojos.</span>
+          <span>
+            Se ha prestado más de lo que ha entrado. Registra la apertura o una aportación en{" "}
+            <Link href="/caja" className="font-semibold underline underline-offset-2">
+              Caja
+            </Link>
+            {" "}para cuadrar el saldo.
+          </span>
+        </div>
+      )}
+
       {/* Gráficas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -221,12 +234,17 @@ function Stat({
   const color = tono === "success" ? "text-success" : tono === "danger" ? "text-danger" : "text-foreground";
   const iconBg = tono === "success" ? "bg-success-soft" : tono === "danger" ? "bg-danger-soft" : "bg-primary-soft";
   return (
-    <Card className="p-5 transition hover:shadow-elevated">
-      <div className="flex items-start justify-between">
-        <p className="text-[13px] font-medium text-muted">{label}</p>
-        <span className={`flex h-9 w-9 items-center justify-center rounded-xl text-base ${iconBg}`}>{icono}</span>
+    <Card className="p-4 transition hover:shadow-elevated sm:p-5">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-[13px] font-medium text-muted">{label}</p>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm sm:h-9 sm:w-9 sm:text-base ${iconBg}`}>
+          {icono}
+        </span>
       </div>
-      <p className={`mt-3 text-[28px] font-bold leading-none tracking-tight ${color}`}>{valor}</p>
+      {/* Los importes largos (p. ej. saldos negativos) no caben a 28px en móvil. */}
+      <p className={`mt-3 text-xl font-bold leading-none tracking-tight tabular-nums sm:text-[28px] ${color}`}>
+        {valor}
+      </p>
     </Card>
   );
 }

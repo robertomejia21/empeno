@@ -681,7 +681,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
               <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-soft p-4">
                 <p className="text-sm font-semibold text-warning">🚗 Verificación obligatoria del vehículo</p>
                 <a
-                  href="https://www.gob.mx/repuve/acciones-y-programas/consulta-ciudadana-repuve"
+                  href="https://www2.repuve.gob.mx:8443/ciudadania/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 text-sm font-medium text-info underline-offset-2 hover:underline"

@@ -29,7 +29,7 @@ import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
 import { RESGUARDO_VACIO, resumenResguardo } from "@/lib/resguardo";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
-import { extraerDatosINE, type ResultadoINE } from "@/lib/gemini";
+import { extraerDatosINE, extraerDatosVehiculo, type ResultadoINE, type ResultadoVehiculo } from "@/lib/gemini";
 
 function dividirDataUrl(dataUrl: string): { mime: string; base64: string } | null {
   const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -170,6 +170,16 @@ export async function analizarINE(dataUrl: string): Promise<ResultadoINE> {
   const p = dividirDataUrl(dataUrl);
   if (!p) return { ok: false, error: "El archivo no es una imagen válida." };
   return extraerDatosINE(p.base64, p.mime);
+}
+
+/** Lee un documento del vehículo (tarjeta de circulación/factura) y autollena. */
+export async function analizarVehiculo(dataUrl: string): Promise<ResultadoVehiculo> {
+  if (await esInvitado()) {
+    return { ok: false, error: "En la demo de sólo lectura no se procesan documentos." };
+  }
+  const p = dividirDataUrl(dataUrl);
+  if (!p) return { ok: false, error: "El archivo no es una imagen válida." };
+  return extraerDatosVehiculo(p.base64, p.mime);
 }
 
 /** Sube la foto del cliente al Storage y devuelve su URL pública. */

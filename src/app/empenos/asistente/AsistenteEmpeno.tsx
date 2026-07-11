@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { crearEmpenoGuiado, analizarINE, subirFotoCliente } from "@/lib/actions";
+import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, prestamoSugerido } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen } from "@/lib/imagen";
@@ -55,6 +55,8 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [escaneando, setEscaneando] = useState(false);
   const [ineMsg, setIneMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [leyendoDoc, setLeyendoDoc] = useState(false);
+  const [docMsg, setDocMsg] = useState<{ ok: boolean; texto: string } | null>(null);
 
   async function onEscanearINE(f: File | undefined) {
     if (!f) return;
@@ -99,6 +101,47 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
       if (url) setFotoCliente(url);
     } finally {
       setSubiendoFoto(false);
+    }
+  }
+
+  async function onEscanearVehiculo(f: File | undefined) {
+    if (!f) return;
+    setLeyendoDoc(true);
+    setDocMsg(null);
+    try {
+      const r = await analizarVehiculo(await normalizarImagen(f));
+      if (!r.ok) {
+        setDocMsg({ ok: false, texto: `${r.error} Puedes capturar los datos a mano.` });
+        return;
+      }
+      const d = r.datos;
+      const leidos = Object.values(d).filter(Boolean).length;
+      setBien((b) => ({
+        ...b,
+        marca: d.marca ?? b.marca,
+        submarca: d.submarca ?? b.submarca,
+        modelo: d.modelo ?? b.modelo,
+        color: d.color ?? b.color,
+        placas: d.placas ?? b.placas,
+        serie: d.niv ?? b.serie,
+      }));
+      setVeh((v) => ({
+        ...v,
+        tipoVehiculo: d.tipoVehiculo ?? v.tipoVehiculo,
+        numeroMotor: d.numeroMotor ?? v.numeroMotor,
+        transmision: d.transmision ?? v.transmision,
+        numeroFactura: d.numeroFactura ?? v.numeroFactura,
+        emisorFactura: d.emisorFactura ?? v.emisorFactura,
+      }));
+      setDocMsg(
+        leidos === 0
+          ? { ok: false, texto: "No se distinguió ningún dato. Toma la foto de frente y con buena luz." }
+          : { ok: true, texto: `✓ ${leidos} campo(s) autollenados del documento. Revísalos antes de continuar.` }
+      );
+    } catch {
+      setDocMsg({ ok: false, texto: "Error al procesar el documento. Intenta con otra foto." });
+    } finally {
+      setLeyendoDoc(false);
     }
   }
 
@@ -453,6 +496,20 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
 
             {esVehiculo ? (
               <>
+                {/* Escaneo del documento del vehículo (tarjeta de circulación / factura) */}
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
+                  <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:opacity-90">
+                    {leyendoDoc ? "Leyendo documento…" : "📄 Escanear tarjeta / factura"}
+                    <input type="file" accept="image/*" capture="environment" className="hidden" disabled={leyendoDoc}
+                      onChange={(e) => onEscanearVehiculo(e.target.files?.[0])} />
+                  </label>
+                  {docMsg ? (
+                    <p className={`w-full text-xs ${docMsg.ok ? "text-success" : "text-danger"}`}>{docMsg.texto}</p>
+                  ) : (
+                    <p className="w-full text-xs text-muted">Sube la tarjeta de circulación o la factura y la IA llena marca, modelo, NIV, placas y motor.</p>
+                  )}
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Campo label="Tipo de vehículo" value={veh.tipoVehiculo} onChange={(v) => setVeh({ ...veh, tipoVehiculo: v })} placeholder="Sedán / Pick-up / SUV" />
                   <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} placeholder="Nissan" />
@@ -680,14 +737,24 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
             {esVehiculo && (
               <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-soft p-4">
                 <p className="text-sm font-semibold text-warning">🚗 Verificación obligatoria del vehículo</p>
-                <a
-                  href="https://www2.repuve.gob.mx:8443/ciudadania/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-info underline-offset-2 hover:underline"
-                >
-                  🔎 Consultar en REPUVE (robo / situación legal) →
-                </a>
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => { if (bien.serie) navigator.clipboard?.writeText(bien.serie).catch(() => {}); }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-info px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+                  >
+                    🔎 Abrir REPUVE {bien.serie ? "(NIV copiado)" : ""} →
+                  </a>
+                  {bien.serie && (
+                    <span className="text-xs text-muted">NIV: <span className="font-mono">{bien.serie}</span></span>
+                  )}
+                </div>
+                <p className="text-xs text-muted">
+                  Se abre el portal oficial y el NIV se copia al portapapeles: pégalo, resuelve el captcha y guarda el resultado.
+                  Sube la captura/PDF del resultado en las fotos del vehículo y anota el folio.
+                </p>
                 <Campo label="Folio de consulta REPUVE" value={repuveFolio} onChange={setRepuveFolio} placeholder="Folio o referencia de la consulta" />
                 <div className="space-y-2 border-t border-warning/20 pt-2">
                   <Check label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />

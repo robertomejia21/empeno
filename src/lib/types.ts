@@ -274,6 +274,19 @@ export type CondicionArticulo = "excelente" | "bueno" | "regular" | "malo";
 
 export type EstadoCotizacion = "vigente" | "vencida" | "convertida" | "rechazada";
 
+/** Canal por el que llegó la cotización (para análisis de mercado). */
+export type ContactoCotizacion =
+  | "Sucursal"
+  | "WhatsApp"
+  | "Messenger"
+  | "Teléfono"
+  | "Llamada"
+  | "Instagram"
+  | "Facebook"
+  | "Recomendación"
+  | "Cliente"
+  | "Otro";
+
 export interface Cotizacion {
   id: ID;
   folio: string; // COT-0001
@@ -299,8 +312,14 @@ export interface Cotizacion {
   // Valuación
   valorMercado: number; // valor comercial de referencia
   valorEstimado: number; // ajustado por condición / kilometraje
+  montoSolicitado: number | null; // lo que pidió el cliente
+  busquedaFacebook: number | null; // precio de referencia hallado (Facebook Marketplace)
   porcentajePrestamo: number; // % ofrecido sobre el valor estimado
-  prestamoOfrecido: number;
+  prestamoOfrecido: number; // monto a prestar
+  contacto: ContactoCotizacion | null; // canal por el que llegó
+  // Seguimiento / resultado
+  seEmpeno: boolean | null; // ¿terminó en empeño? (null = pendiente)
+  motivoNo: string | null; // por qué no se empeñó
   vigenciaDias: number;
   vigenciaHasta: string; // ISO date
   estado: EstadoCotizacion;
@@ -308,6 +327,68 @@ export interface Cotizacion {
   valuadorNombre: string | null;
   notas: string | null;
   creadoEn: string;
+}
+
+export interface CotizacionInput {
+  tipo: TipoCotizacion;
+  categoria: CategoriaPrenda;
+  descripcion: string;
+  prospectoNombre: string | null;
+  prospectoTelefono: string | null;
+  marca: string | null;
+  submarca: string | null;
+  modelo: string | null; // año (vehículo) o modelo
+  serie: string | null;
+  placas: string | null;
+  kilometraje: number | null;
+  condicion: CondicionArticulo;
+  metal: string | null;
+  kilataje: string | null;
+  gramos: number | null;
+  valorMercado: number;
+  valorEstimado: number;
+  montoSolicitado: number | null;
+  busquedaFacebook: number | null;
+  porcentajePrestamo: number;
+  prestamoOfrecido: number;
+  contacto: ContactoCotizacion | null;
+  fotos: string[];
+  notas: string | null;
+}
+
+// ---- Autorizaciones (aprobaciones de Dirección General) ----
+
+export type TipoAutorizacion = "interes_especial" | "otro";
+export type EstadoAutorizacion = "pendiente" | "aprobada" | "rechazada";
+
+export interface Autorizacion {
+  id: ID;
+  folio: string; // AUT-0001
+  tipo: TipoAutorizacion;
+  estado: EstadoAutorizacion;
+  solicitanteNombre: string | null;
+  autorizadorNombre: string | null;
+  clienteNombre: string | null;
+  bien: string | null;
+  monto: number | null;
+  tasaSolicitada: number | null;
+  tasaEstandar: number | null;
+  motivo: string | null;
+  comentarioResolucion: string | null;
+  referencia: string | null; // folio de empeño / cotización relacionada
+  creadoEn: string;
+  resueltoEn: string | null;
+}
+
+export interface AutorizacionInput {
+  tipo: TipoAutorizacion;
+  clienteNombre: string | null;
+  bien: string | null;
+  monto: number | null;
+  tasaSolicitada: number | null;
+  tasaEstandar: number | null;
+  motivo: string | null;
+  referencia: string | null;
 }
 
 export interface Bitacora {

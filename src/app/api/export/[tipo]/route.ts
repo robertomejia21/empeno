@@ -1,5 +1,6 @@
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
+import { calcularReporteSemanal, rangoSemanaActual } from "@/lib/reporteSemanal";
 
 function csv(rows: (string | number | null)[][]): string {
   const esc = (v: string | number | null) => {
@@ -56,6 +57,42 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
     for (const x of pg) {
       rows.push([x.reciboNo, x.refrendoNo, x.tipo, x.fecha, x.intereses, x.almacenaje, x.moratorios, x.iva, x.abonoCapital, x.total, x.metodoPago, x.usuarioNombre]);
     }
+  } else if (tipo === "semanal") {
+    nombre = "reporte-semanal";
+    const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
+    const { desde, hasta } = rangoSemanaActual();
+    const r = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+    rows = [
+      [`Información semanal casa empeño (${desde} a ${hasta})`, "", ""],
+      ["Descripción", "Total", "Comentarios"],
+      ["Ventas de vitrina", r.ventasVitrina, ""],
+      ["Vehículos", "", ""],
+      ["Empeños", r.vehiculos.empenos, ""],
+      ["Refrendos", r.vehiculos.refrendos, ""],
+      ["Desempeños", r.vehiculos.desempenos, ""],
+      ["Artículos", "", ""],
+      ["Empeños", r.articulos.empenos, ""],
+      ["Refrendos", r.articulos.refrendos, ""],
+      ["Desempeños", r.articulos.desempenos, ""],
+    ];
+  } else if (tipo === "cotizaciones") {
+    nombre = "cotizaciones";
+    const cot = await listarCotizaciones();
+    const cab = ["#", "Bien", "Año", "Fecha", "Monto solicitado", "Monto a prestar", "Busqueda Facebook", "¿Se empeñó?", "Motivo (si no)", "Contacto"];
+    const seEmp = (v: boolean | null) => (v === null ? "Pendiente" : v ? "Sí" : "No");
+    const bloque = (titulo: string, lista: typeof cot) => {
+      const r: (string | number | null)[][] = [[titulo, "", "", "", "", "", "", "", "", ""], cab];
+      lista.forEach((c, i) => {
+        if (!match(`${c.descripcion} ${c.folio} ${c.contacto ?? ""}`)) return;
+        r.push([i + 1, c.descripcion, c.modelo, c.creadoEn.slice(0, 10), c.montoSolicitado, c.prestamoOfrecido, c.busquedaFacebook, seEmp(c.seEmpeno), c.motivoNo, c.contacto]);
+      });
+      return r;
+    };
+    rows = [
+      ...bloque("DETALLES DEL VEHÍCULO", cot.filter((c) => c.tipo === "vehiculo")),
+      ["", "", "", "", "", "", "", "", "", ""],
+      ...bloque("DETALLES DEL ARTÍCULO", cot.filter((c) => c.tipo !== "vehiculo")),
+    ];
   } else {
     return new Response("Tipo no válido", { status: 400 });
   }

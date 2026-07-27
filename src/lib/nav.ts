@@ -17,6 +17,7 @@ export const navGroups: NavGroup[] = [
       { href: "/mostrador", label: "Mostrador", icon: "🏪" },
       { href: "/", label: "Tablero", icon: "📊" },
       { href: "/empenos", label: "Empeños", icon: "🤝" },
+      { href: "/cotizaciones", label: "Cotizaciones", icon: "🧾" },
       // Oculto temporalmente (la ruta /prendas sigue activa):
       // { href: "/prendas", label: "Comprar", icon: "🛍️" },
       { href: "/clientes", label: "Clientes", icon: "👤" },
@@ -47,6 +48,7 @@ export const navGroups: NavGroup[] = [
   {
     titulo: "Cumplimiento",
     items: [
+      { href: "/autorizaciones", label: "Autorizaciones", icon: "✅" },
       { href: "/cumplimiento", label: "Cumplimiento PLD", icon: "🛡️" },
       { href: "/avaluo", label: "Avalúo metales", icon: "⚖️" },
     ],

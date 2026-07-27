@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
+import { calcularReporteSemanal, rangoSemanaActual, type ReporteSemanal } from "@/lib/reporteSemanal";
 import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -8,18 +9,23 @@ import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
 
 const accesos = [
   { href: "/empenos/asistente", icon: "🤝", label: "Nuevo empeño", tono: "bg-primary-soft text-primary" },
-  { href: "/ventas", icon: "🛒", label: "Punto de venta", tono: "bg-info-soft text-info" },
-  { href: "/prendas/nueva", icon: "🛍️", label: "Comprar / registrar", tono: "bg-warning-soft text-warning" },
+  { href: "/cotizaciones", icon: "🧾", label: "Cotizar", tono: "bg-info-soft text-info" },
+  { href: "/ventas", icon: "🛒", label: "Punto de venta", tono: "bg-warning-soft text-warning" },
   { href: "/clientes/nuevo", icon: "👤", label: "Nuevo cliente", tono: "bg-success-soft text-success" },
 ];
 
 export default async function Tablero() {
-  const [empenos, movimientos, clientes, prendas] = await Promise.all([
+  const [empenos, movimientos, clientes, prendas, pagos, ventas] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),
     listarClientes(),
     listarPrendas(),
+    listarPagos(),
+    listarVentas(),
   ]);
+
+  const semana = rangoSemanaActual();
+  const reporteSemanal = calcularReporteSemanal(empenos, pagos, ventas, semana.desde, semana.hasta);
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalPrestado = activos.reduce((s, e) => s + e.montoPrestado, 0);
@@ -125,6 +131,9 @@ export default async function Tablero() {
         </div>
       )}
 
+      {/* Informe semanal */}
+      <ReporteSemanalCard reporte={reporteSemanal} />
+
       {/* Gráficas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -223,6 +232,61 @@ export default async function Tablero() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function ReporteSemanalCard({ reporte }: { reporte: ReporteSemanal }) {
+  const filas: { desc: string; total?: number; seccion?: boolean }[] = [
+    { desc: "Ventas de vitrina", total: reporte.ventasVitrina },
+    { desc: "Vehículos", seccion: true },
+    { desc: "Empeños", total: reporte.vehiculos.empenos },
+    { desc: "Refrendos", total: reporte.vehiculos.refrendos },
+    { desc: "Desempeños", total: reporte.vehiculos.desempenos },
+    { desc: "Artículos", seccion: true },
+    { desc: "Empeños", total: reporte.articulos.empenos },
+    { desc: "Refrendos", total: reporte.articulos.refrendos },
+    { desc: "Desempeños", total: reporte.articulos.desempenos },
+  ];
+  return (
+    <Card className="mt-6">
+      <CardHeader
+        title="Informe semanal"
+        subtitle={`Del ${formatFecha(reporte.desde)} al ${formatFecha(reporte.hasta)}`}
+        action={
+          <a href="/api/export/semanal" className="text-sm font-medium text-primary">
+            ⬇️ Descargar Excel
+          </a>
+        }
+      />
+      <div className="overflow-x-auto px-5 pb-5">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+              <th className="py-2 font-medium">Descripción</th>
+              <th className="py-2 text-right font-medium">Total</th>
+              <th className="hidden py-2 pl-4 font-medium sm:table-cell">Comentarios</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f, i) =>
+              f.seccion ? (
+                <tr key={i} className="bg-warning-soft">
+                  <td colSpan={3} className="py-1.5 text-center text-xs font-bold uppercase tracking-wide text-warning">
+                    {f.desc}
+                  </td>
+                </tr>
+              ) : (
+                <tr key={i} className="border-b border-border/60">
+                  <td className="py-2 text-foreground">{f.desc}</td>
+                  <td className="py-2 text-right font-medium tabular-nums text-foreground">{formatMXN(f.total ?? 0)}</td>
+                  <td className="hidden py-2 pl-4 text-muted sm:table-cell" />
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }
 

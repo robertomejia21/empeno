@@ -109,6 +109,14 @@ export function prestamoSugerido(valorAvaluo: number, porcentaje = 50): number {
   return round2(valorAvaluo * (porcentaje / 100));
 }
 
+/** Tasa mínima del catálogo que NO requiere autorización de Dirección General. */
+export const TASA_MINIMA_LIBRE = 6.48;
+
+/** ¿Esta tasa es especial (fuera de catálogo) y requiere autorización de Dirección? */
+export function requiereAutorizacionTasa(tasa: number): boolean {
+  return tasa > 0 && tasa < TASA_MINIMA_LIBRE;
+}
+
 /**
  * Tasa de interés mensual sugerida según el historial del cliente
  * (basado en el flujo PRENDAFLEX):

@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, prestamoSugerido } from "@/lib/interes";
+import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, solicitarAutorizacion } from "@/lib/actions";
+import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa, TASA_MINIMA_LIBRE } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen } from "@/lib/imagen";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
@@ -45,6 +45,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     clientes.length > 0 ? "existente" : "nuevo"
   );
   const [clienteId, setClienteId] = useState("");
+  const [busqCliente, setBusqCliente] = useState("");
   const [cn, setCn] = useState({
     nombre: "", apellidoPaterno: "", apellidoMaterno: "",
     curp: "", telefono: "", direccion: "", email: "",
@@ -168,6 +169,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
 
   // Paso 5 — préstamo
   const [monto, setMonto] = useState("");
+  const [montoTocado, setMontoTocado] = useState(false);
 
   // Paso 6 — intereses y cargos
   const [tasa, setTasa] = useState(10.8);
@@ -199,6 +201,11 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ empenoId: string; folio: string } | null>(null);
 
+  // Autorización de tasa especial (Dirección General)
+  const [autorizacionFolio, setAutorizacionFolio] = useState<string | null>(null);
+  const [solicitandoAut, setSolicitandoAut] = useState(false);
+  const [autMotivo, setAutMotivo] = useState("");
+
   const clienteSel = clientes.find((c) => c.id === clienteId);
   const previos = modoCliente === "existente" ? clienteSel?.previos ?? 0 : 0;
   const historial = tasaPorHistorial(previos);
@@ -206,6 +213,18 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const esJoyeria = categoria === "Joyería";
   const avaluoNum = parseFloat(valorAvaluo) || 0;
   const montoNum = parseFloat(monto) || 0;
+  const tasaEspecial = requiereAutorizacionTasa(tasa);
+
+  const clientesFiltrados = useMemo(() => {
+    const q = busqCliente.trim().toLowerCase();
+    if (!q) return clientes;
+    return clientes.filter(
+      (c) =>
+        c.nombre.toLowerCase().includes(q) ||
+        (c.curp ?? "").toLowerCase().includes(q) ||
+        (c.telefono ?? "").toLowerCase().includes(q)
+    );
+  }, [busqCliente, clientes]);
 
   const vencimiento = useMemo(
     () => calcularVencimiento(fechaInicio, periodo, plazo),
@@ -215,7 +234,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   // Al entrar al paso de intereses, sugerir tasa por historial
   function irAPaso(n: number) {
     if (n === 6) setTasa(historial.tasa);
-    if (n === 5 && !monto && avaluoNum > 0) setMonto(String(prestamoSugerido(avaluoNum)));
+    if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugerido(avaluoNum)));
     setPaso(n);
   }
 
@@ -244,6 +263,11 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     if (esVehiculo && !autoVerificado) {
       setError("Para vehículos debes verificar REPUVE (sin reporte de robo) y la documentación completa.");
       setPaso(8);
+      return;
+    }
+    if (tasaEspecial && !autorizacionFolio) {
+      setError("La tasa especial requiere autorización de Dirección General. Solicítala en el paso de intereses.");
+      setPaso(6);
       return;
     }
     setGuardando(true);
@@ -324,7 +348,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
         plazoPeriodos: plazo,
         diasGracia,
         fechaInicio,
-        notas: null,
+        notas: autorizacionFolio ? `Tasa especial ${tasa}% — autorización ${autorizacionFolio}` : null,
       });
       setResultado(res);
       setPaso(9);
@@ -339,6 +363,25 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     modoCliente === "existente"
       ? clienteSel?.nombre ?? "—"
       : `${cn.nombre} ${cn.apellidoPaterno} ${cn.apellidoMaterno}`.trim();
+
+  async function solicitarAut() {
+    setSolicitandoAut(true);
+    try {
+      const r = await solicitarAutorizacion({
+        tipo: "interes_especial",
+        clienteNombre: nombreCliente,
+        bien: bien.descripcion || null,
+        monto: montoNum || null,
+        tasaSolicitada: tasa,
+        tasaEstandar: TASA_MINIMA_LIBRE,
+        motivo: autMotivo || null,
+        referencia: null,
+      });
+      if (r.folio) setAutorizacionFolio(r.folio);
+    } finally {
+      setSolicitandoAut(false);
+    }
+  }
 
   return (
     <div>
@@ -653,6 +696,37 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                 ))}
               </div>
             </div>
+
+            {tasaEspecial && (
+              <div className="space-y-2 rounded-lg border border-warning/40 bg-warning-soft p-4">
+                <p className="text-sm font-semibold text-warning">
+                  🔒 Tasa especial ({tasa}%) — requiere autorización de Dirección General
+                </p>
+                {autorizacionFolio ? (
+                  <p className="text-sm text-success">
+                    ✓ Autorización <strong>{autorizacionFolio}</strong> solicitada. Dirección la revisará en la bandeja de{" "}
+                    <Link href="/autorizaciones" className="underline underline-offset-2">Autorizaciones</Link>.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      value={autMotivo}
+                      onChange={(e) => setAutMotivo(e.target.value)}
+                      placeholder="Motivo de la tasa especial (opcional)"
+                      className="min-w-[200px] flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={solicitarAut}
+                      disabled={solicitandoAut}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-50"
+                    >
+                      {solicitandoAut ? "Solicitando…" : "Solicitar autorización"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />

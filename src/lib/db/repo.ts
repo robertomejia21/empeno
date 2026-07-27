@@ -22,6 +22,8 @@ import {
   rowToBitacora,
   rowToCorte,
   rowToPago,
+  rowToCotizacion,
+  rowToAutorizacion,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -295,6 +297,39 @@ export async function listarCortes(): Promise<CorteCaja[]> {
     return (data ?? []).map(rowToCorte);
   }
   return getStore().cortes.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+}
+
+export async function listarCotizaciones(): Promise<import("@/lib/types").Cotizacion[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("cotizaciones")
+      .select("*")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToCotizacion);
+  }
+  return getStore().cotizaciones.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+}
+
+export async function obtenerCotizacion(id: string): Promise<import("@/lib/types").Cotizacion | null> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase().from("cotizaciones").select("*").eq("id", id).maybeSingle();
+    if (error) throw error;
+    return data ? rowToCotizacion(data) : null;
+  }
+  return getStore().cotizaciones.find((c) => c.id === id) ?? null;
+}
+
+export async function listarAutorizaciones(): Promise<import("@/lib/types").Autorizacion[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("autorizaciones")
+      .select("*")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToAutorizacion);
+  }
+  return getStore().autorizaciones.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 }
 
 export async function listarBitacora(limite = 200): Promise<Bitacora[]> {

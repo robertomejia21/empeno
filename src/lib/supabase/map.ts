@@ -231,6 +231,68 @@ export function rowToCorte(r: any): import("@/lib/types").CorteCaja {
   };
 }
 
+export function rowToCotizacion(r: any): import("@/lib/types").Cotizacion {
+  const n = (v: any) => (v == null ? null : Number(v));
+  return {
+    id: r.id,
+    folio: r.folio,
+    tipo: r.tipo,
+    categoria: r.categoria as CategoriaPrenda,
+    descripcion: r.descripcion ?? "",
+    clienteId: r.cliente_id ?? null,
+    prospectoNombre: r.prospecto_nombre ?? null,
+    prospectoTelefono: r.prospecto_telefono ?? null,
+    marca: r.marca ?? null,
+    submarca: r.submarca ?? null,
+    modelo: r.modelo ?? null,
+    serie: r.serie ?? null,
+    placas: r.placas ?? null,
+    kilometraje: n(r.kilometraje),
+    condicion: (r.condicion ?? "bueno") as any,
+    metal: r.metal ?? null,
+    kilataje: r.kilataje ?? null,
+    gramos: n(r.gramos),
+    valorMercado: Number(r.valor_mercado ?? 0),
+    valorEstimado: Number(r.valor_estimado ?? 0),
+    montoSolicitado: n(r.monto_solicitado),
+    busquedaFacebook: n(r.busqueda_facebook),
+    porcentajePrestamo: Number(r.porcentaje_prestamo ?? 50),
+    prestamoOfrecido: Number(r.prestamo_ofrecido ?? 0),
+    contacto: r.contacto ?? null,
+    seEmpeno: r.se_empeno == null ? null : Boolean(r.se_empeno),
+    motivoNo: r.motivo_no ?? null,
+    vigenciaDias: Number(r.vigencia_dias ?? 15),
+    vigenciaHasta: r.vigencia_hasta,
+    estado: r.estado,
+    fotos: r.fotos ?? [],
+    valuadorNombre: r.valuador_nombre ?? null,
+    notas: r.notas ?? null,
+    creadoEn: r.creado_en,
+  };
+}
+
+export function rowToAutorizacion(r: any): import("@/lib/types").Autorizacion {
+  const n = (v: any) => (v == null ? null : Number(v));
+  return {
+    id: r.id,
+    folio: r.folio,
+    tipo: r.tipo,
+    estado: r.estado,
+    solicitanteNombre: r.solicitante_nombre ?? null,
+    autorizadorNombre: r.autorizador_nombre ?? null,
+    clienteNombre: r.cliente_nombre ?? null,
+    bien: r.bien ?? null,
+    monto: n(r.monto),
+    tasaSolicitada: n(r.tasa_solicitada),
+    tasaEstandar: n(r.tasa_estandar),
+    motivo: r.motivo ?? null,
+    comentarioResolucion: r.comentario_resolucion ?? null,
+    referencia: r.referencia ?? null,
+    creadoEn: r.creado_en,
+    resueltoEn: r.resuelto_en ?? null,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

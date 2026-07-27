@@ -18,6 +18,11 @@ import type {
   Apartado,
   CorteCaja,
   Resguardo,
+  Cotizacion,
+  CotizacionInput,
+  EstadoCotizacion,
+  Autorizacion,
+  AutorizacionInput,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -1466,4 +1471,218 @@ function revalidatePaths() {
   revalidatePath("/prendas");
   revalidatePath("/caja");
   revalidatePath("/");
+}
+
+// ----------------- COTIZACIONES -----------------
+
+function sumarDiasISO(iso: string, dias: number): string {
+  const d = new Date(iso + "T00:00:00");
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function crearCotizacion(input: CotizacionInput): Promise<{ id: string; folio: string }> {
+  if (await esInvitado()) return { id: "", folio: "" };
+  const valuador = (await getUsuarioActual())?.nombre ?? null;
+  const vigenciaDias = 15;
+  const vigenciaHasta = sumarDiasISO(hoyISO(), vigenciaDias);
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: existentes } = await sb.from("cotizaciones").select("folio");
+    const folio = siguienteFolio(existentes ?? [], "COT");
+    const { data, error } = await sb
+      .from("cotizaciones")
+      .insert({
+        folio,
+        tipo: input.tipo,
+        categoria: input.categoria,
+        descripcion: input.descripcion,
+        prospecto_nombre: input.prospectoNombre,
+        prospecto_telefono: input.prospectoTelefono,
+        marca: input.marca,
+        submarca: input.submarca,
+        modelo: input.modelo,
+        serie: input.serie,
+        placas: input.placas,
+        kilometraje: input.kilometraje,
+        condicion: input.condicion,
+        metal: input.metal,
+        kilataje: input.kilataje,
+        gramos: input.gramos,
+        valor_mercado: input.valorMercado,
+        valor_estimado: input.valorEstimado,
+        monto_solicitado: input.montoSolicitado,
+        busqueda_facebook: input.busquedaFacebook,
+        porcentaje_prestamo: input.porcentajePrestamo,
+        prestamo_ofrecido: input.prestamoOfrecido,
+        contacto: input.contacto,
+        vigencia_dias: vigenciaDias,
+        vigencia_hasta: vigenciaHasta,
+        estado: "vigente",
+        fotos: input.fotos,
+        valuador_nombre: valuador,
+        notas: input.notas,
+      })
+      .select("id, folio")
+      .single();
+    if (error) throw error;
+    await bitacoraAuto("Cotización creada", `${input.descripcion} · ${formatMXN(input.prestamoOfrecido)}`, data.folio);
+    revalidatePath("/cotizaciones");
+    return { id: data.id, folio: data.folio };
+  }
+
+  const store = getStore();
+  const folio = siguienteFolio(store.cotizaciones, "COT");
+  const cot: Cotizacion = {
+    id: nuevoId("cot"),
+    folio,
+    tipo: input.tipo,
+    categoria: input.categoria,
+    descripcion: input.descripcion,
+    clienteId: null,
+    prospectoNombre: input.prospectoNombre,
+    prospectoTelefono: input.prospectoTelefono,
+    marca: input.marca,
+    submarca: input.submarca,
+    modelo: input.modelo,
+    serie: input.serie,
+    placas: input.placas,
+    kilometraje: input.kilometraje,
+    condicion: input.condicion,
+    metal: input.metal,
+    kilataje: input.kilataje,
+    gramos: input.gramos,
+    valorMercado: input.valorMercado,
+    valorEstimado: input.valorEstimado,
+    montoSolicitado: input.montoSolicitado,
+    busquedaFacebook: input.busquedaFacebook,
+    porcentajePrestamo: input.porcentajePrestamo,
+    prestamoOfrecido: input.prestamoOfrecido,
+    contacto: input.contacto,
+    seEmpeno: null,
+    motivoNo: null,
+    vigenciaDias,
+    vigenciaHasta,
+    estado: "vigente",
+    fotos: input.fotos,
+    valuadorNombre: valuador,
+    notas: input.notas,
+    creadoEn: new Date().toISOString(),
+  };
+  store.cotizaciones.push(cot);
+  revalidatePath("/cotizaciones");
+  return { id: cot.id, folio: cot.folio };
+}
+
+// ----------------- AUTORIZACIONES (Dirección General) -----------------
+
+/** Crea una solicitud de autorización (p. ej. tasa de interés especial). */
+export async function solicitarAutorizacion(input: AutorizacionInput): Promise<{ id: string; folio: string }> {
+  if (await esInvitado()) return { id: "", folio: "" };
+  const solicitante = (await getUsuarioActual())?.nombre ?? null;
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: existentes } = await sb.from("autorizaciones").select("folio");
+    const folio = siguienteFolio(existentes ?? [], "AUT");
+    const { data, error } = await sb
+      .from("autorizaciones")
+      .insert({
+        folio,
+        tipo: input.tipo,
+        estado: "pendiente",
+        solicitante_nombre: solicitante,
+        cliente_nombre: input.clienteNombre,
+        bien: input.bien,
+        monto: input.monto,
+        tasa_solicitada: input.tasaSolicitada,
+        tasa_estandar: input.tasaEstandar,
+        motivo: input.motivo,
+        referencia: input.referencia,
+      })
+      .select("id, folio")
+      .single();
+    if (error) throw error;
+    await bitacoraAuto("Autorización solicitada", `${input.tipo} · tasa ${input.tasaSolicitada ?? "?"}%`, data.folio);
+    revalidatePath("/autorizaciones");
+    return { id: data.id, folio: data.folio };
+  }
+
+  const store = getStore();
+  const folio = siguienteFolio(store.autorizaciones, "AUT");
+  const aut: Autorizacion = {
+    id: nuevoId("aut"),
+    folio,
+    tipo: input.tipo,
+    estado: "pendiente",
+    solicitanteNombre: solicitante,
+    autorizadorNombre: null,
+    clienteNombre: input.clienteNombre,
+    bien: input.bien,
+    monto: input.monto,
+    tasaSolicitada: input.tasaSolicitada,
+    tasaEstandar: input.tasaEstandar,
+    motivo: input.motivo,
+    comentarioResolucion: null,
+    referencia: input.referencia,
+    creadoEn: new Date().toISOString(),
+    resueltoEn: null,
+  };
+  store.autorizaciones.push(aut);
+  revalidatePath("/autorizaciones");
+  return { id: aut.id, folio: aut.folio };
+}
+
+/** Aprueba o rechaza una solicitud. Solo Dirección General (admin) o Gerente. */
+export async function resolverAutorizacion(id: string, aprobada: boolean, comentario: string | null) {
+  const u = await getUsuarioActual();
+  if (!u || (u.rol !== "admin" && u.rol !== "gerente")) {
+    throw new Error("Solo Dirección General puede autorizar.");
+  }
+  const estado = aprobada ? "aprobada" : "rechazada";
+  const ahora = new Date().toISOString();
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("autorizaciones")
+      .update({
+        estado,
+        autorizador_nombre: u.nombre,
+        comentario_resolucion: comentario,
+        resuelto_en: ahora,
+      })
+      .eq("id", id);
+    if (error) throw error;
+  } else {
+    const a = getStore().autorizaciones.find((x) => x.id === id);
+    if (a) {
+      a.estado = estado;
+      a.autorizadorNombre = u.nombre;
+      a.comentarioResolucion = comentario;
+      a.resueltoEn = ahora;
+    }
+  }
+  await bitacoraAuto(aprobada ? "Autorización aprobada" : "Autorización rechazada", comentario, id);
+  revalidatePath("/autorizaciones");
+}
+
+/** Marca el resultado de una cotización: si terminó en empeño o el motivo de rechazo. */
+export async function marcarResultadoCotizacion(id: string, seEmpeno: boolean, motivo: string | null) {
+  if (await esInvitado()) return;
+  const estado: EstadoCotizacion = seEmpeno ? "convertida" : "rechazada";
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("cotizaciones")
+      .update({ se_empeno: seEmpeno, motivo_no: seEmpeno ? null : motivo, estado })
+      .eq("id", id);
+    if (error) throw error;
+  } else {
+    const c = getStore().cotizaciones.find((x) => x.id === id);
+    if (c) {
+      c.seEmpeno = seEmpeno;
+      c.motivoNo = seEmpeno ? null : motivo;
+      c.estado = estado;
+    }
+  }
+  revalidatePath("/cotizaciones");
 }

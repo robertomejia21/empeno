@@ -143,6 +143,8 @@ export interface Empeno {
   diasGracia: number; // días de gracia antes de remate
   estado: EstadoEmpeno;
   notas: string | null;
+  firmaCliente: string | null; // firma digital del consumidor (data URL PNG)
+  firmaFecha: string | null; // ISO datetime en que firmó
   creadoEn: string;
 }
 

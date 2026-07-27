@@ -186,6 +186,8 @@ export const empenosSeed: Empeno[] = [
     diasGracia: 7,
     estado: "activo",
     notas: null,
+    firmaCliente: null,
+    firmaFecha: null,
     creadoEn: ahora(-40),
   },
   {
@@ -209,6 +211,8 @@ export const empenosSeed: Empeno[] = [
     diasGracia: 7,
     estado: "activo",
     notas: null,
+    firmaCliente: null,
+    firmaFecha: null,
     creadoEn: ahora(-25),
   },
 ];

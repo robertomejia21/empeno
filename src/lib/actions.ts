@@ -358,6 +358,8 @@ export async function crearEmpeno(form: FormData) {
       diasGracia,
       estado: "activo",
       notas: sn(form, "notas"),
+      firmaCliente: null,
+      firmaFecha: null,
       creadoEn: new Date().toISOString(),
     };
     store.empenos.push(empeno);
@@ -851,6 +853,8 @@ export async function crearEmpenoGuiado(
     diasGracia: data.diasGracia,
     estado: "activo",
     notas: data.notas,
+    firmaCliente: null,
+    firmaFecha: null,
     creadoEn: ts,
   };
   store.empenos.push(empeno);
@@ -1685,4 +1689,25 @@ export async function marcarResultadoCotizacion(id: string, seEmpeno: boolean, m
     }
   }
   revalidatePath("/cotizaciones");
+}
+
+/** Guarda la firma digital del consumidor en el empeño (respaldo electrónico). */
+export async function guardarFirmaEmpeno(empenoId: string, firmaDataUrl: string) {
+  if (await esInvitado()) return;
+  const ahora = new Date().toISOString();
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("empenos")
+      .update({ firma_cliente: firmaDataUrl, firma_fecha: ahora })
+      .eq("id", empenoId);
+    if (error) throw error;
+  } else {
+    const e = getStore().empenos.find((x) => x.id === empenoId);
+    if (e) {
+      e.firmaCliente = firmaDataUrl;
+      e.firmaFecha = ahora;
+    }
+  }
+  await bitacoraAuto("Contrato firmado por el cliente", null, empenoId);
+  revalidatePath(`/empenos/${empenoId}/contrato`);
 }

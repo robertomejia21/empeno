@@ -40,6 +40,12 @@ export default async function EmpenoDetalle({
           subtitle={`Creado el ${formatFechaLarga(empeno.creadoEn)}`}
           action={
             <div className="flex items-center gap-2">
+              <Link
+                href={`/empenos/${empeno.id}/contrato`}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+              >
+                📝 Contrato PROFECO
+              </Link>
               <a
                 href={`/api/boleta/${empeno.id}`}
                 target="_blank"

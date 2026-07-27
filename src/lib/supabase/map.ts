@@ -114,6 +114,8 @@ export function rowToEmpeno(r: any): Empeno {
     diasGracia: r.dias_gracia,
     estado: r.estado as EstadoEmpeno,
     notas: r.notas,
+    firmaCliente: r.firma_cliente ?? null,
+    firmaFecha: r.firma_fecha ?? null,
     creadoEn: r.creado_en,
   };
 }

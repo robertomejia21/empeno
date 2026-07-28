@@ -18,6 +18,7 @@ export const navGroups: NavGroup[] = [
       { href: "/", label: "Tablero", icon: "📊" },
       { href: "/empenos", label: "Empeños", icon: "🤝" },
       { href: "/cotizaciones", label: "Cotizaciones", icon: "🧾" },
+      { href: "/prendas/escanear", label: "Escanear prenda", icon: "📷" },
       // Oculto temporalmente (la ruta /prendas sigue activa):
       // { href: "/prendas", label: "Comprar", icon: "🛍️" },
       { href: "/clientes", label: "Clientes", icon: "👤" },
@@ -43,6 +44,12 @@ export const navGroups: NavGroup[] = [
       { href: "/vencimientos", label: "Vencimientos", icon: "📆" },
       { href: "/cobranza", label: "Cobranza", icon: "💳" },
       { href: "/reportes", label: "Reportes", icon: "📈" },
+    ],
+  },
+  {
+    titulo: "Vehículos",
+    items: [
+      { href: "/gps", label: "GPS y resguardo", icon: "📡" },
     ],
   },
   {

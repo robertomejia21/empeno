@@ -6,13 +6,20 @@
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { Map as LMap, Marker as LMarker, DivIcon } from "leaflet";
+import { SUCURSAL } from "@/lib/negocio";
 
-const MEXICALI: [number, number] = [32.6278, -115.4545];
+const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
 
 const PIN_SVG =
   '<svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">' +
   '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#d96a10"/>' +
   '<circle cx="14" cy="14" r="6" fill="#fff"/></svg>';
+
+// Marcador de nuestra sucursal (matriz), en azul con un ícono de tienda.
+const SUCURSAL_SVG =
+  '<svg width="30" height="42" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">' +
+  '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#1d4ed8"/>' +
+  '<text x="14" y="19" font-size="12" text-anchor="middle" fill="#fff">🏪</text></svg>';
 
 export function MapaResguardo({ onChange }: { onChange: (texto: string) => void }) {
   const [referencia, setReferencia] = useState("");
@@ -62,6 +69,11 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
         maxZoom: 19,
         attribution: "© OpenStreetMap",
       }).addTo(map);
+      // Nuestra sucursal (matriz) siempre visible en el mapa.
+      const sucursalIcon = L.divIcon({ className: "", html: SUCURSAL_SVG, iconSize: [30, 42], iconAnchor: [15, 42] });
+      L.marker([SUCURSAL.lat, SUCURSAL.lng], { icon: sucursalIcon })
+        .addTo(map)
+        .bindTooltip(`🏪 ${SUCURSAL.nombre}`, { direction: "top", offset: [0, -38] });
       map.on("click", (e) => setPin({ lat: e.latlng.lat, lng: e.latlng.lng }));
       mapRef.current = map;
       if (pin) markerRef.current = L.marker([pin.lat, pin.lng], { icon: iconRef.current }).addTo(map);

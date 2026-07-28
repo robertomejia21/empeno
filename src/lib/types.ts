@@ -212,7 +212,16 @@ export interface Apartado {
   creadoEn: string;
 }
 
-export type RolUsuario = "admin" | "gerente" | "cajero" | "valuador" | "invitado";
+// admin = Dirección General (acceso total). Los demás, acceso acotado por área.
+export type RolUsuario =
+  | "admin"
+  | "gerente"
+  | "lider"
+  | "atencion"
+  | "cobranza"
+  | "cajero"
+  | "valuador"
+  | "invitado";
 
 export interface Usuario {
   id: ID;

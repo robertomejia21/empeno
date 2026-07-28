@@ -72,25 +72,41 @@ export async function verificarSesion(token: string | undefined): Promise<Sesion
 // ---- Roles y permisos ----
 
 export const ROLES: { value: RolUsuario; label: string }[] = [
-  { value: "admin", label: "Administrador" },
+  { value: "admin", label: "Dirección General" },
   { value: "gerente", label: "Gerente" },
+  { value: "lider", label: "Líder" },
+  { value: "atencion", label: "Atención a clientes" },
+  { value: "cobranza", label: "Cobranza" },
   { value: "cajero", label: "Cajero" },
-  { value: "valuador", label: "Valuador" },
 ];
 
 export const ROL_LABEL: Record<RolUsuario, string> = {
-  admin: "Administrador",
+  admin: "Dirección General",
   gerente: "Gerente",
+  lider: "Líder",
+  atencion: "Atención a clientes",
+  cobranza: "Cobranza",
   cajero: "Cajero",
   valuador: "Valuador",
   invitado: "Invitado",
 };
 
-/** Rutas permitidas por rol. admin/gerente ven todo. */
+/**
+ * Rutas permitidas por rol (una sola sucursal por ahora).
+ *  - Dirección General (admin): acceso total.
+ *  - Gerente: todo lo de su sucursal; sin configuración ni usuarios (aparte).
+ *  - Líder: supervisión operativa; sin reportes financieros ni configuración.
+ *  - Atención a clientes: alta de clientes y contratos; sin caja ni reportes.
+ *  - Cobranza: adeudos y vencimientos; sin inventario ni caja.
+ *  - Cajero: operaciones de caja; sin reportes gerenciales ni configuración.
+ */
 const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   admin: "*",
   gerente: "*",
-  cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza"],
+  lider: ["/", "/mostrador", "/empenos", "/cotizaciones", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/vencimientos", "/cobranza", "/autorizaciones", "/gps"],
+  atencion: ["/", "/mostrador", "/empenos", "/cotizaciones", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/apartados"],
+  cobranza: ["/", "/cobranza", "/vencimientos", "/clientes", "/empenos", "/recordatorios", "/conversaciones", "/buscar"],
+  cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza", "/gps"],
   valuador: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
   // Invitado (demo): ve TODO en solo lectura (las escrituras se bloquean aparte).
   invitado: "*",
@@ -99,8 +115,10 @@ const PERMISOS: Record<RolUsuario, string[] | "*"> = {
 export function puedeAcceder(rol: RolUsuario, href: string): boolean {
   // La Oficina Virtual es exclusiva del invitado (su tablero de inicio).
   if (href.startsWith("/oficina")) return rol === "invitado";
-  // La gestión de usuarios es exclusiva de admin.
+  // La gestión de usuarios es exclusiva de Dirección General.
   if (href.startsWith("/usuarios")) return rol === "admin";
+  // La configuración del sistema: Dirección General y Gerente.
+  if (href.startsWith("/configuracion")) return rol === "admin" || rol === "gerente" || rol === "invitado";
   const p = PERMISOS[rol];
   if (p === "*") return true;
   if (href === "/") return p.includes("/");

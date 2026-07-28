@@ -17,6 +17,20 @@ export const PROFECO = {
   paginaWeb: "www.gob.mx/profeco",
 } as const;
 
+/** URL pública de la app (para los códigos QR de las prendas). */
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://empeno.vercel.app";
+
+/**
+ * Ubicación de la sucursal (matriz) para mostrarla en el mapa de resguardo.
+ * Aproximada a Blvd. Lázaro Cárdenas 401, Mexicali; ajústala al punto exacto
+ * si lo necesitas.
+ */
+export const SUCURSAL = {
+  nombre: PROVEEDOR.marca,
+  lat: 32.63041,
+  lng: -115.44684,
+} as const;
+
 /** Número de periodos al año según el periodo del contrato. */
 export function periodosPorAnio(periodo: "mensual" | "quincenal" | "semanal"): number {
   return periodo === "mensual" ? 12 : periodo === "quincenal" ? 24 : 52;

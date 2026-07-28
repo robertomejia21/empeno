@@ -2,6 +2,8 @@ import Link from "next/link";
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual, type ReporteSemanal } from "@/lib/reporteSemanal";
+import { resumenModalidades } from "@/lib/gps";
+import { GpsModalidades } from "@/components/GpsModalidades";
 import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -26,6 +28,7 @@ export default async function Tablero() {
 
   const semana = rangoSemanaActual();
   const reporteSemanal = calcularReporteSemanal(empenos, pagos, ventas, semana.desde, semana.hasta);
+  const resumenGps = resumenModalidades(empenos);
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalPrestado = activos.reduce((s, e) => s + e.montoPrestado, 0);
@@ -128,6 +131,17 @@ export default async function Tablero() {
             </Link>
             {" "}para cuadrar el saldo.
           </span>
+        </div>
+      )}
+
+      {/* Modalidad GPS vs Resguardo (vehículos) */}
+      {resumenGps.totalVehiculos > 0 && (
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground">Vehículos por modalidad</h2>
+            <Link href="/gps" className="text-sm font-medium text-primary">Ver GPS y resguardo →</Link>
+          </div>
+          <GpsModalidades resumen={resumenGps} />
         </div>
       )}
 

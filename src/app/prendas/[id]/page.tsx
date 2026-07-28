@@ -5,6 +5,7 @@ import { formatMXN, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { generarQR, urlPrenda } from "@/lib/qr";
 
 const campoCls =
   "w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm";
@@ -13,6 +14,8 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const p = await obtenerPrenda(id);
   if (!p) notFound();
+
+  const qrDataUrl = await generarQR(urlPrenda(p.id));
 
   const datos: [string, string | null][] = [
     ["Folio", p.folio],
@@ -58,6 +61,25 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
         subtitle={`${p.folio} · registrada ${formatFechaLarga(p.creadoEn)}`}
         action={estadoPrendaBadge(p.estado)}
       />
+
+      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface p-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={qrDataUrl} alt={`QR ${p.folio}`} className="h-24 w-24 rounded-lg border border-border bg-white p-1" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">Código QR de la prenda</p>
+          <p className="text-xs text-muted">
+            Folio <span className="font-mono">{p.folio}</span>. Escanéalo con cualquier cámara para abrir esta ficha.
+          </p>
+          <a
+            href={`/prendas/${p.id}/etiqueta`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium hover:bg-surface"
+          >
+            🖨️ Imprimir etiqueta
+          </a>
+        </div>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">

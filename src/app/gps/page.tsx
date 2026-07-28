@@ -18,7 +18,15 @@ export default async function GpsPage() {
 
   return (
     <div>
-      <PageHeader title="GPS y resguardo" subtitle="Vehículos en garantía por modalidad" />
+      <PageHeader
+        title="GPS y resguardo"
+        subtitle="Vehículos en garantía por modalidad"
+        action={
+          <Link href="/gps/citas" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90">
+            📅 Citas de GPS
+          </Link>
+        }
+      />
 
       <GpsModalidades resumen={resumen} />
 

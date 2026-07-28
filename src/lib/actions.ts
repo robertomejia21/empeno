@@ -23,6 +23,9 @@ import type {
   EstadoCotizacion,
   Autorizacion,
   AutorizacionInput,
+  CitaGps,
+  CitaGpsInput,
+  EstadoCitaGps,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -1570,6 +1573,7 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
     vigenciaHasta,
     estado: "vigente",
     fotos: input.fotos,
+    documentos: [],
     valuadorNombre: valuador,
     notas: input.notas,
     creadoEn: new Date().toISOString(),
@@ -1710,4 +1714,88 @@ export async function guardarFirmaEmpeno(empenoId: string, firmaDataUrl: string)
   }
   await bitacoraAuto("Contrato firmado por el cliente", null, empenoId);
   revalidatePath(`/empenos/${empenoId}/contrato`);
+}
+
+/** Adjunta un documento del vehículo (foto/PDF) a una cotización. */
+export async function subirDocumentoCotizacion(cotizacionId: string, dataUrl: string): Promise<string | null> {
+  if (await esInvitado()) return null;
+  const p = dividirDataUrl(dataUrl);
+  if (!p || !supabaseConfigured) return null;
+  const sb = getServerSupabase();
+  const ext = p.mime.split("/")[1] || "jpg";
+  const path = `cotizaciones/${cotizacionId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${ext}`;
+  const { error } = await sb.storage
+    .from("prendas")
+    .upload(path, Buffer.from(p.base64, "base64"), { contentType: p.mime, upsert: false });
+  if (error) return null;
+  const url = sb.storage.from("prendas").getPublicUrl(path).data.publicUrl;
+  const { data } = await sb.from("cotizaciones").select("documentos").eq("id", cotizacionId).single();
+  const docs = [...(((data?.documentos as string[]) ?? [])), url];
+  await sb.from("cotizaciones").update({ documentos: docs }).eq("id", cotizacionId);
+  await bitacoraAuto("Documento adjuntado a cotización", url, cotizacionId);
+  revalidatePath("/cotizaciones");
+  return url;
+}
+
+// ----------------- CITAS DE GPS -----------------
+
+export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean; error?: string }> {
+  if (await esInvitado()) return { ok: false, error: "En modo demo no se agendan citas." };
+  if (!input.fecha || !input.hora) return { ok: false, error: "Falta fecha u hora." };
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data: ocupado } = await sb
+      .from("citas_gps")
+      .select("id")
+      .eq("fecha", input.fecha)
+      .eq("hora", input.hora)
+      .neq("estado", "cancelada");
+    if (ocupado && ocupado.length > 0) return { ok: false, error: "Ese horario ya está ocupado." };
+    const { error } = await sb.from("citas_gps").insert({
+      fecha: input.fecha,
+      hora: input.hora,
+      cliente_nombre: input.clienteNombre,
+      telefono: input.telefono,
+      vehiculo: input.vehiculo,
+      notas: input.notas,
+      estado: "agendada",
+    });
+    if (error) throw error;
+    await bitacoraAuto("Cita de GPS agendada", `${input.fecha} ${input.hora}`, input.clienteNombre);
+    revalidatePath("/gps/citas");
+    return { ok: true };
+  }
+
+  const store = getStore();
+  if (store.citasGps.some((c) => c.fecha === input.fecha && c.hora === input.hora && c.estado !== "cancelada")) {
+    return { ok: false, error: "Ese horario ya está ocupado." };
+  }
+  const cita: CitaGps = {
+    id: nuevoId("cita"),
+    fecha: input.fecha,
+    hora: input.hora,
+    clienteNombre: input.clienteNombre,
+    telefono: input.telefono,
+    vehiculo: input.vehiculo,
+    empenoId: null,
+    estado: "agendada",
+    notas: input.notas,
+    creadoEn: new Date().toISOString(),
+  };
+  store.citasGps.push(cita);
+  revalidatePath("/gps/citas");
+  return { ok: true };
+}
+
+export async function actualizarEstadoCitaGps(id: string, estado: EstadoCitaGps) {
+  if (await esInvitado()) return;
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("citas_gps").update({ estado }).eq("id", id);
+    if (error) throw error;
+  } else {
+    const c = getStore().citasGps.find((x) => x.id === id);
+    if (c) c.estado = estado;
+  }
+  revalidatePath("/gps/citas");
 }

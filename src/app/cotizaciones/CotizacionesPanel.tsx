@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo } from "@/lib/actions";
+import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion } from "@/lib/actions";
 import { normalizarImagen } from "@/lib/imagen";
 import { prestamoSugerido } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -301,13 +301,40 @@ function TablaReporte({
 }
 
 function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, si: boolean, motivo: string | null) => void }) {
+  const router = useRouter();
   const [motivando, setMotivando] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const [subiendo, setSubiendo] = useState(false);
+
+  async function onDoc(f: File | undefined) {
+    if (!f) return;
+    setSubiendo(true);
+    try {
+      await subirDocumentoCotizacion(c.id, await normalizarImagen(f, 1600));
+      router.refresh();
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
   return (
     <tr className="border-b border-border/60 align-top">
       <td className="px-4 py-2.5">
         <p className="font-medium text-foreground">{c.descripcion}</p>
         <p className="text-xs text-muted">{c.folio}{c.prospectoNombre ? ` · ${c.prospectoNombre}` : ""}</p>
+        {c.seEmpeno === true && (
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {c.documentos.length > 0 && (
+              <a href={c.documentos[c.documentos.length - 1]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-info hover:underline">
+                📎 {c.documentos.length} doc(s)
+              </a>
+            )}
+            <label className="cursor-pointer text-xs font-medium text-primary hover:underline">
+              {subiendo ? "Subiendo…" : "+ Adjuntar documentación"}
+              <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={(e) => onDoc(e.target.files?.[0])} />
+            </label>
+          </div>
+        )}
       </td>
       <td className="px-3 py-2.5 text-muted">{c.modelo ?? "—"}</td>
       <td className="px-3 py-2.5 text-muted">{formatFecha(c.creadoEn)}</td>

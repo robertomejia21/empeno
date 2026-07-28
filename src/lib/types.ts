@@ -335,9 +335,36 @@ export interface Cotizacion {
   vigenciaHasta: string; // ISO date
   estado: EstadoCotizacion;
   fotos: string[];
+  documentos: string[]; // documentación del vehículo adjunta (URLs)
   valuadorNombre: string | null;
   notas: string | null;
   creadoEn: string;
+}
+
+// ---- Citas de instalación de GPS ----
+
+export type EstadoCitaGps = "agendada" | "completada" | "cancelada";
+
+export interface CitaGps {
+  id: ID;
+  fecha: string; // ISO date
+  hora: string; // "08:00" .. "16:00"
+  clienteNombre: string | null;
+  telefono: string | null;
+  vehiculo: string | null;
+  empenoId: ID | null;
+  estado: EstadoCitaGps;
+  notas: string | null;
+  creadoEn: string;
+}
+
+export interface CitaGpsInput {
+  fecha: string;
+  hora: string;
+  clienteNombre: string | null;
+  telefono: string | null;
+  vehiculo: string | null;
+  notas: string | null;
 }
 
 export interface CotizacionInput {

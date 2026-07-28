@@ -50,6 +50,7 @@ export const navGroups: NavGroup[] = [
     titulo: "Vehículos",
     items: [
       { href: "/gps", label: "GPS y resguardo", icon: "📡" },
+      { href: "/gps/citas", label: "Citas de GPS", icon: "📅" },
     ],
   },
   {

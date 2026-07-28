@@ -267,7 +267,23 @@ export function rowToCotizacion(r: any): import("@/lib/types").Cotizacion {
     vigenciaHasta: r.vigencia_hasta,
     estado: r.estado,
     fotos: r.fotos ?? [],
+    documentos: r.documentos ?? [],
     valuadorNombre: r.valuador_nombre ?? null,
+    notas: r.notas ?? null,
+    creadoEn: r.creado_en,
+  };
+}
+
+export function rowToCitaGps(r: any): import("@/lib/types").CitaGps {
+  return {
+    id: r.id,
+    fecha: r.fecha,
+    hora: r.hora,
+    clienteNombre: r.cliente_nombre ?? null,
+    telefono: r.telefono ?? null,
+    vehiculo: r.vehiculo ?? null,
+    empenoId: r.empeno_id ?? null,
+    estado: r.estado,
     notas: r.notas ?? null,
     creadoEn: r.creado_en,
   };

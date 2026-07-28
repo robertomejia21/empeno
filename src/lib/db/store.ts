@@ -31,6 +31,7 @@ interface Store {
   pagos: import("@/lib/types").Pago[];
   cotizaciones: import("@/lib/types").Cotizacion[];
   autorizaciones: import("@/lib/types").Autorizacion[];
+  citasGps: import("@/lib/types").CitaGps[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -51,6 +52,7 @@ export function getStore(): Store {
       pagos: [],
       cotizaciones: [],
       autorizaciones: [],
+      citasGps: [],
     };
   }
   return g.__empenoStore;

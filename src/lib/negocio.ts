@@ -27,8 +27,9 @@ export const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://empeno.vercel
  */
 export const SUCURSAL = {
   nombre: PROVEEDOR.marca,
-  lat: 32.63041,
-  lng: -115.44684,
+  direccion: "Blvd. Lázaro Cárdenas #4101, Col. Islas Agrarias A, C.P. 21395, Mexicali, B.C. (a un lado de Plaza Sendero)",
+  lat: 32.5928664,
+  lng: -115.357967,
 } as const;
 
 /** Número de periodos al año según el periodo del contrato. */

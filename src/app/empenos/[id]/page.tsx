@@ -8,6 +8,7 @@ import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui
 import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { Boleta } from "./Boleta";
+import { RefrendoForm } from "./RefrendoForm";
 
 const periodoLabel: Record<string, string> = {
   mensual: "Mensual",
@@ -94,34 +95,7 @@ export default async function EmpenoDetalle({
             {activo && (
               <div className="space-y-4 border-t border-border px-5 py-4">
                 {/* Refrendo / abono mensual con recibo */}
-                <form action={refrendar} className="rounded-xl bg-surface-2 p-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">Refrendo / abono mensual</p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    <label className="flex flex-col gap-1 text-xs text-muted">
-                      Método de pago
-                      <select name="metodoPago" defaultValue={empeno.metodoPago} className={campoCls}>
-                        <option value="efectivo">Efectivo</option>
-                        <option value="transferencia">Transferencia</option>
-                        <option value="cheque">Cheque</option>
-                        <option value="tarjeta">Tarjeta</option>
-                      </select>
-                    </label>
-                    <CampoNum name="moratorios" label="Moratorios" />
-                    <CampoNum name="gastosAdmin" label="Gastos admin." />
-                    <CampoNum name="abonoCapital" label="Abono a capital" />
-                    <CampoNum name="descuento" label="Descuento" />
-                    <CampoNum name="recibido" label="Efectivo recibido" />
-                  </div>
-                  <p className="mt-3 text-xs text-muted">
-                    Intereses {formatMXN(calc.totalRefrendo)} (interés + almacenaje + IVA por periodo). El total se
-                    calcula con moratorios/abono/descuento y se genera el recibo.
-                  </p>
-                  <div className="mt-3">
-                    <ConfirmSubmit confirmacion="¿Registrar el refrendo/abono y generar el recibo?">
-                      Registrar y entregar recibo
-                    </ConfirmSubmit>
-                  </div>
-                </form>
+                <RefrendoForm accion={refrendar} base={calc.totalRefrendo} metodoDefault={empeno.metodoPago} />
                 <form action={desempenar} className="rounded-xl border border-border bg-surface-2/40 p-4">
                   <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

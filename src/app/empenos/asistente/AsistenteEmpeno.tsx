@@ -167,6 +167,9 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     seguroMensual: "", pensionMensual: "", gpsMensual: "",
   });
 
+  // Modalidad del vehículo (GPS o Resguardo)
+  const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
+
   // Paso 5 — préstamo
   const [monto, setMonto] = useState("");
   const [montoTocado, setMontoTocado] = useState(false);
@@ -335,6 +338,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
             : CAMPOS_VEHICULO_VACIOS),
           verificado: esVehiculo ? autoVerificado : true,
           repuveFolio: esVehiculo ? repuveFolio || null : null,
+          modalidad: esVehiculo ? modalidad : null,
           notas: [comentariosBien, condiciones].filter(Boolean).join("\n") || null,
         },
         montoPrestado: montoNum,
@@ -551,6 +555,28 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                   ) : (
                     <p className="w-full text-xs text-muted">Sube la tarjeta de circulación o la factura y la IA llena marca, modelo, NIV, placas y motor.</p>
                   )}
+                </div>
+
+                <div className="rounded-lg border border-border bg-surface-2/50 p-4">
+                  <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalidad("resguardo")}
+                      className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "resguardo" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+                    >
+                      🏢 Resguardo
+                      <span className="block text-[11px] font-normal text-muted">Queda en nuestra bóveda/patio</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalidad("gps")}
+                      className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "gps" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+                    >
+                      📡 GPS
+                      <span className="block text-[11px] font-normal text-muted">El cliente lo conserva con GPS</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">

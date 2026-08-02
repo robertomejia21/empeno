@@ -87,6 +87,7 @@ export function rowToPrenda(r: any): Prenda {
     gpsMensual: r.gps_mensual == null ? null : Number(r.gps_mensual),
     verificado: Boolean(r.verificado),
     repuveFolio: r.repuve_folio ?? null,
+    modalidad: r.modalidad ?? null,
     notas: r.notas,
     creadoEn: r.creado_en,
   };

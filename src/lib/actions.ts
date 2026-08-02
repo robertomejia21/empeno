@@ -711,6 +711,7 @@ export async function crearEmpenoGuiado(
         gps_mensual: data.prenda.gpsMensual,
         verificado: data.prenda.verificado,
         repuve_folio: data.prenda.repuveFolio,
+        modalidad: data.prenda.modalidad ?? null,
         notas: data.prenda.notas,
       })
       .select("id")
@@ -831,6 +832,7 @@ export async function crearEmpenoGuiado(
     gpsMensual: data.prenda.gpsMensual,
     verificado: data.prenda.verificado,
     repuveFolio: data.prenda.repuveFolio,
+    modalidad: data.prenda.modalidad ?? null,
     notas: data.prenda.notas,
     creadoEn: ts,
   };

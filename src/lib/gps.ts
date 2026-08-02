@@ -4,8 +4,12 @@ import type { EmpenoConDetalle, Prenda } from "./types";
 
 export type Modalidad = "gps" | "resguardo";
 
-/** Se considera modalidad GPS si hay renta de GPS o ubicación de GPS registrada. */
-export function modalidadVehiculo(p: Pick<Prenda, "gpsMensual" | "gpsUbicacion">): Modalidad {
+/**
+ * Modalidad del vehículo. Usa la elegida al registrar el contrato; si no se
+ * capturó, la infiere (renta o ubicación de GPS ⇒ GPS, si no Resguardo).
+ */
+export function modalidadVehiculo(p: Pick<Prenda, "modalidad" | "gpsMensual" | "gpsUbicacion">): Modalidad {
+  if (p.modalidad === "gps" || p.modalidad === "resguardo") return p.modalidad;
   if ((p.gpsMensual ?? 0) > 0) return "gps";
   if (p.gpsUbicacion && p.gpsUbicacion.trim()) return "gps";
   return "resguardo";

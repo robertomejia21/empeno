@@ -108,6 +108,7 @@ export interface Prenda {
   // Verificación (autos): REPUVE / no reportado robado / documentación
   verificado: boolean;
   repuveFolio: string | null;
+  modalidad?: "gps" | "resguardo" | null; // modalidad del vehículo en garantía
   notas: string | null; // comentarios / estado del bien
   creadoEn: string;
 }
@@ -502,6 +503,7 @@ export interface PrendaInput {
   gpsMensual: number | null;
   verificado: boolean;
   repuveFolio: string | null;
+  modalidad?: "gps" | "resguardo" | null;
   notas: string | null;
 }
 

@@ -10,6 +10,7 @@ export const PROVEEDOR = {
   paginaWeb: "empeno.vercel.app",
   registroRPCA: "2089-2022",
   registroFecha: "06 de junio de 2022",
+  horario: "Lunes a Sábado de 9:00 a 19:00 hrs",
 } as const;
 
 export const PROFECO = {

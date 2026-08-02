@@ -312,6 +312,23 @@ export function rowToAutorizacion(r: any): import("@/lib/types").Autorizacion {
   };
 }
 
+export function rowToEncuesta(r: any): import("@/lib/types").Encuesta {
+  const b = (v: any) => (v == null ? null : Boolean(v));
+  return {
+    id: r.id,
+    amable: b(r.amable),
+    tiempoAdecuado: b(r.tiempo_adecuado),
+    resolvioDudas: b(r.resolvio_dudas),
+    ofrecioAlternativas: b(r.ofrecio_alternativas),
+    profesionalismoSatisfecho: b(r.profesionalismo_satisfecho),
+    comunicacionFacil: b(r.comunicacion_facil),
+    horarioSatisfecho: b(r.horario_satisfecho),
+    calificacion: r.calificacion == null ? null : Number(r.calificacion),
+    comentario: r.comentario ?? null,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToMovimiento(r: any): MovimientoCaja {
   return {
     id: r.id,

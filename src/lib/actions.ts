@@ -26,6 +26,7 @@ import type {
   CitaGps,
   CitaGpsInput,
   EstadoCitaGps,
+  EncuestaInput,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
@@ -1830,6 +1831,30 @@ export async function enviarRecordatoriosCitasGps(): Promise<{ enviados: number;
     else fallidos++;
   }
   return { enviados, fallidos };
+}
+
+// ----------------- ENCUESTA DE SATISFACCIÓN -----------------
+
+/** Guarda una respuesta de la encuesta (pública, la responde el cliente). */
+export async function guardarEncuesta(input: EncuestaInput): Promise<{ ok: boolean }> {
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("encuestas").insert({
+      amable: input.amable,
+      tiempo_adecuado: input.tiempoAdecuado,
+      resolvio_dudas: input.resolvioDudas,
+      ofrecio_alternativas: input.ofrecioAlternativas,
+      profesionalismo_satisfecho: input.profesionalismoSatisfecho,
+      comunicacion_facil: input.comunicacionFacil,
+      horario_satisfecho: input.horarioSatisfecho,
+      calificacion: input.calificacion,
+      comentario: input.comentario,
+    });
+    if (error) throw error;
+  } else {
+    getStore().encuestas.push({ id: nuevoId("enc"), ...input, creadoEn: new Date().toISOString() });
+  }
+  revalidatePath("/encuestas");
+  return { ok: true };
 }
 
 export async function actualizarEstadoCitaGps(id: string, estado: EstadoCitaGps) {

@@ -17,7 +17,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/cron")) return conPathname(req);
 
   // Rutas públicas
-  if (pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps") return conPathname(req);
+  if (pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps" || pathname === "/encuesta") return conPathname(req);
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const sesion = await verificarSesion(token);

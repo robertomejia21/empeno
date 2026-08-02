@@ -430,6 +430,24 @@ export interface AutorizacionInput {
   referencia: string | null;
 }
 
+// ---- Encuesta de satisfacción ----
+
+export interface Encuesta {
+  id: ID;
+  amable: boolean | null;
+  tiempoAdecuado: boolean | null;
+  resolvioDudas: boolean | null;
+  ofrecioAlternativas: boolean | null;
+  profesionalismoSatisfecho: boolean | null;
+  comunicacionFacil: boolean | null;
+  horarioSatisfecho: boolean | null;
+  calificacion: number | null; // 1..5
+  comentario: string | null;
+  creadoEn: string;
+}
+
+export type EncuestaInput = Omit<Encuesta, "id" | "creadoEn">;
+
 export interface Bitacora {
   id: ID;
   fecha: string;

@@ -25,6 +25,7 @@ import {
   rowToCotizacion,
   rowToAutorizacion,
   rowToCitaGps,
+  rowToEncuesta,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -344,6 +345,18 @@ export async function listarCitasGps(): Promise<import("@/lib/types").CitaGps[]>
     return (data ?? []).map(rowToCitaGps);
   }
   return getStore().citasGps.slice().sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+}
+
+export async function listarEncuestas(): Promise<import("@/lib/types").Encuesta[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("encuestas")
+      .select("*")
+      .order("creado_en", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToEncuesta);
+  }
+  return getStore().encuestas.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
 }
 
 export async function listarBitacora(limite = 200): Promise<Bitacora[]> {

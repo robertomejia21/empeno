@@ -31,8 +31,9 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos } from "@/lib/db/repo";
+import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
+import { SUCURSAL } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
 import { RESGUARDO_VACIO, resumenResguardo } from "@/lib/resguardo";
@@ -1739,6 +1740,26 @@ export async function subirDocumentoCotizacion(cotizacionId: string, dataUrl: st
 
 // ----------------- CITAS DE GPS -----------------
 
+/** Avisa por WhatsApp al cliente y al equipo cuando se agenda una cita de GPS. */
+async function notificarCitaAgendada(input: CitaGpsInput) {
+  const dir = SUCURSAL.direccion ?? "";
+  const cuando = `${formatFecha(input.fecha)} a las ${input.hora} hrs`;
+  if (input.telefono) {
+    const saludo = input.clienteNombre ? ` ${input.clienteNombre}` : "";
+    await enviarWhatsApp(
+      input.telefono,
+      `Hola${saludo}, tu cita para la instalación del GPS quedó agendada:\n\n📅 ${cuando}\n📍 ${SUCURSAL.nombre} — ${dir}\n\nGracias por tu preferencia.`
+    ).catch(() => {});
+  }
+  const equipo = process.env.GPS_EQUIPO_TEL;
+  if (equipo) {
+    await enviarWhatsApp(
+      equipo,
+      `🔔 Nueva cita de GPS\n${cuando}\nCliente: ${input.clienteNombre ?? "—"} (${input.telefono ?? "s/tel"})\nVehículo: ${input.vehiculo ?? "s/d"}`
+    ).catch(() => {});
+  }
+}
+
 export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean; error?: string }> {
   if (await esInvitado()) return { ok: false, error: "En modo demo no se agendan citas." };
   if (!input.fecha || !input.hora) return { ok: false, error: "Falta fecha u hora." };
@@ -1763,6 +1784,7 @@ export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean
     });
     if (error) throw error;
     await bitacoraAuto("Cita de GPS agendada", `${input.fecha} ${input.hora}`, input.clienteNombre);
+    await notificarCitaAgendada(input);
     revalidatePath("/gps/citas");
     return { ok: true };
   }
@@ -1784,8 +1806,28 @@ export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean
     creadoEn: new Date().toISOString(),
   };
   store.citasGps.push(cita);
+  await notificarCitaAgendada(input);
   revalidatePath("/gps/citas");
   return { ok: true };
+}
+
+/** Recordatorio de citas de GPS del día siguiente (para el cron). */
+export async function enviarRecordatoriosCitasGps(): Promise<{ enviados: number; fallidos: number }> {
+  const manana = sumarDiasISO(hoyISO(), 1);
+  const citas = (await listarCitasGps()).filter(
+    (c) => c.estado === "agendada" && c.fecha === manana && c.telefono
+  );
+  let enviados = 0;
+  let fallidos = 0;
+  for (const c of citas) {
+    const r = await enviarWhatsApp(
+      c.telefono,
+      `Recordatorio: mañana ${formatFecha(c.fecha)} a las ${c.hora} hrs es tu cita de instalación de GPS en ${SUCURSAL.nombre}, ${SUCURSAL.direccion ?? ""}. Te esperamos.`
+    );
+    if (r.ok) enviados++;
+    else fallidos++;
+  }
+  return { enviados, fallidos };
 }
 
 export async function actualizarEstadoCitaGps(id: string, estado: EstadoCitaGps) {

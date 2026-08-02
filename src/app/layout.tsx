@@ -32,7 +32,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const sinShell = pathname === "/login" || pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/");
+  const sinShell = pathname === "/login" || pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps";
   const usuario = sinShell ? null : await getUsuarioActual();
 
   return (

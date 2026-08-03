@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, solicitarAutorizacion } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa, TASA_MINIMA_LIBRE } from "@/lib/interes";
+import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente } from "@/lib/actions";
+import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen } from "@/lib/imagen";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
@@ -204,11 +204,6 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [error, setError] = useState<string | null>(null);
   const [resultado, setResultado] = useState<{ empenoId: string; folio: string } | null>(null);
 
-  // Autorización de tasa especial (Dirección General)
-  const [autorizacionFolio, setAutorizacionFolio] = useState<string | null>(null);
-  const [solicitandoAut, setSolicitandoAut] = useState(false);
-  const [autMotivo, setAutMotivo] = useState("");
-
   const clienteSel = clientes.find((c) => c.id === clienteId);
   const previos = modoCliente === "existente" ? clienteSel?.previos ?? 0 : 0;
   const historial = tasaPorHistorial(previos);
@@ -266,11 +261,6 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     if (esVehiculo && !autoVerificado) {
       setError("Para vehículos debes verificar REPUVE (sin reporte de robo) y la documentación completa.");
       setPaso(8);
-      return;
-    }
-    if (tasaEspecial && !autorizacionFolio) {
-      setError("La tasa especial requiere autorización de Dirección General. Solicítala en el paso de intereses.");
-      setPaso(6);
       return;
     }
     setGuardando(true);
@@ -352,7 +342,7 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
         plazoPeriodos: plazo,
         diasGracia,
         fechaInicio,
-        notas: autorizacionFolio ? `Tasa especial ${tasa}% — autorización ${autorizacionFolio}` : null,
+        notas: tasaEspecial ? `Tasa especial ${tasa}% — pendiente de autorización` : null,
       });
       setResultado(res);
       setPaso(9);
@@ -367,25 +357,6 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
     modoCliente === "existente"
       ? clienteSel?.nombre ?? "—"
       : `${cn.nombre} ${cn.apellidoPaterno} ${cn.apellidoMaterno}`.trim();
-
-  async function solicitarAut() {
-    setSolicitandoAut(true);
-    try {
-      const r = await solicitarAutorizacion({
-        tipo: "interes_especial",
-        clienteNombre: nombreCliente,
-        bien: bien.descripcion || null,
-        monto: montoNum || null,
-        tasaSolicitada: tasa,
-        tasaEstandar: TASA_MINIMA_LIBRE,
-        motivo: autMotivo || null,
-        referencia: null,
-      });
-      if (r.folio) setAutorizacionFolio(r.folio);
-    } finally {
-      setSolicitandoAut(false);
-    }
-  }
 
   return (
     <div>
@@ -436,24 +407,36 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
 
             {modoCliente === "existente" ? (
               <div>
-                <Label>Selecciona el cliente</Label>
-                <select
-                  value={clienteId}
-                  onChange={(e) => setClienteId(e.target.value)}
+                <Label>Buscar cliente</Label>
+                <input
+                  value={busqCliente}
+                  onChange={(e) => setBusqCliente(e.target.value)}
+                  placeholder="Nombre, apellido, CURP o teléfono…"
                   className={inputCls}
-                >
-                  <option value="">— Selecciona —</option>
-                  {clientes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre} ({c.previos} empeños)
-                    </option>
-                  ))}
-                </select>
-                {clienteSel && (
-                  <p className="mt-2 text-xs text-muted">
-                    CURP: {clienteSel.curp ?? "—"} · Tel: {clienteSel.telefono ?? "—"}
-                  </p>
-                )}
+                />
+                <div className="mt-2 max-h-56 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+                  {clientesFiltrados.length === 0 ? (
+                    <p className="px-3 py-4 text-center text-sm text-muted">Sin coincidencias.</p>
+                  ) : (
+                    clientesFiltrados.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => setClienteId(c.id)}
+                        className={`flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm transition ${
+                          clienteId === c.id ? "bg-primary-soft text-primary" : "hover:bg-surface-2"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{c.nombre}</span>
+                          <span className="block truncate text-xs text-muted">CURP: {c.curp ?? "—"} · Tel: {c.telefono ?? "—"}</span>
+                        </span>
+                        <span className="shrink-0 text-xs text-muted">{c.previos} empeño(s)</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+                {clienteSel && <p className="mt-2 text-xs text-success">✓ Seleccionado: {clienteSel.nombre}</p>}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -724,33 +707,10 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
             </div>
 
             {tasaEspecial && (
-              <div className="space-y-2 rounded-lg border border-warning/40 bg-warning-soft p-4">
-                <p className="text-sm font-semibold text-warning">
-                  🔒 Tasa especial ({tasa}%) — requiere autorización de Dirección General
-                </p>
-                {autorizacionFolio ? (
-                  <p className="text-sm text-success">
-                    ✓ Autorización <strong>{autorizacionFolio}</strong> solicitada. Dirección la revisará en la bandeja de{" "}
-                    <Link href="/autorizaciones" className="underline underline-offset-2">Autorizaciones</Link>.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      value={autMotivo}
-                      onChange={(e) => setAutMotivo(e.target.value)}
-                      placeholder="Motivo de la tasa especial (opcional)"
-                      className="min-w-[200px] flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={solicitarAut}
-                      disabled={solicitandoAut}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-50"
-                    >
-                      {solicitandoAut ? "Solicitando…" : "Solicitar autorización"}
-                    </button>
-                  </div>
-                )}
+              <div className="rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm text-warning">
+                🔒 <strong>Tasa especial ({tasa}%)</strong> — requiere autorización de Dirección General. Al finalizar, el
+                empeño quedará en <strong>borrador</strong> y se enviará la solicitud al supervisor por WhatsApp; se
+                activará cuando la autoricen.
               </div>
             )}
 

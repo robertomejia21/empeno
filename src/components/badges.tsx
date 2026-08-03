@@ -2,6 +2,7 @@ import { Badge } from "./ui";
 import type { EstadoEmpeno, EstadoPrenda } from "@/lib/types";
 
 const empenoMap: Record<EstadoEmpeno, { label: string; tono: Parameters<typeof Badge>[0]["tono"] }> = {
+  borrador: { label: "Borrador (pend. autorización)", tono: "warning" },
   activo: { label: "Activo", tono: "success" },
   refrendado: { label: "Refrendado", tono: "info" },
   vencido: { label: "Vencido", tono: "danger" },

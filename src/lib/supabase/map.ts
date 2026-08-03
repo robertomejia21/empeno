@@ -310,6 +310,7 @@ export function rowToAutorizacion(r: any): import("@/lib/types").Autorizacion {
     motivo: r.motivo ?? null,
     comentarioResolucion: r.comentario_resolucion ?? null,
     referencia: r.referencia ?? null,
+    empenoId: r.empeno_id ?? null,
     creadoEn: r.creado_en,
     resueltoEn: r.resuelto_en ?? null,
   };

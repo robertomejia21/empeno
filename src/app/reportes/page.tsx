@@ -32,13 +32,13 @@ export default async function ReportesPage() {
 
   // Distribución por estado
   const estados = ["activo", "refrendado", "vencido", "desempenado", "en_remate", "rematado"] as const;
-  const porEstado = estados.map((est) => ({
-    est,
-    n:
+  const porEstado = estados.map((est) => {
+    const lista =
       est === "vencido"
-        ? activos.filter((e) => calcularLiquidacion(e).vencido).length
-        : empenos.filter((e) => e.estado === est).length,
-  }));
+        ? activos.filter((e) => calcularLiquidacion(e).vencido)
+        : empenos.filter((e) => e.estado === est);
+    return { est, n: lista.length, monto: lista.reduce((s, e) => s + e.montoPrestado, 0) };
+  });
   const maxEstado = Math.max(1, ...porEstado.map((x) => x.n));
 
   // Ingresos del mes por tipo
@@ -137,11 +137,11 @@ export default async function ReportesPage() {
         <Card>
           <CardHeader title="Empeños por estado" />
           <div className="space-y-3 p-5">
-            {porEstado.map(({ est, n }) => (
+            {porEstado.map(({ est, n, monto }) => (
               <div key={est}>
                 <div className="mb-1 flex justify-between text-sm">
                   <span className="text-muted">{etiquetaEstado[est]}</span>
-                  <span className="font-medium text-foreground">{n}</span>
+                  <span className="font-medium text-foreground">{n} · {formatMXN(monto)}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
                   <div

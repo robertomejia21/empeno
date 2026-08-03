@@ -29,7 +29,7 @@ import type {
   EncuestaInput,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
@@ -639,6 +639,12 @@ export async function crearEmpenoGuiado(
 ): Promise<{ empenoId: string; folio: string }> {
   if (await esInvitado()) throw new Error("Modo demo: solo lectura, no se puede guardar.");
   const fechaVencimiento = calcularVencimiento(data.fechaInicio, data.periodo, data.plazoPeriodos);
+  // Tasa especial (≤ 6.48%): el empeño se crea en BORRADOR hasta que Dirección autorice.
+  const especial = requiereAutorizacionTasa(data.tasaInteres);
+  const estadoInicial = especial ? "borrador" : "activo";
+  const nombreClienteAut = data.clienteNuevo
+    ? `${data.clienteNuevo.nombre} ${data.clienteNuevo.apellidoPaterno} ${data.clienteNuevo.apellidoMaterno}`.trim()
+    : null;
 
   if (supabaseConfigured) {
     const sb = getServerSupabase();
@@ -737,12 +743,26 @@ export async function crearEmpenoGuiado(
         fecha_inicio: data.fechaInicio,
         fecha_vencimiento: fechaVencimiento,
         dias_gracia: data.diasGracia,
-        estado: "activo",
+        estado: estadoInicial,
         notas: data.notas,
       })
       .select("id, folio")
       .single();
     if (ee) throw ee;
+
+    if (especial) {
+      await solicitarAutorizacion({
+        tipo: "interes_especial",
+        clienteNombre: nombreClienteAut,
+        bien: data.prenda.descripcion,
+        monto: data.montoPrestado,
+        tasaSolicitada: data.tasaInteres,
+        tasaEstandar: TASA_MINIMA_LIBRE,
+        motivo: `Empeño ${e.folio} en borrador por tasa especial`,
+        referencia: e.folio,
+        empenoId: e.id,
+      });
+    }
 
     // 4) Salida de caja (dividida por tope antilavado si aplica)
     const partesSb = dividirMontoAML(data.montoPrestado);
@@ -858,13 +878,26 @@ export async function crearEmpenoGuiado(
     fechaInicio: data.fechaInicio,
     fechaVencimiento,
     diasGracia: data.diasGracia,
-    estado: "activo",
+    estado: estadoInicial,
     notas: data.notas,
     firmaCliente: null,
     firmaFecha: null,
     creadoEn: ts,
   };
   store.empenos.push(empeno);
+  if (especial) {
+    await solicitarAutorizacion({
+      tipo: "interes_especial",
+      clienteNombre: nombreClienteAut,
+      bien: data.prenda.descripcion,
+      monto: data.montoPrestado,
+      tasaSolicitada: data.tasaInteres,
+      tasaEstandar: TASA_MINIMA_LIBRE,
+      motivo: `Empeño ${empeno.folio} en borrador por tasa especial`,
+      referencia: empeno.folio,
+      empenoId: empeno.id,
+    });
+  }
   dividirMontoAML(data.montoPrestado).forEach((m, i, arr) =>
     store.movimientos.push({
       id: nuevoId("m"),
@@ -1592,6 +1625,21 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
 
 // ----------------- AUTORIZACIONES (Dirección General) -----------------
 
+/** Avisa por WhatsApp al supervisor que hay una autorización de tasa especial pendiente. */
+async function notificarSupervisorAutorizacion(input: AutorizacionInput, folio: string) {
+  const tel = process.env.SUPERVISOR_TEL;
+  if (!tel) return;
+  const texto = [
+    `🔒 Autorización de tasa especial (${folio})`,
+    `Cliente: ${input.clienteNombre ?? "—"}`,
+    input.bien ? `Bien: ${input.bien}` : null,
+    `Tasa solicitada: ${input.tasaSolicitada ?? "?"}% (catálogo ${input.tasaEstandar ?? "?"}%)`,
+    input.monto ? `Préstamo: ${formatMXN(input.monto)}` : null,
+    `Autoriza aquí: ${APP_URL}/autorizaciones`,
+  ].filter(Boolean).join("\n");
+  await enviarWhatsApp(tel, texto).catch(() => {});
+}
+
 /** Crea una solicitud de autorización (p. ej. tasa de interés especial). */
 export async function solicitarAutorizacion(input: AutorizacionInput): Promise<{ id: string; folio: string }> {
   if (await esInvitado()) return { id: "", folio: "" };
@@ -1615,11 +1663,13 @@ export async function solicitarAutorizacion(input: AutorizacionInput): Promise<{
         tasa_estandar: input.tasaEstandar,
         motivo: input.motivo,
         referencia: input.referencia,
+        empeno_id: input.empenoId ?? null,
       })
       .select("id, folio")
       .single();
     if (error) throw error;
     await bitacoraAuto("Autorización solicitada", `${input.tipo} · tasa ${input.tasaSolicitada ?? "?"}%`, data.folio);
+    await notificarSupervisorAutorizacion(input, data.folio);
     revalidatePath("/autorizaciones");
     return { id: data.id, folio: data.folio };
   }
@@ -1641,10 +1691,12 @@ export async function solicitarAutorizacion(input: AutorizacionInput): Promise<{
     motivo: input.motivo,
     comentarioResolucion: null,
     referencia: input.referencia,
+    empenoId: input.empenoId ?? null,
     creadoEn: new Date().toISOString(),
     resueltoEn: null,
   };
   store.autorizaciones.push(aut);
+  await notificarSupervisorAutorizacion(input, aut.folio);
   revalidatePath("/autorizaciones");
   return { id: aut.id, folio: aut.folio };
 }
@@ -1657,17 +1709,20 @@ export async function resolverAutorizacion(id: string, aprobada: boolean, coment
   }
   const estado = aprobada ? "aprobada" : "rechazada";
   const ahora = new Date().toISOString();
+  let empenoId: string | null = null;
   if (supabaseConfigured) {
-    const { error } = await getServerSupabase()
+    const sb = getServerSupabase();
+    const { data: aut } = await sb.from("autorizaciones").select("empeno_id").eq("id", id).maybeSingle();
+    empenoId = aut?.empeno_id ?? null;
+    const { error } = await sb
       .from("autorizaciones")
-      .update({
-        estado,
-        autorizador_nombre: u.nombre,
-        comentario_resolucion: comentario,
-        resuelto_en: ahora,
-      })
+      .update({ estado, autorizador_nombre: u.nombre, comentario_resolucion: comentario, resuelto_en: ahora })
       .eq("id", id);
     if (error) throw error;
+    // Al aprobar, el empeño en borrador se activa (se "cierra").
+    if (empenoId && aprobada) {
+      await sb.from("empenos").update({ estado: "activo" }).eq("id", empenoId).eq("estado", "borrador");
+    }
   } else {
     const a = getStore().autorizaciones.find((x) => x.id === id);
     if (a) {
@@ -1675,10 +1730,16 @@ export async function resolverAutorizacion(id: string, aprobada: boolean, coment
       a.autorizadorNombre = u.nombre;
       a.comentarioResolucion = comentario;
       a.resueltoEn = ahora;
+      empenoId = a.empenoId;
+    }
+    if (empenoId && aprobada) {
+      const e = getStore().empenos.find((x) => x.id === empenoId);
+      if (e && e.estado === "borrador") e.estado = "activo";
     }
   }
   await bitacoraAuto(aprobada ? "Autorización aprobada" : "Autorización rechazada", comentario, id);
   revalidatePath("/autorizaciones");
+  if (empenoId) revalidatePath(`/empenos/${empenoId}`);
 }
 
 /** Marca el resultado de una cotización: si terminó en empeño o el motivo de rechazo. */

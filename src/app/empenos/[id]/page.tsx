@@ -61,6 +61,13 @@ export default async function EmpenoDetalle({
           }
         />
 
+        {empeno.estado === "borrador" && (
+          <div className="mb-6 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+            ⏳ Este empeño está en <strong>borrador</strong>, pendiente de autorización de Dirección por tasa especial. No se puede cerrar (refrendar/desempeñar) hasta que se autorice en{" "}
+            <Link href="/autorizaciones" className="font-semibold underline underline-offset-2">Autorizaciones</Link>.
+          </div>
+        )}
+
         {calc.vencido && activo && (
           <div className="mb-6 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
             ⚠️ Este empeño está <strong>vencido</strong> (venció el{" "}

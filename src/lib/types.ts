@@ -114,6 +114,7 @@ export interface Prenda {
 }
 
 export type EstadoEmpeno =
+  | "borrador"
   | "activo"
   | "refrendado"
   | "vencido"
@@ -420,6 +421,7 @@ export interface Autorizacion {
   motivo: string | null;
   comentarioResolucion: string | null;
   referencia: string | null; // folio de empeño / cotización relacionada
+  empenoId: ID | null; // empeño en borrador que se activa al aprobar
   creadoEn: string;
   resueltoEn: string | null;
 }
@@ -433,6 +435,7 @@ export interface AutorizacionInput {
   tasaEstandar: number | null;
   motivo: string | null;
   referencia: string | null;
+  empenoId?: string | null;
 }
 
 // ---- Encuesta de satisfacción ----

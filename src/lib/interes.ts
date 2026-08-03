@@ -112,9 +112,9 @@ export function prestamoSugerido(valorAvaluo: number, porcentaje = 50): number {
 /** Tasa mínima del catálogo que NO requiere autorización de Dirección General. */
 export const TASA_MINIMA_LIBRE = 6.48;
 
-/** ¿Esta tasa es especial (fuera de catálogo) y requiere autorización de Dirección? */
+/** ¿Esta tasa requiere autorización de Dirección? (6.48% o menor). */
 export function requiereAutorizacionTasa(tasa: number): boolean {
-  return tasa > 0 && tasa < TASA_MINIMA_LIBRE;
+  return tasa > 0 && tasa <= TASA_MINIMA_LIBRE;
 }
 
 /**

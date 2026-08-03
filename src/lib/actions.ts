@@ -1623,6 +1623,32 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
   return { id: cot.id, folio: cot.folio };
 }
 
+/** Cotizaciones sin acción en 24 h pasan a "no proceden" (vencida). Para el cron. */
+export async function caducarCotizaciones(): Promise<{ caducadas: number }> {
+  const limite = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("cotizaciones")
+      .update({ estado: "vencida" })
+      .eq("estado", "vigente")
+      .is("se_empeno", null)
+      .lt("creado_en", limite)
+      .select("id");
+    if (error) throw error;
+    revalidatePath("/cotizaciones");
+    return { caducadas: data?.length ?? 0 };
+  }
+  let n = 0;
+  for (const c of getStore().cotizaciones) {
+    if (c.estado === "vigente" && c.seEmpeno === null && c.creadoEn < limite) {
+      c.estado = "vencida";
+      n++;
+    }
+  }
+  revalidatePath("/cotizaciones");
+  return { caducadas: n };
+}
+
 // ----------------- AUTORIZACIONES (Dirección General) -----------------
 
 /** Avisa por WhatsApp al supervisor que hay una autorización de tasa especial pendiente. */

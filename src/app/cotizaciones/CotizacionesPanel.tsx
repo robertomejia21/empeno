@@ -39,6 +39,19 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
   const [docMsg, setDocMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [abierto, setAbierto] = useState(false);
+  const [filtro, setFiltro] = useState<"todas" | "vigentes" | "noproceden" | "empenadas">("todas");
+
+  const visibles = useMemo(() => {
+    if (filtro === "todas") return cotizaciones;
+    return cotizaciones.filter((c) => {
+      const cls = clasifica(c);
+      return (
+        (filtro === "vigentes" && cls === "vigente") ||
+        (filtro === "noproceden" && cls === "noprocede") ||
+        (filtro === "empenadas" && cls === "empenada")
+      );
+    });
+  }, [cotizaciones, filtro]);
 
   const set = <K extends keyof typeof FORM_VACIO>(k: K, v: (typeof FORM_VACIO)[K]) => setF((s) => ({ ...s, [k]: v }));
 
@@ -245,21 +258,45 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
       {/* Motivos de no empeño */}
       <MotivosNoEmpeno cotizaciones={cotizaciones} />
 
+      {/* Filtro */}
+      <div className="flex flex-wrap gap-2">
+        {([["todas", "Todas"], ["vigentes", "Vigentes"], ["noproceden", "No proceden"], ["empenadas", "Empeñadas"]] as const).map(([v, l]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setFiltro(v)}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+              filtro === v ? "border-primary bg-primary text-primary-fg" : "border-border bg-surface hover:bg-surface-2"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
       {/* Reporte */}
       <TablaReporte
         titulo="Detalles del vehículo"
         icono="🚗"
-        filas={cotizaciones.filter((c) => c.tipo === "vehiculo")}
+        filas={visibles.filter((c) => c.tipo === "vehiculo")}
         onResultado={(id, si, motivo) => marcarResultadoCotizacion(id, si, motivo).then(() => router.refresh())}
       />
       <TablaReporte
         titulo="Detalles del artículo"
         icono="📦"
-        filas={cotizaciones.filter((c) => c.tipo !== "vehiculo")}
+        filas={visibles.filter((c) => c.tipo !== "vehiculo")}
         onResultado={(id, si, motivo) => marcarResultadoCotizacion(id, si, motivo).then(() => router.refresh())}
       />
     </div>
   );
+}
+
+/** Clasifica una cotización: empeñada, no procede (rechazada/vencida/+24h sin acción) o vigente. */
+function clasifica(c: Cotizacion): "vigente" | "noprocede" | "empenada" {
+  if (c.seEmpeno === true || c.estado === "convertida") return "empenada";
+  if (c.seEmpeno === false || c.estado === "rechazada" || c.estado === "vencida") return "noprocede";
+  const horas = (Date.now() - new Date(c.creadoEn).getTime()) / 3_600_000;
+  return horas >= 24 ? "noprocede" : "vigente";
 }
 
 function MotivosNoEmpeno({ cotizaciones }: { cotizaciones: Cotizacion[] }) {

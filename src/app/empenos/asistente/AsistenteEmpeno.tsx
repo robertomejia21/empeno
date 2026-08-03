@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente } from "@/lib/actions";
+import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
-import { normalizarImagen } from "@/lib/imagen";
+import { normalizarImagen, leerArchivo } from "@/lib/imagen";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
 import { MapaResguardo } from "@/components/MapaResguardo";
 import { Card } from "@/components/ui";
@@ -189,6 +189,23 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
   const [ubicacion, setUbicacion] = useState("");
   const [condiciones, setCondiciones] = useState("");
   const [fotos, setFotos] = useState<string[]>([]);
+  const [subiendoFotos, setSubiendoFotos] = useState(false);
+
+  async function onSubirArchivos(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setSubiendoFotos(true);
+    try {
+      const urls: string[] = [];
+      for (const f of Array.from(files)) {
+        const dataUrl = f.type === "application/pdf" ? await leerArchivo(f) : await normalizarImagen(f, 1600);
+        const url = await subirArchivoPrenda(dataUrl);
+        if (url) urls.push(url);
+      }
+      setFotos((prev) => [...prev, ...urls]);
+    } finally {
+      setSubiendoFotos(false);
+    }
+  }
   const [funcionamiento, setFuncionamiento] = useState(false);
   const [documentacion, setDocumentacion] = useState(false);
 
@@ -772,21 +789,28 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
         {paso === 8 && (
           <div className="space-y-4">
             <div>
-              <Label>Fotografías del artículo / vehículo</Label>
+              <Label>Fotos y documentación del artículo / vehículo</Label>
               <input
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 multiple
-                onChange={(e) =>
-                  setFotos(Array.from(e.target.files ?? []).map((f) => f.name))
-                }
+                capture="environment"
+                disabled={subiendoFotos}
+                onChange={(e) => onSubirArchivos(e.target.files)}
                 className="block w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary"
               />
+              {subiendoFotos && <p className="mt-1 text-xs text-muted">Subiendo…</p>}
               {fotos.length > 0 && (
-                <p className="mt-1 text-xs text-success">✓ {fotos.length} archivo(s): {fotos.join(", ")}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {fotos.map((u, i) => (
+                    <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-info hover:bg-surface">
+                      📎 archivo {i + 1}
+                    </a>
+                  ))}
+                </div>
               )}
               <p className="mt-1 text-xs text-muted">
-                (En esta demo se guardan los nombres; con Supabase Storage se subirán las imágenes.)
+                Sube fotos del bien y su documentación (factura, tarjeta de circulación, INE…). Se guardan en el expediente.
               </p>
             </div>
             <MapaResguardo onChange={setUbicacion} />

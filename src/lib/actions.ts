@@ -192,6 +192,21 @@ export async function analizarVehiculo(dataUrl: string): Promise<ResultadoVehicu
   return extraerDatosVehiculo(p.base64, p.mime);
 }
 
+/** Sube una foto o documento del bien (empeño) al Storage y devuelve su URL. */
+export async function subirArchivoPrenda(dataUrl: string): Promise<string | null> {
+  if (await esInvitado()) return null;
+  const p = dividirDataUrl(dataUrl);
+  if (!p || !supabaseConfigured) return null;
+  const sb = getServerSupabase();
+  const ext = (p.mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+  const path = `empenos/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error } = await sb.storage
+    .from("prendas")
+    .upload(path, Buffer.from(p.base64, "base64"), { contentType: p.mime, upsert: false });
+  if (error) return null;
+  return sb.storage.from("prendas").getPublicUrl(path).data.publicUrl;
+}
+
 /** Sube la foto del cliente al Storage y devuelve su URL pública. */
 export async function subirFotoCliente(dataUrl: string): Promise<string | null> {
   if (await esInvitado()) return null;

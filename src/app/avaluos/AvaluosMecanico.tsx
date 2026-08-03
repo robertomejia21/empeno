@@ -4,11 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { responderAvaluoMecanico } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
+import { CHECKLIST_MECANICO, CHECKLIST_OPCIONES, CHECKLIST_ETIQUETA } from "@/lib/checklist";
 import { Card, CardHeader } from "@/components/ui";
 import type { Cotizacion } from "@/lib/types";
 
 const inputCls =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+
+function claseChecklist(op: string, activo: boolean): string {
+  const base = "rounded px-1.5 py-0.5 text-[10px] font-medium transition ";
+  if (!activo) return base + "border border-border text-muted hover:bg-surface-2";
+  if (op === "bueno") return base + "bg-success-soft text-success";
+  if (op === "regular") return base + "bg-warning-soft text-warning";
+  if (op === "malo") return base + "bg-danger-soft text-danger";
+  return base + "bg-surface-2 text-foreground";
+}
 
 export function AvaluosMecanico({ pendientes, respondidas }: { pendientes: Cotizacion[]; respondidas: Cotizacion[] }) {
   return (
@@ -55,6 +65,7 @@ function ItemPendiente({ c }: { c: Cotizacion }) {
   const router = useRouter();
   const [monto, setMonto] = useState("");
   const [comentario, setComentario] = useState("");
+  const [checklist, setChecklist] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
 
   const archivos = [...c.fotos, ...c.documentos];
@@ -64,7 +75,7 @@ function ItemPendiente({ c }: { c: Cotizacion }) {
     if (!Number.isFinite(m) || m <= 0) return;
     setGuardando(true);
     try {
-      await responderAvaluoMecanico(c.id, m, comentario.trim() || null);
+      await responderAvaluoMecanico(c.id, m, comentario.trim() || null, Object.keys(checklist).length ? checklist : null);
       router.refresh();
     } finally {
       setGuardando(false);
@@ -93,6 +104,29 @@ function ItemPendiente({ c }: { c: Cotizacion }) {
           ))}
         </div>
       )}
+
+      <div className="rounded-lg border border-border">
+        <p className="border-b border-border px-3 py-2 text-xs font-semibold text-foreground">Lista de chequeo vehicular</p>
+        <div className="max-h-72 divide-y divide-border overflow-y-auto">
+          {CHECKLIST_MECANICO.map((item) => (
+            <div key={item} className="flex items-center justify-between gap-2 px-3 py-1.5">
+              <span className="min-w-0 truncate text-xs text-foreground">{item}</span>
+              <div className="flex shrink-0 gap-1">
+                {CHECKLIST_OPCIONES.map((op) => (
+                  <button
+                    key={op}
+                    type="button"
+                    onClick={() => setChecklist((s) => ({ ...s, [item]: op }))}
+                    className={claseChecklist(op, checklist[item] === op)}
+                  >
+                    {CHECKLIST_ETIQUETA[op]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
         <input type="number" step="0.01" placeholder="Tu avalúo (MXN)" value={monto} onChange={(e) => setMonto(e.target.value)} className={inputCls} />

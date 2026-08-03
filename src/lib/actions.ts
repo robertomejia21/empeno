@@ -1606,6 +1606,7 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
     contacto: input.contacto,
     avaluoMecanico: null,
     comentarioMecanico: null,
+    checklistMecanico: null,
     avaluoEstado: null,
     seEmpeno: null,
     motivoNo: null,
@@ -1818,14 +1819,19 @@ export async function solicitarAvaluoMecanico(cotizacionId: string): Promise<{ o
   return { ok: true };
 }
 
-/** El mecánico guarda su avalúo (monto y comentario) sobre el vehículo. */
-export async function responderAvaluoMecanico(cotizacionId: string, monto: number, comentario: string | null) {
+/** El mecánico guarda su avalúo (monto, comentario y checklist) sobre el vehículo. */
+export async function responderAvaluoMecanico(
+  cotizacionId: string,
+  monto: number,
+  comentario: string | null,
+  checklist: Record<string, string> | null = null
+) {
   const u = await getUsuarioActual();
   if (!u || !["mecanico", "admin", "gerente"].includes(u.rol)) throw new Error("No autorizado");
   if (supabaseConfigured) {
     const { error } = await getServerSupabase()
       .from("cotizaciones")
-      .update({ avaluo_mecanico: monto, comentario_mecanico: comentario, avaluo_estado: "respondido" })
+      .update({ avaluo_mecanico: monto, comentario_mecanico: comentario, checklist_mecanico: checklist, avaluo_estado: "respondido" })
       .eq("id", cotizacionId);
     if (error) throw error;
   } else {
@@ -1833,6 +1839,7 @@ export async function responderAvaluoMecanico(cotizacionId: string, monto: numbe
     if (c) {
       c.avaluoMecanico = monto;
       c.comentarioMecanico = comentario;
+      c.checklistMecanico = checklist;
       c.avaluoEstado = "respondido";
     }
   }

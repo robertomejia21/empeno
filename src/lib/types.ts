@@ -334,6 +334,7 @@ export interface Cotizacion {
   // Avalúo del mecánico (vehículos): retro sobre el valor real del auto
   avaluoMecanico: number | null;
   comentarioMecanico: string | null;
+  checklistMecanico: Record<string, string> | null; // lista de chequeo vehicular
   avaluoEstado: "solicitado" | "respondido" | null;
   // Seguimiento / resultado
   seEmpeno: boolean | null; // ¿terminó en empeño? (null = pendiente)

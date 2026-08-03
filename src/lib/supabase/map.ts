@@ -264,6 +264,7 @@ export function rowToCotizacion(r: any): import("@/lib/types").Cotizacion {
     contacto: r.contacto ?? null,
     avaluoMecanico: r.avaluo_mecanico == null ? null : Number(r.avaluo_mecanico),
     comentarioMecanico: r.comentario_mecanico ?? null,
+    checklistMecanico: r.checklist_mecanico ?? null,
     avaluoEstado: r.avaluo_estado ?? null,
     seEmpeno: r.se_empeno == null ? null : Boolean(r.se_empeno),
     motivoNo: r.motivo_no ?? null,

@@ -1834,6 +1834,20 @@ export async function guardarFirmaEmpeno(empenoId: string, firmaDataUrl: string)
   }
   await bitacoraAuto("Contrato firmado por el cliente", null, empenoId);
   revalidatePath(`/empenos/${empenoId}/contrato`);
+  revalidatePath(`/firmar/${empenoId}`);
+}
+
+/** Envía al cliente por WhatsApp el enlace del contrato para que lo revise y firme. */
+export async function enviarContratoWhatsApp(empenoId: string): Promise<void> {
+  if (await esInvitado()) return;
+  const e = await obtenerEmpeno(empenoId);
+  if (!e) return;
+  await enviarWhatsApp(
+    e.cliente.telefono,
+    `Hola ${e.cliente.nombre}, aquí está tu contrato de empeño ${e.folio}. Ábrelo para revisarlo y firmarlo:\n${APP_URL}/firmar/${empenoId}`
+  ).catch(() => {});
+  await bitacoraAuto("Contrato enviado al cliente por WhatsApp", null, e.folio);
+  revalidatePath(`/empenos/${empenoId}/contrato`);
 }
 
 /** Adjunta un documento del vehículo (foto/PDF) a una cotización. */

@@ -11,7 +11,7 @@ function sumarDias(iso: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function ContratoProfeco({ empeno, calc }: { empeno: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConDetalle; calc: CalculoLiquidacion; qrPrenda?: string }) {
   const c = empeno.cliente;
   const p = empeno.prenda;
 
@@ -177,6 +177,17 @@ export function ContratoProfeco({ empeno, calc }: { empeno: EmpenoConDetalle; ca
           </tr>
         </tbody>
       </table>
+
+      {qrPrenda && (
+        <div className="mt-1 flex items-center gap-2 rounded border border-gray-300 p-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qrPrenda} alt={`QR ${p.folio}`} className="h-16 w-16" />
+          <p className="text-[8.5px] text-gray-700">
+            Escanea este código para verificar en línea toda la información de la prenda ({p.folio}): descripción,
+            características, avalúo y fotografías.
+          </p>
+        </div>
+      )}
 
       <p className="mt-1 text-justify text-[9.5px]">
         Monto del avalúo: <strong>{formatMXN(p.valorAvaluo)}</strong> ({pesosALetras(p.valorAvaluo)}). Porcentaje del

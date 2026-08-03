@@ -242,6 +242,9 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
         )}
       </Card>
 
+      {/* Motivos de no empeño */}
+      <MotivosNoEmpeno cotizaciones={cotizaciones} />
+
       {/* Reporte */}
       <TablaReporte
         titulo="Detalles del vehículo"
@@ -256,6 +259,44 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
         onResultado={(id, si, motivo) => marcarResultadoCotizacion(id, si, motivo).then(() => router.refresh())}
       />
     </div>
+  );
+}
+
+function MotivosNoEmpeno({ cotizaciones }: { cotizaciones: Cotizacion[] }) {
+  const motivos = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of cotizaciones) {
+      if (c.seEmpeno === false && c.motivoNo && c.motivoNo.trim()) {
+        const k = c.motivoNo.trim();
+        m.set(k, (m.get(k) ?? 0) + 1);
+      }
+    }
+    return [...m.entries()].map(([motivo, n]) => ({ motivo, n })).sort((a, b) => b.n - a.n);
+  }, [cotizaciones]);
+
+  if (motivos.length === 0) return null;
+  const total = motivos.reduce((s, m) => s + m.n, 0);
+  const max = Math.max(1, ...motivos.map((m) => m.n));
+
+  return (
+    <Card>
+      <CardHeader title="¿Por qué no empeñaron?" subtitle={`${total} cotización(es) no concretadas`} />
+      <div className="space-y-3 p-5">
+        {motivos.map((m) => (
+          <div key={m.motivo}>
+            <div className="mb-1 flex justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate text-muted">{m.motivo}</span>
+              <span className="shrink-0 font-medium text-foreground">
+                {m.n} <span className="text-muted">({Math.round((m.n / total) * 100)}%)</span>
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+              <div className="bg-gold-gradient h-full rounded-full" style={{ width: `${(m.n / max) * 100}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 

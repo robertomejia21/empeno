@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion } from "@/lib/actions";
+import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion, solicitarAvaluoMecanico } from "@/lib/actions";
 import { normalizarImagen } from "@/lib/imagen";
 import { prestamoSugerido } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -305,6 +305,17 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
   const [motivando, setMotivando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [subiendo, setSubiendo] = useState(false);
+  const [solicitando, setSolicitando] = useState(false);
+
+  async function onSolicitarMecanico() {
+    setSolicitando(true);
+    try {
+      await solicitarAvaluoMecanico(c.id);
+      router.refresh();
+    } finally {
+      setSolicitando(false);
+    }
+  }
 
   async function onDoc(f: File | undefined) {
     if (!f) return;
@@ -322,6 +333,19 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
       <td className="px-4 py-2.5">
         <p className="font-medium text-foreground">{c.descripcion}</p>
         <p className="text-xs text-muted">{c.folio}{c.prospectoNombre ? ` · ${c.prospectoNombre}` : ""}</p>
+        {c.tipo === "vehiculo" && (
+          <div className="mt-1 text-xs">
+            {c.avaluoEstado === "respondido" ? (
+              <span className="text-success">🔧 Mecánico: <strong>{c.avaluoMecanico != null ? formatMXN(c.avaluoMecanico) : "—"}</strong>{c.comentarioMecanico ? ` · ${c.comentarioMecanico}` : ""}</span>
+            ) : c.avaluoEstado === "solicitado" ? (
+              <span className="text-warning">⏳ Con el mecánico…</span>
+            ) : (
+              <button type="button" onClick={onSolicitarMecanico} disabled={solicitando} className="font-medium text-primary hover:underline disabled:opacity-50">
+                {solicitando ? "Enviando…" : "🔧 Enviar al mecánico"}
+              </button>
+            )}
+          </div>
+        )}
         {c.seEmpeno === true && (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {c.documentos.length > 0 && (

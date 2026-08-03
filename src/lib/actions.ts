@@ -32,9 +32,9 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps } from "@/lib/db/repo";
+import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
-import { SUCURSAL } from "@/lib/negocio";
+import { SUCURSAL, APP_URL } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
 import { RESGUARDO_VACIO, resumenResguardo } from "@/lib/resguardo";
@@ -1571,6 +1571,9 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
     porcentajePrestamo: input.porcentajePrestamo,
     prestamoOfrecido: input.prestamoOfrecido,
     contacto: input.contacto,
+    avaluoMecanico: null,
+    comentarioMecanico: null,
+    avaluoEstado: null,
     seEmpeno: null,
     motivoNo: null,
     vigenciaDias,
@@ -1696,6 +1699,58 @@ export async function marcarResultadoCotizacion(id: string, seEmpeno: boolean, m
       c.estado = estado;
     }
   }
+  revalidatePath("/cotizaciones");
+}
+
+// ----------------- AVALÚO DEL MECÁNICO -----------------
+
+/** Envía la cotización del vehículo al mecánico para que dé su avalúo (retro). */
+export async function solicitarAvaluoMecanico(cotizacionId: string): Promise<{ ok: boolean }> {
+  if (await esInvitado()) return { ok: false };
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("cotizaciones")
+      .update({ avaluo_estado: "solicitado" })
+      .eq("id", cotizacionId);
+    if (error) throw error;
+  } else {
+    const c = getStore().cotizaciones.find((x) => x.id === cotizacionId);
+    if (c) c.avaluoEstado = "solicitado";
+  }
+  const cot = await obtenerCotizacion(cotizacionId);
+  const tel = process.env.MECANICO_TEL;
+  if (tel && cot) {
+    const fb = cot.busquedaFacebook ? formatMXN(cot.busquedaFacebook) : "s/d";
+    await enviarWhatsApp(
+      tel,
+      `🔧 Vehículo para avalúo\n${cot.descripcion}${cot.modelo ? ` (${cot.modelo})` : ""}\nValor de referencia (Facebook): ${fb}\n\nDa tu retroalimentación aquí:\n${APP_URL}/avaluos`
+    ).catch(() => {});
+  }
+  revalidatePath("/cotizaciones");
+  revalidatePath("/avaluos");
+  return { ok: true };
+}
+
+/** El mecánico guarda su avalúo (monto y comentario) sobre el vehículo. */
+export async function responderAvaluoMecanico(cotizacionId: string, monto: number, comentario: string | null) {
+  const u = await getUsuarioActual();
+  if (!u || !["mecanico", "admin", "gerente"].includes(u.rol)) throw new Error("No autorizado");
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("cotizaciones")
+      .update({ avaluo_mecanico: monto, comentario_mecanico: comentario, avaluo_estado: "respondido" })
+      .eq("id", cotizacionId);
+    if (error) throw error;
+  } else {
+    const c = getStore().cotizaciones.find((x) => x.id === cotizacionId);
+    if (c) {
+      c.avaluoMecanico = monto;
+      c.comentarioMecanico = comentario;
+      c.avaluoEstado = "respondido";
+    }
+  }
+  await bitacoraAuto("Avalúo del mecánico", `${formatMXN(monto)}`, cotizacionId);
+  revalidatePath("/avaluos");
   revalidatePath("/cotizaciones");
 }
 

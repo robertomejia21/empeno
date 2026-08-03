@@ -78,6 +78,7 @@ export const ROLES: { value: RolUsuario; label: string }[] = [
   { value: "atencion", label: "Atención a clientes" },
   { value: "cobranza", label: "Cobranza" },
   { value: "cajero", label: "Cajero" },
+  { value: "mecanico", label: "Mecánico (avalúos)" },
 ];
 
 export const ROL_LABEL: Record<RolUsuario, string> = {
@@ -88,6 +89,7 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
   cobranza: "Cobranza",
   cajero: "Cajero",
   valuador: "Valuador",
+  mecanico: "Mecánico",
   invitado: "Invitado",
 };
 
@@ -108,6 +110,8 @@ const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   cobranza: ["/", "/cobranza", "/vencimientos", "/clientes", "/empenos", "/recordatorios", "/conversaciones", "/buscar"],
   cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza", "/gps"],
   valuador: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
+  // Mecánico: acceso EXCLUSIVO a los avalúos de vehículos (reforzado en el middleware).
+  mecanico: ["/avaluos"],
   // Invitado (demo): ve TODO en solo lectura (las escrituras se bloquean aparte).
   invitado: "*",
 };

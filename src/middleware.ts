@@ -34,6 +34,12 @@ export async function middleware(req: NextRequest) {
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
+
+  // El mecánico sólo tiene acceso a los avalúos de vehículos.
+  if (sesion.rol === "mecanico" && !pathname.startsWith("/avaluos")) {
+    return NextResponse.redirect(new URL("/avaluos", req.url));
+  }
+
   return conPathname(req);
 }
 

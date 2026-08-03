@@ -222,6 +222,7 @@ export type RolUsuario =
   | "cobranza"
   | "cajero"
   | "valuador"
+  | "mecanico"
   | "invitado";
 
 export interface Usuario {
@@ -329,6 +330,10 @@ export interface Cotizacion {
   porcentajePrestamo: number; // % ofrecido sobre el valor estimado
   prestamoOfrecido: number; // monto a prestar
   contacto: ContactoCotizacion | null; // canal por el que llegó
+  // Avalúo del mecánico (vehículos): retro sobre el valor real del auto
+  avaluoMecanico: number | null;
+  comentarioMecanico: string | null;
+  avaluoEstado: "solicitado" | "respondido" | null;
   // Seguimiento / resultado
   seEmpeno: boolean | null; // ¿terminó en empeño? (null = pendiente)
   motivoNo: string | null; // por qué no se empeñó

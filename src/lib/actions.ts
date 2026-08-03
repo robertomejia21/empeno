@@ -1691,6 +1691,78 @@ export async function caducarCotizaciones(): Promise<{ caducadas: number }> {
   return { caducadas: n };
 }
 
+// ----------------- PRODUCTOS DE INTERÉS (catálogo) -----------------
+
+async function soloDireccion() {
+  const u = await getUsuarioActual();
+  if (!u || (u.rol !== "admin" && u.rol !== "gerente")) throw new Error("Solo Dirección o Gerente.");
+  return u;
+}
+
+export async function crearProductoInteres(form: FormData) {
+  await soloDireccion();
+  const datos = {
+    nombre: s(form, "nombre").toUpperCase(),
+    modalidad: sn(form, "modalidad"),
+    tipo: s(form, "tipo") || "tradicional",
+    tasa: num(form, "tasa"),
+    periodo: s(form, "periodo") || "mensual",
+    plazo_periodos: Math.max(1, Math.round(num(form, "plazoPeriodos")) || 1),
+    orden: Math.round(num(form, "orden")) || 99,
+    activo: true,
+  };
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("productos_interes").insert(datos);
+    if (error) throw error;
+  } else {
+    getStore().productosInteres.push({
+      id: nuevoId("pi"),
+      nombre: datos.nombre,
+      modalidad: datos.modalidad as "gps" | "resguardo" | null,
+      tipo: datos.tipo as "tradicional" | "fijo",
+      tasa: datos.tasa,
+      periodo: datos.periodo as PeriodoInteres,
+      plazoPeriodos: datos.plazo_periodos,
+      orden: datos.orden,
+      activo: true,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  revalidatePath("/configuracion");
+  revalidatePath("/empenos/asistente");
+}
+
+export async function actualizarProductoInteres(id: string, form: FormData) {
+  await soloDireccion();
+  const datos = { tasa: num(form, "tasa"), activo: form.get("activo") === "on", orden: Math.round(num(form, "orden")) || 0 };
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("productos_interes").update(datos).eq("id", id);
+    if (error) throw error;
+  } else {
+    const p = getStore().productosInteres.find((x) => x.id === id);
+    if (p) {
+      p.tasa = datos.tasa;
+      p.activo = datos.activo;
+      p.orden = datos.orden;
+    }
+  }
+  revalidatePath("/configuracion");
+  revalidatePath("/empenos/asistente");
+}
+
+export async function eliminarProductoInteres(id: string) {
+  await soloDireccion();
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("productos_interes").delete().eq("id", id);
+    if (error) throw error;
+  } else {
+    const store = getStore();
+    store.productosInteres = store.productosInteres.filter((x) => x.id !== id);
+  }
+  revalidatePath("/configuracion");
+  revalidatePath("/empenos/asistente");
+}
+
 // ----------------- AUTORIZACIONES (Dirección General) -----------------
 
 /** Avisa por WhatsApp al supervisor que hay una autorización de tasa especial pendiente. */

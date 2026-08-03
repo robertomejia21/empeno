@@ -124,6 +124,20 @@ export type EstadoEmpeno =
 
 export type PeriodoInteres = "mensual" | "quincenal" | "semanal";
 
+/** Producto de interés del catálogo (por departamento/modalidad). */
+export interface ProductoInteres {
+  id: ID;
+  nombre: string; // MAQUINARIA, VEHÍCULOS, GPS, COMPRA…
+  modalidad: "gps" | "resguardo" | null;
+  tipo: "tradicional" | "fijo";
+  tasa: number; // % por periodo
+  periodo: PeriodoInteres;
+  plazoPeriodos: number;
+  orden: number;
+  activo: boolean;
+  creadoEn: string;
+}
+
 export interface Empeno {
   id: ID;
   folio: string;

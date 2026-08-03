@@ -26,6 +26,7 @@ import {
   rowToAutorizacion,
   rowToCitaGps,
   rowToEncuesta,
+  rowToProductoInteres,
 } from "@/lib/supabase/map";
 
 export async function listarClientes(): Promise<Cliente[]> {
@@ -357,6 +358,18 @@ export async function listarEncuestas(): Promise<import("@/lib/types").Encuesta[
     return (data ?? []).map(rowToEncuesta);
   }
   return getStore().encuestas.slice().sort((a, b) => b.creadoEn.localeCompare(a.creadoEn));
+}
+
+export async function listarProductosInteres(soloActivos = false): Promise<import("@/lib/types").ProductoInteres[]> {
+  if (supabaseConfigured) {
+    let q = getServerSupabase().from("productos_interes").select("*").order("orden", { ascending: true });
+    if (soloActivos) q = q.eq("activo", true);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []).map(rowToProductoInteres);
+  }
+  const items = getStore().productosInteres.slice().sort((a, b) => a.orden - b.orden);
+  return soloActivos ? items.filter((p) => p.activo) : items;
 }
 
 export async function listarBitacora(limite = 200): Promise<Bitacora[]> {

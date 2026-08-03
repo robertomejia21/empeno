@@ -9,7 +9,7 @@ import { normalizarImagen, leerArchivo } from "@/lib/imagen";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
 import { MapaResguardo } from "@/components/MapaResguardo";
 import { Card } from "@/components/ui";
-import type { CategoriaPrenda, PeriodoInteres, TipoIdentificacion } from "@/lib/types";
+import type { CategoriaPrenda, PeriodoInteres, TipoIdentificacion, ProductoInteres } from "@/lib/types";
 import { PASOS } from "./pasos";
 import { Stepper } from "./Stepper";
 
@@ -37,7 +37,7 @@ const tiposId: { value: TipoIdentificacion; label: string }[] = [
   { value: "Otro", label: "Otro" },
 ];
 
-export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
+export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[]; productos: ProductoInteres[] }) {
   const [paso, setPaso] = useState(1);
 
   // Paso 2 — cliente
@@ -707,20 +707,29 @@ export function AsistenteEmpeno({ clientes }: { clientes: ClienteOpt[] }) {
                   <span className="text-warning"> (requiere autorización de Gerencia)</span>
                 )}
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {[10.8, 8.64, 6.48].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTasa(t)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                      tasa === t ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
-                    }`}
-                  >
-                    {t}%
-                  </button>
-                ))}
-              </div>
+              {productos.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-1.5 text-xs font-medium text-muted">Producto de interés (catálogo)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {productos.map((p) => {
+                      const activo = tasa === p.tasa && periodo === p.periodo;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { setTasa(p.tasa); setPeriodo(p.periodo); setPlazo(p.plazoPeriodos); }}
+                          className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
+                            activo ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
+                          }`}
+                        >
+                          <span className="block font-medium">{p.nombre}{p.modalidad ? ` · ${p.modalidad}` : ""}</span>
+                          <span className="block text-xs text-muted">{p.tasa}% {p.periodo}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {tasaEspecial && (

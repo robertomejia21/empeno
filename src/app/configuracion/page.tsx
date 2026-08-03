@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getUsuarioActual } from "@/lib/session";
+import { listarProductosInteres } from "@/lib/db/repo";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
+import { ProductosInteresConfig } from "./ProductosInteresConfig";
 import {
   EMPRESA,
   UMA_DIARIA_2026,
@@ -17,6 +19,7 @@ export default async function ConfiguracionPage() {
   if (!actual || !["admin", "gerente", "invitado"].includes(actual.rol)) redirect("/");
 
   const niveles = [0, 4, 6].map((n) => tasaPorHistorial(n));
+  const productos = await listarProductosInteres();
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -63,6 +66,8 @@ export default async function ConfiguracionPage() {
           </dl>
         </Card>
       </div>
+
+      <ProductosInteresConfig productos={productos} />
 
       <div className="mt-6 rounded-xl border border-info/20 bg-info-soft px-5 py-4 text-sm text-info">
         ℹ️ Estos parámetros están definidos en código (<code>src/lib/compliance.ts</code> e{" "}

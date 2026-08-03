@@ -33,6 +33,7 @@ interface Store {
   autorizaciones: import("@/lib/types").Autorizacion[];
   citasGps: import("@/lib/types").CitaGps[];
   encuestas: import("@/lib/types").Encuesta[];
+  productosInteres: import("@/lib/types").ProductoInteres[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -55,6 +56,13 @@ export function getStore(): Store {
       autorizaciones: [],
       citasGps: [],
       encuestas: [],
+      productosInteres: [
+        { id: "pi1", nombre: "MAQUINARIA", modalidad: null, tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 1, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi2", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 2, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi3", nombre: "GPS", modalidad: "gps", tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 3, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi4", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 8.64, periodo: "mensual", plazoPeriodos: 1, orden: 4, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi5", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 6.48, periodo: "mensual", plazoPeriodos: 1, orden: 5, activo: true, creadoEn: new Date().toISOString() },
+      ],
     };
   }
   return g.__empenoStore;

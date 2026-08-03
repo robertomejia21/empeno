@@ -279,6 +279,21 @@ export function rowToCotizacion(r: any): import("@/lib/types").Cotizacion {
   };
 }
 
+export function rowToProductoInteres(r: any): import("@/lib/types").ProductoInteres {
+  return {
+    id: r.id,
+    nombre: r.nombre,
+    modalidad: r.modalidad ?? null,
+    tipo: r.tipo,
+    tasa: Number(r.tasa),
+    periodo: r.periodo,
+    plazoPeriodos: Number(r.plazo_periodos ?? 1),
+    orden: Number(r.orden ?? 0),
+    activo: Boolean(r.activo),
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToCitaGps(r: any): import("@/lib/types").CitaGps {
   return {
     id: r.id,

@@ -207,6 +207,32 @@ export async function subirArchivoPrenda(dataUrl: string): Promise<string | null
   return sb.storage.from("prendas").getPublicUrl(path).data.publicUrl;
 }
 
+/** Sube una foto del auto lavado, la guarda en la prenda y la envía al cliente por WhatsApp. */
+export async function subirYEnviarFotoLavado(empenoId: string, dataUrl: string): Promise<{ ok: boolean }> {
+  if (await esInvitado()) return { ok: false };
+  const url = await subirArchivoPrenda(dataUrl);
+  if (!url) return { ok: false };
+  const e = await obtenerEmpeno(empenoId);
+  if (!e) return { ok: false };
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    const { data } = await sb.from("prendas").select("fotos").eq("id", e.prendaId).single();
+    const fotos = [...(((data?.fotos as string[]) ?? [])), url];
+    await sb.from("prendas").update({ fotos }).eq("id", e.prendaId);
+  } else {
+    const p = getStore().prendas.find((x) => x.id === e.prendaId);
+    if (p) p.fotos = [...p.fotos, url];
+  }
+  const r = await enviarWhatsAppMedia(
+    e.cliente.telefono,
+    url,
+    `Hola ${e.cliente.nombre}, foto de tu vehículo (${e.prenda.marca ?? "auto"}) en resguardo — contrato ${e.folio}.`
+  );
+  await bitacoraAuto("Foto del auto lavado enviada al cliente", null, e.folio);
+  revalidatePath(`/empenos/${empenoId}`);
+  return { ok: r.ok };
+}
+
 /** Sube la foto del cliente al Storage y devuelve su URL pública. */
 export async function subirFotoCliente(dataUrl: string): Promise<string | null> {
   if (await esInvitado()) return null;

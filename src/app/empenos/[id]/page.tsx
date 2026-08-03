@@ -9,6 +9,7 @@ import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { Boleta } from "./Boleta";
 import { RefrendoForm } from "./RefrendoForm";
+import { FotoLavado } from "./FotoLavado";
 
 const periodoLabel: Record<string, string> = {
   mensual: "Mensual",
@@ -214,13 +215,13 @@ export default async function EmpenoDetalle({
               )}
             </dl>
             {empeno.prenda.categoria === "Vehículos" && activo && (
-              <div className="border-t border-border px-5 py-4">
+              <div className="space-y-3 border-t border-border px-5 py-4">
+                <FotoLavado empenoId={empeno.id} />
                 <form action={enviarFotoVehiculo.bind(null, empeno.id)}>
-                  <ConfirmSubmit variante="secondary" confirmacion="¿Enviar la foto del vehículo al propietario por WhatsApp?">
-                    📷 Enviar foto al propietario
+                  <ConfirmSubmit variante="secondary" confirmacion="¿Enviar la última foto guardada del vehículo al propietario por WhatsApp?">
+                    📷 Enviar última foto guardada
                   </ConfirmSubmit>
                 </form>
-                <p className="mt-2 text-xs text-muted">Automático cada miércoles a las 10:00.</p>
               </div>
             )}
           </Card>

@@ -65,6 +65,7 @@ export function ProductosInteresConfig({ productos }: { productos: ProductoInter
           <option value="mensual">Mensual</option>
           <option value="quincenal">Quincenal</option>
           <option value="semanal">Semanal</option>
+          <option value="diario">Diario</option>
         </select>
         <input name="tasa" type="number" step="0.01" placeholder="Tasa %" required className={inputCls} />
         <input name="plazoPeriodos" type="number" defaultValue={1} placeholder="Plazo" className={inputCls} />

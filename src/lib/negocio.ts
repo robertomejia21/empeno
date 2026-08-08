@@ -34,6 +34,9 @@ export const SUCURSAL = {
 } as const;
 
 /** Número de periodos al año según el periodo del contrato. */
-export function periodosPorAnio(periodo: "mensual" | "quincenal" | "semanal"): number {
-  return periodo === "mensual" ? 12 : periodo === "quincenal" ? 24 : 52;
+export function periodosPorAnio(periodo: "mensual" | "quincenal" | "semanal" | "diario"): number {
+  if (periodo === "mensual") return 12;
+  if (periodo === "quincenal") return 24;
+  if (periodo === "semanal") return 52;
+  return 360;
 }

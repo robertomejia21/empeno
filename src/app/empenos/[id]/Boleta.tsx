@@ -4,6 +4,7 @@ import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/li
 const periodoLabel: Record<string, string> = {
   mensual: "mensual",
   quincenal: "quincenal",
+  diario: "diario",
   semanal: "semanal",
 };
 

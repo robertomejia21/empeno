@@ -182,6 +182,7 @@ export function EmpenoForm({
             options={[
               { value: "mensual", label: "Mensual (30 días)" },
               { value: "quincenal", label: "Quincenal (15 días)" },
+              { value: "diario", label: "Diario (1 día)" },
               { value: "semanal", label: "Semanal (7 días)" },
             ]}
             defaultValue="mensual"

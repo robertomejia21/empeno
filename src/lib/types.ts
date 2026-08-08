@@ -115,6 +115,7 @@ export interface Prenda {
 
 export type EstadoEmpeno =
   | "borrador"
+  | "cancelado"
   | "activo"
   | "refrendado"
   | "vencido"
@@ -122,7 +123,7 @@ export type EstadoEmpeno =
   | "en_remate"
   | "rematado";
 
-export type PeriodoInteres = "mensual" | "quincenal" | "semanal";
+export type PeriodoInteres = "mensual" | "quincenal" | "semanal" | "diario";
 
 /** Producto de interés del catálogo (por departamento/modalidad). */
 export interface ProductoInteres {

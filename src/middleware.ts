@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verificarSesion, authHabilitada } from "@/lib/auth";
+import { SESSION_COOKIE, verificarSesion, authHabilitada, puedeAcceder } from "@/lib/auth";
 
 function conPathname(req: NextRequest) {
   const headers = new Headers(req.headers);
@@ -8,10 +8,18 @@ function conPathname(req: NextRequest) {
 }
 
 export async function middleware(req: NextRequest) {
-  // Red de seguridad: sin AUTH_SECRET, la app queda abierta (modo demo).
-  if (!authHabilitada()) return conPathname(req);
-
   const { pathname } = req.nextUrl;
+
+  // Sin AUTH_SECRET la app queda en modo demo abierto SÓLO en desarrollo.
+  // En producción es fail-closed: solo las rutas públicas responden.
+  if (!authHabilitada()) {
+    if (process.env.NODE_ENV === "production") {
+      const publica =
+        pathname === "/inicio" || pathname === "/login" || pathname === "/tienda" || pathname.startsWith("/tienda/");
+      if (!publica) return NextResponse.redirect(new URL("/inicio", req.url));
+    }
+    return conPathname(req);
+  }
 
   // El cron se autentica por secreto propio, no por sesión.
   if (pathname.startsWith("/api/cron")) return conPathname(req);
@@ -38,6 +46,11 @@ export async function middleware(req: NextRequest) {
   // El mecánico sólo tiene acceso a los avalúos de vehículos.
   if (sesion.rol === "mecanico" && !pathname.startsWith("/avaluos")) {
     return NextResponse.redirect(new URL("/avaluos", req.url));
+  }
+
+  // Control de acceso por rol para páginas (las /api gestionan su propio acceso).
+  if (!pathname.startsWith("/api") && !puedeAcceder(sesion.rol, pathname)) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   return conPathname(req);

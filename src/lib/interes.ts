@@ -6,6 +6,7 @@ const DIAS_POR_PERIODO: Record<PeriodoInteres, number> = {
   mensual: 30, // referencia para costo diario; el vencimiento usa mes calendario
   quincenal: 15,
   semanal: 7,
+  diario: 1,
 };
 
 export function diasPorPeriodo(periodo: PeriodoInteres): number {

@@ -16,6 +16,8 @@ export interface UsuarioActual {
  */
 export async function getUsuarioActual(): Promise<UsuarioActual | null> {
   if (!authHabilitada()) {
+    // En producción, sin AUTH_SECRET no se otorga un admin sintético (fail-closed).
+    if (process.env.NODE_ENV === "production") return null;
     return { uid: "demo", nombre: "Administrador (demo)", rol: "admin", esSesionReal: false };
   }
   const store = await cookies();

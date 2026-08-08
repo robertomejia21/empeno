@@ -3,7 +3,7 @@ import { formatMXN, formatFecha, formatPorcentaje } from "@/lib/format";
 import { pesosALetras } from "@/lib/letras";
 import { PROVEEDOR, PROFECO, periodosPorAnio } from "@/lib/negocio";
 
-const periodoLabel: Record<string, string> = { mensual: "mensual", quincenal: "quincenal", semanal: "semanal" };
+const periodoLabel: Record<string, string> = { mensual: "mensual", quincenal: "quincenal", semanal: "semanal", diario: "diario" };
 
 function sumarDias(iso: string, dias: number): string {
   const d = new Date(iso + "T00:00:00");

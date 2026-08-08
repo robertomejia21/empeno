@@ -176,6 +176,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
 
   // Paso 6 — intereses y cargos
   const [tasa, setTasa] = useState(10.8);
+  const [productoSelId, setProductoSelId] = useState<string | null>(null);
   const [almacenajePct, setAlmacenajePct] = useState(0);
   const [ivaPct, setIvaPct] = useState(0);
   const [metodoPago, setMetodoPago] = useState("efectivo");
@@ -682,7 +683,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
         {/* ---------- PASO 5: Préstamo ---------- */}
         {paso === 5 && (
           <div className="space-y-4">
-            <Campo label="Monto autorizado del préstamo (MXN)" req type="number" value={monto} onChange={setMonto} />
+            <Campo label="Monto autorizado del préstamo (MXN)" req type="number" value={monto} onChange={(v) => { setMonto(v); setMontoTocado(true); }} />
             <div className="rounded-lg bg-info-soft px-4 py-3 text-sm text-info">
               💵 Al finalizar se registrará automáticamente la <strong>salida de efectivo</strong> de{" "}
               {formatMXN(montoNum)} en el módulo de Caja (apartado de aportación y retiro).
@@ -712,12 +713,12 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <p className="mb-1.5 text-xs font-medium text-muted">Producto de interés (catálogo)</p>
                   <div className="flex flex-wrap gap-2">
                     {productos.map((p) => {
-                      const activo = tasa === p.tasa && periodo === p.periodo;
+                      const activo = productoSelId === p.id;
                       return (
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => { setTasa(p.tasa); setPeriodo(p.periodo); setPlazo(p.plazoPeriodos); }}
+                          onClick={() => { setProductoSelId(p.id); setTasa(p.tasa); setPeriodo(p.periodo); setPlazo(p.plazoPeriodos); }}
                           className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
                             activo ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
                           }`}
@@ -759,6 +760,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <option value="mensual">Mensual (30 días)</option>
                   <option value="quincenal">Quincenal (15 días)</option>
                   <option value="semanal">Semanal (7 días)</option>
+                  <option value="diario">Diario (1 día)</option>
                 </select>
               </div>
               <Campo label="Plazo (periodos)" type="number" value={String(plazo)} onChange={(v) => setPlazo(parseInt(v) || 1)} />

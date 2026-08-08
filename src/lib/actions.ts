@@ -33,7 +33,7 @@ import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TAS
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
-import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
+import { enviarWhatsApp, enviarWhatsAppMedia, formatearNumeroMX } from "@/lib/whatsapp";
 import { SUCURSAL, APP_URL } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
@@ -79,6 +79,39 @@ function sn(form: FormData, key: string): string | null {
 function num(form: FormData, key: string): number {
   const v = parseFloat(s(form, key).replace(/,/g, ""));
   return Number.isFinite(v) ? v : 0;
+}
+
+/** Registra la salida de caja del préstamo (dividida por tope antilavado). */
+async function registrarSalidaPrestamo(empenoId: string, folio: string, monto: number) {
+  const partes = dividirMontoAML(monto);
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    for (let i = 0; i < partes.length; i++) {
+      await sb.from("movimientos_caja").insert({
+        tipo: "prestamo",
+        monto: partes[i],
+        es_entrada: false,
+        concepto: `Préstamo empeño ${folio}${partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : ""}`,
+        empeno_id: empenoId,
+        referencia: folio,
+      });
+    }
+  } else {
+    const store = getStore();
+    partes.forEach((m, i, arr) =>
+      store.movimientos.push({
+        id: nuevoId("m"),
+        fecha: new Date().toISOString(),
+        tipo: "prestamo",
+        monto: m,
+        esEntrada: false,
+        concepto: `Préstamo empeño ${folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
+        empenoId,
+        referencia: folio,
+        creadoEn: new Date().toISOString(),
+      })
+    );
+  }
 }
 
 // ----------------- CLIENTES -----------------
@@ -339,6 +372,8 @@ export async function crearEmpeno(form: FormData) {
   const realSucursal = form.get("realSucursal") ? num(form, "realSucursal") : null;
   const diasGracia = form.get("diasGracia") ? Math.round(num(form, "diasGracia")) : 7;
   const fechaVencimiento = calcularVencimiento(fechaInicio, periodo, plazoPeriodos);
+  const especial = requiereAutorizacionTasa(tasaInteres);
+  const estadoInicial = especial ? "borrador" : "activo";
 
   let empenoId: string;
 
@@ -362,7 +397,7 @@ export async function crearEmpeno(form: FormData) {
         fecha_inicio: fechaInicio,
         fecha_vencimiento: fechaVencimiento,
         dias_gracia: diasGracia,
-        estado: "activo",
+        estado: estadoInicial,
         notas: sn(form, "notas"),
       })
       .select("id, folio")
@@ -370,16 +405,10 @@ export async function crearEmpeno(form: FormData) {
     if (error) throw error;
     empenoId = data.id;
     await sb.from("prendas").update({ estado: "empenada" }).eq("id", prendaId);
-    const partes = dividirMontoAML(montoPrestado);
-    for (let i = 0; i < partes.length; i++) {
-      await sb.from("movimientos_caja").insert({
-        tipo: "prestamo",
-        monto: partes[i],
-        es_entrada: false,
-        concepto: `Préstamo empeño ${data.folio}${partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : ""}`,
-        empeno_id: empenoId,
-        referencia: data.folio,
-      });
+    if (!especial) {
+      await registrarSalidaPrestamo(empenoId, data.folio, montoPrestado);
+    } else {
+      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaInteres, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${data.folio} en borrador por tasa especial`, referencia: data.folio, empenoId });
     }
   } else {
     const store = getStore();
@@ -402,7 +431,7 @@ export async function crearEmpeno(form: FormData) {
       fechaInicio,
       fechaVencimiento,
       diasGracia,
-      estado: "activo",
+      estado: estadoInicial,
       notas: sn(form, "notas"),
       firmaCliente: null,
       firmaFecha: null,
@@ -411,19 +440,11 @@ export async function crearEmpeno(form: FormData) {
     store.empenos.push(empeno);
     const prenda = store.prendas.find((p) => p.id === prendaId);
     if (prenda) prenda.estado = "empenada";
-    dividirMontoAML(montoPrestado).forEach((m, i, arr) =>
-      store.movimientos.push({
-        id: nuevoId("m"),
-        fecha: new Date().toISOString(),
-        tipo: "prestamo",
-        monto: m,
-        esEntrada: false,
-        concepto: `Préstamo empeño ${empeno.folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
-        empenoId: empeno.id,
-        referencia: empeno.folio,
-        creadoEn: new Date().toISOString(),
-      })
-    );
+    if (!especial) {
+      await registrarSalidaPrestamo(empeno.id, empeno.folio, montoPrestado);
+    } else {
+      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaInteres, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${empeno.folio} en borrador por tasa especial`, referencia: empeno.folio, empenoId: empeno.id });
+    }
     empenoId = empeno.id;
   }
 
@@ -458,7 +479,7 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
 
   const subtotal = round2(interesP + almacenajeP + gastosAdmin + moratorios + ivaP);
-  const total = round2(subtotal + abonoCapital - descuento);
+  const total = round2(Math.max(0, subtotal + abonoCapital - descuento));
   const recibido = g("recibido");
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
   const tarjeta = metodoPago === "tarjeta" ? total : 0;
@@ -805,17 +826,10 @@ export async function crearEmpenoGuiado(
       });
     }
 
-    // 4) Salida de caja (dividida por tope antilavado si aplica)
-    const partesSb = dividirMontoAML(data.montoPrestado);
-    for (let i = 0; i < partesSb.length; i++) {
-      await sb.from("movimientos_caja").insert({
-        tipo: "prestamo",
-        monto: partesSb[i],
-        es_entrada: false,
-        concepto: `Préstamo empeño ${e.folio}${partesSb.length > 1 ? ` (parte ${i + 1}/${partesSb.length})` : ""}`,
-        empeno_id: e.id,
-        referencia: e.folio,
-      });
+    // 4) Salida de caja — solo si NO está en borrador (si es especial, se
+    //    registra al aprobar la autorización, no antes).
+    if (!especial) {
+      await registrarSalidaPrestamo(e.id, e.folio, data.montoPrestado);
     }
 
     await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, e.folio);
@@ -939,19 +953,9 @@ export async function crearEmpenoGuiado(
       empenoId: empeno.id,
     });
   }
-  dividirMontoAML(data.montoPrestado).forEach((m, i, arr) =>
-    store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: ts,
-      tipo: "prestamo",
-      monto: m,
-      esEntrada: false,
-      concepto: `Préstamo empeño ${empeno.folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
-      empenoId: empeno.id,
-      referencia: empeno.folio,
-      creadoEn: ts,
-    })
-  );
+  if (!especial) {
+    await registrarSalidaPrestamo(empeno.id, empeno.folio, data.montoPrestado);
+  }
 
   await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, empeno.folio);
   revalidatePaths();
@@ -1021,7 +1025,7 @@ export async function enviarFotoVehiculo(empenoId: string) {
   revalidatePath(`/empenos/${empenoId}`);
 }
 
-/** Envío semanal (miércoles): foto del vehículo a cada propietario con empeño activo. */
+/** Envío semanal (sábado): foto del vehículo a cada propietario con empeño activo. */
 export async function enviarFotosVehiculosSemanal(): Promise<{ enviados: number; fallidos: number }> {
   const empenos = await listarEmpenos();
   let enviados = 0;
@@ -1569,7 +1573,7 @@ function sumarDiasISO(iso: string, dias: number): string {
 export async function crearCotizacion(input: CotizacionInput): Promise<{ id: string; folio: string }> {
   if (await esInvitado()) return { id: "", folio: "" };
   const valuador = (await getUsuarioActual())?.nombre ?? null;
-  const vigenciaDias = 15;
+  const vigenciaDias = 1; // caduca en 24 h si no hay acción
   const vigenciaHasta = sumarDiasISO(hoyISO(), vigenciaDias);
 
   if (supabaseConfigured) {
@@ -1859,10 +1863,6 @@ export async function resolverAutorizacion(id: string, aprobada: boolean, coment
       .update({ estado, autorizador_nombre: u.nombre, comentario_resolucion: comentario, resuelto_en: ahora })
       .eq("id", id);
     if (error) throw error;
-    // Al aprobar, el empeño en borrador se activa (se "cierra").
-    if (empenoId && aprobada) {
-      await sb.from("empenos").update({ estado: "activo" }).eq("id", empenoId).eq("estado", "borrador");
-    }
   } else {
     const a = getStore().autorizaciones.find((x) => x.id === id);
     if (a) {
@@ -1872,11 +1872,37 @@ export async function resolverAutorizacion(id: string, aprobada: boolean, coment
       a.resueltoEn = ahora;
       empenoId = a.empenoId;
     }
-    if (empenoId && aprobada) {
-      const e = getStore().empenos.find((x) => x.id === empenoId);
-      if (e && e.estado === "borrador") e.estado = "activo";
+  }
+
+  // Efecto sobre el empeño en borrador ligado a la autorización.
+  if (empenoId) {
+    const emp = await obtenerEmpeno(empenoId);
+    if (emp && emp.estado === "borrador") {
+      if (aprobada) {
+        if (supabaseConfigured) {
+          await getServerSupabase().from("empenos").update({ estado: "activo" }).eq("id", empenoId).eq("estado", "borrador");
+        } else {
+          const e = getStore().empenos.find((x) => x.id === empenoId);
+          if (e) e.estado = "activo";
+        }
+        // Recién ahora se entrega el préstamo: se registra la salida de caja.
+        await registrarSalidaPrestamo(empenoId, emp.folio, emp.montoPrestado);
+      } else {
+        // Rechazado: el empeño se cancela y la prenda vuelve a estar disponible.
+        if (supabaseConfigured) {
+          const sb = getServerSupabase();
+          await sb.from("empenos").update({ estado: "cancelado" }).eq("id", empenoId).eq("estado", "borrador");
+          await sb.from("prendas").update({ estado: "en_avaluo" }).eq("id", emp.prendaId);
+        } else {
+          const e = getStore().empenos.find((x) => x.id === empenoId);
+          if (e) e.estado = "cancelado";
+          const p = getStore().prendas.find((x) => x.id === emp.prendaId);
+          if (p) p.estado = "en_avaluo";
+        }
+      }
     }
   }
+
   await bitacoraAuto(aprobada ? "Autorización aprobada" : "Autorización rechazada", comentario, id);
   revalidatePath("/autorizaciones");
   if (empenoId) revalidatePath(`/empenos/${empenoId}`);
@@ -1964,6 +1990,12 @@ export async function responderAvaluoMecanico(
 /** Guarda la firma digital del consumidor en el empeño (respaldo electrónico). */
 export async function guardarFirmaEmpeno(empenoId: string, firmaDataUrl: string) {
   if (await esInvitado()) return;
+  // La firma (cadena vacía = borrar) debe ser una imagen dataURL de tamaño razonable.
+  if (firmaDataUrl && (!firmaDataUrl.startsWith("data:image/") || firmaDataUrl.length > 400_000)) return;
+  const empenoFirma = await obtenerEmpeno(empenoId);
+  if (!empenoFirma) return;
+  // No sobrescribir una firma ya registrada (evita manipulación desde el enlace público).
+  if (empenoFirma.firmaCliente && firmaDataUrl) return;
   const ahora = new Date().toISOString();
   if (supabaseConfigured) {
     const { error } = await getServerSupabase()
@@ -2042,6 +2074,10 @@ async function notificarCitaAgendada(input: CitaGpsInput) {
 export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean; error?: string }> {
   if (await esInvitado()) return { ok: false, error: "En modo demo no se agendan citas." };
   if (!input.fecha || !input.hora) return { ok: false, error: "Falta fecha u hora." };
+  // Página pública: exigir nombre y un teléfono válido (mitiga abuso/spam).
+  if (!input.clienteNombre || !input.clienteNombre.trim()) return { ok: false, error: "Falta el nombre." };
+  if (!formatearNumeroMX(input.telefono)) return { ok: false, error: "Teléfono inválido." };
+  if (input.fecha < hoyISO()) return { ok: false, error: "La fecha ya pasó." };
 
   if (supabaseConfigured) {
     const sb = getServerSupabase();

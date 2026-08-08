@@ -123,10 +123,13 @@ export function puedeAcceder(rol: RolUsuario, href: string): boolean {
   if (href.startsWith("/usuarios")) return rol === "admin";
   // La configuración del sistema: Dirección General y Gerente.
   if (href.startsWith("/configuracion")) return rol === "admin" || rol === "gerente" || rol === "invitado";
+  // Avalúos del mecánico: mecánico, Dirección o Gerente.
+  if (href.startsWith("/avaluos")) return rol === "mecanico" || rol === "admin" || rol === "gerente";
   const p = PERMISOS[rol];
   if (p === "*") return true;
   if (href === "/") return p.includes("/");
-  return p.some((ruta) => ruta !== "/" && href.startsWith(ruta));
+  // Coincidencia por segmento exacto (evita que "/x" conceda "/x-otro").
+  return p.some((ruta) => ruta !== "/" && (href === ruta || href.startsWith(ruta + "/")));
 }
 
 /** Solo admin gestiona usuarios y configuración del sistema. */

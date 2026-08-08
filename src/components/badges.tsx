@@ -3,6 +3,7 @@ import type { EstadoEmpeno, EstadoPrenda } from "@/lib/types";
 
 const empenoMap: Record<EstadoEmpeno, { label: string; tono: Parameters<typeof Badge>[0]["tono"] }> = {
   borrador: { label: "Borrador (pend. autorización)", tono: "warning" },
+  cancelado: { label: "Cancelado", tono: "danger" },
   activo: { label: "Activo", tono: "success" },
   refrendado: { label: "Refrendado", tono: "info" },
   vencido: { label: "Vencido", tono: "danger" },

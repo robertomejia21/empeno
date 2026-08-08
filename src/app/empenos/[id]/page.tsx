@@ -14,6 +14,7 @@ import { FotoLavado } from "./FotoLavado";
 const periodoLabel: Record<string, string> = {
   mensual: "Mensual",
   quincenal: "Quincenal",
+  diario: "Diario",
   semanal: "Semanal",
 };
 

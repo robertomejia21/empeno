@@ -80,6 +80,26 @@ export async function crearUsuario(form: FormData) {
   redirect("/usuarios");
 }
 
+/** Edita nombre, correo y rol de un usuario existente. La contraseña solo se actualiza si se captura una nueva. */
+export async function editarUsuario(id: string, form: FormData) {
+  const actual = await getUsuarioActual();
+  if (!actual || actual.rol !== "admin") throw new Error("No autorizado");
+  if (!supabaseConfigured) throw new Error("Supabase no configurado");
+
+  const nombre = ((form.get("nombre") as string) ?? "").trim();
+  const email = ((form.get("email") as string) ?? "").trim().toLowerCase();
+  const rol = ((form.get("rol") as string) ?? "cajero") as RolUsuario;
+  const password = (form.get("password") as string) ?? "";
+
+  const datos: { nombre: string; email: string; rol: RolUsuario; password_hash?: string } = { nombre, email, rol };
+  if (password) datos.password_hash = hashPassword(password);
+
+  const { error } = await getServerSupabase().from("usuarios").update(datos).eq("id", id);
+  if (error) throw error;
+  await registrarBitacora("Edición de usuario", actual.nombre, actual.rol, `${nombre} (${rol})`);
+  redirect("/usuarios");
+}
+
 export async function cambiarEstadoUsuario(id: string, activo: boolean) {
   const actual = await getUsuarioActual();
   if (!actual || actual.rol !== "admin") throw new Error("No autorizado");

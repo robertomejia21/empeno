@@ -175,7 +175,8 @@ export type TipoMovimiento =
   | "apertura" // saldo inicial de caja
   | "retiro" // salida: retiro de efectivo
   | "deposito" // entrada: depósito de efectivo
-  | "compra"; // salida: compra directa de mercancía
+  | "compra" // salida: compra directa de mercancía
+  | "cancelacion"; // entrada: reversa del préstamo al cancelar un contrato
 
 export interface MovimientoCaja {
   id: ID;

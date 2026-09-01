@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listarClientes, listarEmpenos } from "@/lib/db/repo";
 import { formatFecha } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
+import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 
 export default async function ClientesPage({
   searchParams,
@@ -14,12 +15,12 @@ export default async function ClientesPage({
     empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado").map((e) => e.clienteId)
   ).size;
   const nuevosMes = todos.filter((c) => c.creadoEn.slice(0, 7) === new Date().toISOString().slice(0, 7)).length;
-  const t = (q ?? "").toLowerCase().trim();
+  const t = (q ?? "").trim();
   const clientes = t
-    ? todos.filter((c) =>
-        [c.nombre, c.apellidoPaterno, c.apellidoMaterno, c.curp, c.telefono, c.numeroIdentificacion]
-          .filter(Boolean)
-          .some((v) => v!.toLowerCase().includes(t))
+    ? todos.filter(
+        (c) =>
+          coincideTexto([c.nombre, c.apellidoPaterno, c.apellidoMaterno, c.curp, c.numeroIdentificacion], t) ||
+          coincideTelefono(c.telefono, t)
       )
     : todos;
 

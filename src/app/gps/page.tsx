@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { resumenModalidades, modalidadVehiculo } from "@/lib/gps";
+import { rastreoHabilitado } from "@/lib/gpsRastreo";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
 import { GpsModalidades } from "@/components/GpsModalidades";
@@ -27,6 +28,13 @@ export default async function GpsPage() {
           </Link>
         }
       />
+
+      {!rastreoHabilitado() && (
+        <div className="mb-6 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          📡 El rastreo en vivo aún no está conectado — por ahora la ubicación de cada vehículo con GPS se anota a mano
+          al registrarlo (ver "Ubicación del GPS"). En cuanto se confirme el proveedor de rastreo, se conecta aquí.
+        </div>
+      )}
 
       <GpsModalidades resumen={resumen} />
 

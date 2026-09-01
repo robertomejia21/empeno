@@ -1,6 +1,8 @@
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual } from "@/lib/reporteSemanal";
+import { getUsuarioActual } from "@/lib/session";
+import { puedeAcceder } from "@/lib/auth";
 
 function csv(rows: (string | number | null)[][]): string {
   const esc = (v: string | number | null) => {
@@ -10,8 +12,32 @@ function csv(rows: (string | number | null)[][]): string {
   return "﻿" + rows.map((r) => r.map(esc).join(",")).join("\r\n");
 }
 
+// El middleware exime a /api/* del control de rol por página (cada endpoint
+// gestiona el suyo). Este mapa refleja desde qué página se ofrece cada
+// descarga: si el rol no puede ver esa página, tampoco puede pedir el CSV
+// directo — evita que un rol sin acceso a /reportes (cajero, cobranza, etc.)
+// baje datos financieros completos saltándose la UI.
+const RUTA_REQUERIDA: Record<string, string> = {
+  empenos: "/reportes",
+  caja: "/reportes",
+  movimientos: "/reportes",
+  pagos: "/reportes",
+  clientes: "/reportes",
+  prendas: "/reportes",
+  semanal: "/",
+  cotizaciones: "/cotizaciones",
+};
+
 export async function GET(req: Request, { params }: { params: Promise<{ tipo: string }> }) {
   const { tipo } = await params;
+
+  const actual = await getUsuarioActual();
+  if (!actual) return new Response("No autorizado", { status: 401 });
+  const rutaRequerida = RUTA_REQUERIDA[tipo];
+  if (!rutaRequerida || !puedeAcceder(actual.rol, rutaRequerida)) {
+    return new Response("No autorizado", { status: 403 });
+  }
+
   const q = (new URL(req.url).searchParams.get("q") ?? "").toLowerCase().trim();
   const match = (s: string) => !q || s.toLowerCase().includes(q);
 

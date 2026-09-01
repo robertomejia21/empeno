@@ -6,6 +6,7 @@ import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, SearchForm, EmptyState, Badge } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import type { EmpenoConDetalle, CalculoLiquidacion } from "@/lib/types";
 
 export const metadata = { title: "Mostrador" };
@@ -22,8 +23,8 @@ export default async function MostradorPage({
   const t = (q ?? "").trim();
   const empenos = await listarEmpenos();
 
-  // Coincidencias por nombre/apellido, prenda, teléfono o número de contrato.
-  const tl = t.toLowerCase();
+  // Coincidencias por nombre/apellido (sin acentos, cualquier orden), prenda,
+  // teléfono (por dígitos, sin importar formato) o número de contrato.
   const tDigits = t.replace(/\D/g, "");
   const contratoNum = tDigits ? String(parseInt(tDigits, 10)) : "";
   const folioNum = (e: EmpenoConDetalle) => String(parseInt(e.folio.replace(/\D/g, "") || "0", 10));
@@ -33,12 +34,9 @@ export default async function MostradorPage({
 
   const matches = t
     ? empenos.filter((e) => {
-        const nombre = `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`.toLowerCase();
         return (
-          nombre.includes(tl) ||
-          e.prenda.descripcion.toLowerCase().includes(tl) ||
-          e.folio.toLowerCase().includes(tl) ||
-          (e.cliente.telefono ?? "").includes(t) ||
+          coincideTexto([e.cliente.nombre, e.cliente.apellidoPaterno, e.cliente.apellidoMaterno, e.prenda.descripcion, e.folio], t) ||
+          coincideTelefono(e.cliente.telefono, t) ||
           folioNum(e) === contratoNum
         );
       })

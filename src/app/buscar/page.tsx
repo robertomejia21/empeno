@@ -3,6 +3,7 @@ import { listarClientes, listarPrendas, listarEmpenos } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
 import { Card, CardHeader, PageHeader, SearchForm, EmptyState } from "@/components/ui";
 import { estadoEmpenoBadge, estadoPrendaBadge } from "@/components/badges";
+import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 
 export default async function BuscarPage({
   searchParams,
@@ -10,7 +11,7 @@ export default async function BuscarPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const t = (q ?? "").toLowerCase().trim();
+  const t = (q ?? "").trim();
 
   let clientes: Awaited<ReturnType<typeof listarClientes>> = [];
   let prendas: Awaited<ReturnType<typeof listarPrendas>> = [];
@@ -18,19 +19,14 @@ export default async function BuscarPage({
 
   if (t) {
     const [cs, ps, es] = await Promise.all([listarClientes(), listarPrendas(), listarEmpenos()]);
-    clientes = cs.filter((c) =>
-      [c.nombre, c.apellidoPaterno, c.apellidoMaterno, c.curp, c.telefono, c.numeroIdentificacion]
-        .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(t))
+    clientes = cs.filter(
+      (c) =>
+        coincideTexto([c.nombre, c.apellidoPaterno, c.apellidoMaterno, c.curp, c.numeroIdentificacion], t) ||
+        coincideTelefono(c.telefono, t)
     );
-    prendas = ps.filter((p) =>
-      [p.folio, p.descripcion, p.marca, p.modelo, p.serie, p.categoria]
-        .filter(Boolean)
-        .some((v) => v!.toLowerCase().includes(t))
-    );
+    prendas = ps.filter((p) => coincideTexto([p.folio, p.descripcion, p.marca, p.modelo, p.serie, p.categoria], t));
     empenos = es.filter((e) =>
-      [e.folio, e.prenda.descripcion, `${e.cliente.nombre} ${e.cliente.apellidoPaterno}`]
-        .some((v) => v.toLowerCase().includes(t))
+      coincideTexto([e.folio, e.prenda.descripcion, e.cliente.nombre, e.cliente.apellidoPaterno, e.cliente.apellidoMaterno], t)
     );
   }
 

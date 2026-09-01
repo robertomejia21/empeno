@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { obtenerEmpeno } from "@/lib/db/repo";
+import { obtenerEmpeno, contarRefrendos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo } from "@/lib/actions";
+import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
@@ -33,6 +33,12 @@ export default async function EmpenoDetalle({
 
   const refrendar = refrendarEmpeno.bind(null, empeno.id);
   const desempenar = desempenarEmpeno.bind(null, empeno.id);
+  const cancelar = cancelarEmpeno.bind(null, empeno.id);
+  // Cancelar solo tiene sentido antes de que el contrato tenga movimientos
+  // (refrendos o abonos) — después de eso se cierra con desempeño.
+  const refrendos = await contarRefrendos(empeno.id);
+  const puedeCancelar =
+    (empeno.estado === "borrador" || empeno.estado === "activo") && empeno.abonoCapital === 0 && refrendos === 0;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -227,6 +233,27 @@ export default async function EmpenoDetalle({
             )}
           </Card>
         </div>
+
+        {puedeCancelar && (
+          <Card className="mt-6 border-danger/20">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Cancelar contrato</p>
+                <p className="text-xs text-muted">
+                  Solo disponible sin refrendos ni abonos. Libera la prenda y revierte el préstamo en caja.
+                </p>
+              </div>
+              <form action={cancelar}>
+                <ConfirmSubmit
+                  variante="danger"
+                  confirmacion={`¿Cancelar el contrato ${empeno.folio}? Esta acción no se puede deshacer.`}
+                >
+                  Cancelar contrato
+                </ConfirmSubmit>
+              </form>
+            </div>
+          </Card>
+        )}
       </div>
 
       {/* Boleta para imprimir */}

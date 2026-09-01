@@ -21,6 +21,7 @@ const categorias: { value: CategoriaPrenda; label: string }[] = [
 export function PrendaForm() {
   const [categoria, setCategoria] = useState<CategoriaPrenda>("Joyería");
   const [valorAvaluo, setValorAvaluo] = useState<number>(0);
+  const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
 
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
@@ -72,6 +73,35 @@ export function PrendaForm() {
             <Field label="Color" name="color" />
             <Field label="Número de serie (NIV)" name="serie" />
             <Field label="Placas" name="placas" />
+          </div>
+
+          <div className="mx-5 mb-5 rounded-lg border border-border bg-surface-2/50 p-4">
+            <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>
+            <input type="hidden" name="modalidad" value={modalidad} />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setModalidad("resguardo")}
+                className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "resguardo" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+              >
+                🏢 Resguardo
+                <span className="block text-[11px] font-normal text-muted">Queda en nuestra bóveda/patio</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalidad("gps")}
+                className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "gps" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+              >
+                📡 GPS
+                <span className="block text-[11px] font-normal text-muted">El cliente lo conserva con GPS</span>
+              </button>
+            </div>
+            {modalidad === "gps" && (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="GPS mensual (MXN)" name="gpsMensual" type="number" step="0.01" />
+                <Field label="Ubicación del GPS" name="gpsUbicacion" placeholder="Coordenadas o liga de Maps" />
+              </div>
+            )}
           </div>
         </Card>
       ) : esJoyeria ? (

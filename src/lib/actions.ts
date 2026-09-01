@@ -310,6 +310,9 @@ export async function crearPrenda(form: FormData) {
     garantia: sn(form, "garantia"),
     verificado: form.get("verificado") === "on",
     repuve_folio: sn(form, "repuveFolio"),
+    modalidad: sn(form, "modalidad") as "gps" | "resguardo" | null,
+    gps_mensual: form.get("gpsMensual") ? num(form, "gpsMensual") : null,
+    gps_ubicacion: sn(form, "gpsUbicacion"),
     notas: sn(form, "notas"),
   };
 
@@ -344,6 +347,9 @@ export async function crearPrenda(form: FormData) {
       garantia: datos.garantia,
       verificado: datos.verificado,
       repuveFolio: datos.repuve_folio,
+      modalidad: datos.modalidad,
+      gpsMensual: datos.gps_mensual,
+      gpsUbicacion: datos.gps_ubicacion,
       notas: datos.notas,
       creadoEn: new Date().toISOString(),
     };
@@ -661,6 +667,51 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   revalidatePath("/caja");
   if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
   redirect(`/api/recibo-pago/${pagoId}`);
+}
+
+/**
+ * Cancela un contrato que todavía no tiene movimientos (sin refrendos ni
+ * abonos) — para corregir un error de captura. Libera la prenda (vuelve a
+ * "en_avaluo") y revierte en caja el préstamo que se había entregado.
+ * Si ya tiene pagos registrados, usa desempeño en su lugar.
+ */
+export async function cancelarEmpeno(id: string) {
+  if (await esInvitado()) return;
+  const e = await obtenerEmpeno(id);
+  if (!e) return;
+  if (e.estado !== "borrador" && e.estado !== "activo") {
+    throw new Error("Solo se puede cancelar un contrato en borrador o activo.");
+  }
+  const refrendos = await contarRefrendos(id);
+  if (e.abonoCapital > 0 || refrendos > 0) {
+    throw new Error("Este contrato ya tiene pagos registrados; no se puede cancelar.");
+  }
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    await sb.from("empenos").update({ estado: "cancelado" }).eq("id", id);
+    await sb.from("prendas").update({ estado: "en_avaluo" }).eq("id", e.prendaId);
+    await sb.from("movimientos_caja").insert({
+      tipo: "cancelacion", monto: e.montoPrestado, es_entrada: true,
+      concepto: `Cancelación empeño ${e.folio}`, empeno_id: id, referencia: e.folio,
+    });
+  } else {
+    const store = getStore();
+    const emp = store.empenos.find((x) => x.id === id);
+    if (emp) emp.estado = "cancelado";
+    const prenda = store.prendas.find((p) => p.id === e.prendaId);
+    if (prenda) prenda.estado = "en_avaluo";
+    store.movimientos.push({
+      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "cancelacion", monto: e.montoPrestado, esEntrada: true,
+      concepto: `Cancelación empeño ${e.folio}`, empenoId: id, referencia: e.folio, creadoEn: new Date().toISOString(),
+    });
+  }
+  await bitacoraAuto("Empeño cancelado", `${e.montoPrestado} MXN revertidos`, e.folio);
+  revalidatePath(`/empenos/${id}`);
+  revalidatePath("/empenos");
+  revalidatePath("/caja");
+  if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
+  redirect("/empenos");
 }
 
 /** Abono a capital: reduce el saldo del préstamo y entra a caja. */

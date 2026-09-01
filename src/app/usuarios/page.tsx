@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { listarUsuarios } from "@/lib/db/repo";
 import { getUsuarioActual } from "@/lib/session";
-import { crearUsuario, cambiarEstadoUsuario } from "@/lib/auth-actions";
+import { crearUsuario, cambiarEstadoUsuario, editarUsuario } from "@/lib/auth-actions";
 import { ROLES, ROL_LABEL, authHabilitada } from "@/lib/auth";
 import { Card, CardHeader, PageHeader, Button, Field, SelectField, Badge } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
@@ -64,16 +64,33 @@ export default async function UsuariosPage() {
                         {u.activo ? <Badge tono="success">Activo</Badge> : <Badge tono="muted">Inactivo</Badge>}
                       </td>
                       <td className="px-5 py-3 text-right">
-                        {u.id !== actual.uid && (
-                          <form action={cambiarEstadoUsuario.bind(null, u.id, !u.activo)}>
-                            <ConfirmSubmit
-                              variante="secondary"
-                              confirmacion={`¿${u.activo ? "Desactivar" : "Activar"} a ${u.nombre}?`}
+                        <div className="flex items-center justify-end gap-2">
+                          <details className="relative">
+                            <summary className="cursor-pointer list-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-2">
+                              Editar
+                            </summary>
+                            <form
+                              action={editarUsuario.bind(null, u.id)}
+                              className="absolute right-0 z-10 mt-2 w-72 space-y-3 rounded-xl border border-border bg-surface p-4 text-left shadow-lg"
                             >
-                              {u.activo ? "Desactivar" : "Activar"}
-                            </ConfirmSubmit>
-                          </form>
-                        )}
+                              <Field label="Nombre" name="nombre" defaultValue={u.nombre} required />
+                              <Field label="Correo" name="email" type="email" defaultValue={u.email} required />
+                              <SelectField label="Rol" name="rol" options={ROLES} defaultValue={u.rol} required />
+                              <Field label="Nueva contraseña" name="password" type="password" placeholder="Dejar en blanco para no cambiar" />
+                              <Button type="submit" className="w-full">Guardar cambios</Button>
+                            </form>
+                          </details>
+                          {u.id !== actual.uid && (
+                            <form action={cambiarEstadoUsuario.bind(null, u.id, !u.activo)}>
+                              <ConfirmSubmit
+                                variante="secondary"
+                                confirmacion={`¿${u.activo ? "Desactivar" : "Activar"} a ${u.nombre}?`}
+                              >
+                                {u.activo ? "Desactivar" : "Activar"}
+                              </ConfirmSubmit>
+                            </form>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

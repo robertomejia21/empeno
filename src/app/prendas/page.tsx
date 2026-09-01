@@ -3,6 +3,7 @@ import { listarPrendas } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, Badge, SearchForm, ResumenChips } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
+import { coincideTexto } from "@/lib/buscar";
 
 export default async function PrendasPage({
   searchParams,
@@ -11,13 +12,9 @@ export default async function PrendasPage({
 }) {
   const { q } = await searchParams;
   const todas = await listarPrendas();
-  const t = (q ?? "").toLowerCase().trim();
+  const t = (q ?? "").trim();
   const prendas = t
-    ? todas.filter((p) =>
-        [p.folio, p.descripcion, p.marca, p.submarca, p.modelo, p.serie, p.categoria, p.placas]
-          .filter(Boolean)
-          .some((v) => v!.toLowerCase().includes(t))
-      )
+    ? todas.filter((p) => coincideTexto([p.folio, p.descripcion, p.marca, p.submarca, p.modelo, p.serie, p.categoria, p.placas], t))
     : todas;
 
   return (

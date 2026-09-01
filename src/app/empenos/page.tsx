@@ -4,6 +4,7 @@ import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
+import { coincideTexto } from "@/lib/buscar";
 
 const pastillaCls = (activa: boolean) =>
   `inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition ${
@@ -19,13 +20,14 @@ export default async function EmpenosPage({
 }) {
   const { q, cat } = await searchParams;
   const todos = await listarEmpenos();
-  const t = (q ?? "").toLowerCase().trim();
+  const t = (q ?? "").trim();
   const tDigits = t.replace(/\D/g, "");
   const porTexto = t
     ? todos.filter((e) => {
-        const texto = [e.folio, e.prenda.descripcion, e.estado, `${e.cliente.nombre} ${e.cliente.apellidoPaterno} ${e.cliente.apellidoMaterno}`]
-          .filter(Boolean)
-          .some((v) => v.toLowerCase().includes(t));
+        const texto = coincideTexto(
+          [e.folio, e.prenda.descripcion, e.estado, e.cliente.nombre, e.cliente.apellidoPaterno, e.cliente.apellidoMaterno],
+          t
+        );
         // Coincidencia por número de contrato (ignora prefijo/ceros): "835" ↔ EM-0835
         const porContrato =
           tDigits.length > 0 && String(parseInt(e.folio.replace(/\D/g, "") || "0", 10)) === String(parseInt(tDigits, 10));

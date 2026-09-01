@@ -223,7 +223,7 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
       <div className="mt-8 grid grid-cols-3 gap-6 text-center text-[9.5px]">
         <Firma titulo="EL CONSUMIDOR" nombre={`${c.nombre} ${c.apellidoPaterno} ${c.apellidoMaterno}`} firma={empeno.firmaCliente} fecha={empeno.firmaFecha} />
         <Firma titulo="EL PROVEEDOR" nombre={PROVEEDOR.marca} />
-        <Firma titulo="EL VALUADOR" nombre="&nbsp;" />
+        <Firma titulo="EL VALUADOR" nombre=" " />
       </div>
 
       <p className="mt-6 text-justify text-[8.5px]">
@@ -247,7 +247,7 @@ function Firma({ titulo, nombre, firma, fecha }: { titulo: string; nombre: strin
       </div>
       <div className="border-t border-black pt-1">
         <p className="font-semibold">{titulo}</p>
-        <p dangerouslySetInnerHTML={{ __html: nombre }} />
+        <p>{nombre}</p>
         {fecha && <p className="text-[8.5px] text-gray-600">Firmado {formatFecha(fecha)}</p>}
       </div>
     </div>

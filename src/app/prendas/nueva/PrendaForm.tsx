@@ -20,6 +20,7 @@ const categorias: { value: CategoriaPrenda; label: string }[] = [
 
 export function PrendaForm() {
   const [categoria, setCategoria] = useState<CategoriaPrenda>("Joyería");
+  const [montoSolicitado, setMontoSolicitado] = useState<number>(0);
   const [valorAvaluo, setValorAvaluo] = useState<number>(0);
   const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
 
@@ -127,6 +128,23 @@ export function PrendaForm() {
       )}
 
       <Card className="mt-6">
+        <CardHeader title="Monto solicitado" subtitle="Lo que pide el cliente, antes de avaluar el bien" />
+        <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">Monto solicitado por el cliente (MXN)</span>
+            <input
+              name="montoSolicitado"
+              type="number"
+              step="0.01"
+              onChange={(e) => setMontoSolicitado(parseFloat(e.target.value) || 0)}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-xs text-muted">Captúralo antes de avaluar, para comparar contra el valor real del bien.</span>
+          </label>
+        </div>
+      </Card>
+
+      <Card className="mt-6">
         <CardHeader title="Avalúo" subtitle="Valor comercial y préstamo recomendado" />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
@@ -151,6 +169,13 @@ export function PrendaForm() {
             placeholder={sugerido ? sugerido.toString() : "Se calcula al 50%"}
           />
         </div>
+        {montoSolicitado > 0 && valorAvaluo > 0 && (
+          <p className={`px-5 pb-4 text-sm font-medium ${montoSolicitado <= sugerido ? "text-success" : "text-danger"}`}>
+            {montoSolicitado <= sugerido
+              ? `✅ El avalúo respalda lo solicitado (préstamo sugerido ${sugerido.toLocaleString("es-MX", { style: "currency", currency: "MXN" })} ≥ solicitado ${montoSolicitado.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}).`
+              : `⚠️ El avalúo NO respalda lo solicitado (préstamo sugerido ${sugerido.toLocaleString("es-MX", { style: "currency", currency: "MXN" })} < solicitado ${montoSolicitado.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}).`}
+          </p>
+        )}
       </Card>
 
       <Card className="mt-6">

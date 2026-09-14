@@ -84,9 +84,11 @@ export function Boleta({
             </tr>
             <tr>
               <td className="py-0.5 pr-2 text-gray-600">Avalúo:</td>
-              <td className="py-0.5 font-medium">{formatMXN(p.valorAvaluo)}</td>
-              <td className="py-0.5 pr-2 text-gray-600">Resguardo:</td>
-              <td className="py-0.5 font-medium">{p.ubicacionResguardo ?? "—"}</td>
+              {/* La ubicación de resguardo es información interna: nunca va en
+                  la boleta que se imprime y se entrega al cliente. */}
+              <td className="py-0.5 font-medium" colSpan={3}>
+                {formatMXN(p.valorAvaluo)}
+              </td>
             </tr>
           </tbody>
         </table>

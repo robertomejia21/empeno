@@ -14,7 +14,18 @@ export default async function BitacoraPage() {
 
   return (
     <div>
-      <PageHeader title="Bitácora" subtitle="Registro de auditoría de operaciones" />
+      <PageHeader
+        title="Bitácora"
+        subtitle="Registro de auditoría de operaciones"
+        action={
+          <a
+            href="/api/export/bitacora"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+          >
+            ⬇️ Descargar Excel/CSV
+          </a>
+        }
+      />
 
       <Card>
         <CardHeader title="Eventos recientes" subtitle={`Últimos ${eventos.length} registros`} />

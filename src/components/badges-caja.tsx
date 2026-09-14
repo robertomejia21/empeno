@@ -13,6 +13,7 @@ const map: Record<TipoMovimiento, { label: string; tono: Parameters<typeof Badge
   deposito: { label: "Depósito", tono: "success" },
   compra: { label: "Compra", tono: "danger" },
   cancelacion: { label: "Cancelación", tono: "muted" },
+  transferencia: { label: "Transferencia", tono: "info" },
 };
 
 export function TipoMovBadge({ tipo }: { tipo: TipoMovimiento }) {

@@ -27,12 +27,13 @@ import type {
   CitaGpsInput,
   EstadoCitaGps,
   EncuestaInput,
+  RolUsuario,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia, formatearNumeroMX } from "@/lib/whatsapp";
 import { SUCURSAL, APP_URL } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
@@ -49,6 +50,26 @@ function dividirDataUrl(dataUrl: string): { mime: string; base64: string } | nul
 /** En modo demo (invitado) las operaciones de escritura no surten efecto. */
 async function esInvitado(): Promise<boolean> {
   return (await getUsuarioActual())?.rol === "invitado";
+}
+
+/** Tope de descuento sin autorización adicional (% del subtotal). */
+const DESCUENTO_TOPE_LIBRE = 20;
+/** Tope absoluto de descuento, incluso con autorización de gerencia. */
+const DESCUENTO_TOPE_GERENCIA = 50;
+
+/**
+ * Valida el % de descuento contra el subtotal: hasta 20% cualquier rol,
+ * hasta 50% solo Dirección General o Gerente; más de 50% nunca se permite.
+ */
+function validarDescuento(descuento: number, subtotal: number, rol: RolUsuario | undefined): void {
+  if (descuento <= 0 || subtotal <= 0) return;
+  const pct = (descuento / subtotal) * 100;
+  if (pct > DESCUENTO_TOPE_GERENCIA) {
+    throw new Error(`El descuento no puede superar el ${DESCUENTO_TOPE_GERENCIA}% del subtotal.`);
+  }
+  if (pct > DESCUENTO_TOPE_LIBRE && rol !== "admin" && rol !== "gerente") {
+    throw new Error(`Descuentos de más del ${DESCUENTO_TOPE_LIBRE}% requieren autorización de Gerencia o Dirección General.`);
+  }
 }
 
 function round2(n: number): number {
@@ -313,7 +334,15 @@ export async function crearPrenda(form: FormData) {
     modalidad: sn(form, "modalidad") as "gps" | "resguardo" | null,
     gps_mensual: form.get("gpsMensual") ? num(form, "gpsMensual") : null,
     gps_ubicacion: sn(form, "gpsUbicacion"),
-    notas: sn(form, "notas"),
+    // No hay columna para "monto solicitado" — se antepone a las notas para
+    // no perder el dato y poder comparar contra el avalúo a simple vista.
+    notas: (() => {
+      const solicitado = form.get("montoSolicitado") ? num(form, "montoSolicitado") : 0;
+      const nota = sn(form, "notas");
+      if (solicitado <= 0) return nota;
+      const linea = `Monto solicitado por el cliente: ${solicitado.toLocaleString("es-MX", { style: "currency", currency: "MXN" })}`;
+      return nota ? `${linea}\n${nota}` : linea;
+    })(),
   };
 
   if (supabaseConfigured) {
@@ -370,7 +399,12 @@ export async function crearEmpeno(form: FormData) {
   const prendaId = s(form, "prendaId");
   const clienteId = s(form, "clienteId");
   const tasaInteres = num(form, "tasaInteres");
-  const almacenajePct = num(form, "almacenajePct");
+  // El formulario simple no captura almacenaje: los artículos (todo lo que no
+  // sea Vehículos) lo cargan igual al interés (ej. 10.8% + 10.8% = 21.6%
+  // mensual); los vehículos no cargan almacenaje por esta vía.
+  const prendaCat = (await obtenerPrenda(prendaId))?.categoria;
+  const almacenajePctForm = num(form, "almacenajePct");
+  const almacenajePct = almacenajePctForm > 0 ? almacenajePctForm : prendaCat && prendaCat !== "Vehículos" ? tasaInteres : 0;
   const ivaPct = num(form, "ivaPct");
   const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
   const comisionista = sn(form, "comisionista");
@@ -485,6 +519,8 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
 
   const subtotal = round2(interesP + almacenajeP + gastosAdmin + moratorios + ivaP);
+  const u = await getUsuarioActual();
+  validarDescuento(descuento, subtotal, u?.rol);
   const total = round2(Math.max(0, subtotal + abonoCapital - descuento));
   const recibido = g("recibido");
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
@@ -493,7 +529,6 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   const cambio = recibido > total ? round2(recibido - total) : 0;
 
   const refrendoNo = (await contarRefrendos(id)) + 1;
-  const u = await getUsuarioActual();
   const hoy = hoyISO();
   const nuevoVenc = calcularVencimiento(hoy, e.periodo, e.plazoPeriodos);
 
@@ -595,6 +630,8 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
     e.montoPrestado + calc.interesAcumulado + calc.almacenajeAcumulado +
     gastosAdmin + moratorios + rentaGps + rentaSeguro + gastosVenta + pension + calc.ivaAcumulado
   );
+  const u = await getUsuarioActual();
+  validarDescuento(descuento, subtotal, u?.rol);
   const total = round2(subtotal - e.abonoCapital - descuento);
   const recibido = g("recibido");
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
@@ -602,7 +639,6 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   const transferencia = metodoPago === "transferencia" || metodoPago === "cheque" ? total : 0;
   const cambio = recibido > total ? round2(recibido - total) : 0;
 
-  const u = await getUsuarioActual();
   const pagoBase = {
     empeno_id: id,
     cliente_id: e.clienteId,
@@ -1537,10 +1573,13 @@ export async function registrarMovimiento(form: FormData) {
   if (await esInvitado()) return;
   const tipo = (s(form, "tipo") || "gasto") as TipoMovimiento;
   const entradas: TipoMovimiento[] = ["desempeno", "refrendo", "abono", "venta", "apertura", "deposito"];
+  // "transferencia" puede ser entrada o salida según lo que elija el usuario
+  // (a diferencia de los demás tipos, que ya implican una sola dirección).
+  const esEntrada = tipo === "transferencia" ? form.get("direccion") === "entrada" : entradas.includes(tipo);
   const datos = {
     tipo,
     monto: num(form, "monto"),
-    es_entrada: entradas.includes(tipo),
+    es_entrada: esEntrada,
     concepto: s(form, "concepto") || "Movimiento manual",
     referencia: sn(form, "referencia"),
   };
@@ -1562,6 +1601,7 @@ export async function registrarMovimiento(form: FormData) {
     getStore().movimientos.push(mov);
   }
   revalidatePath("/caja");
+  revalidatePath("/corte");
 }
 
 // ----------------- CORTE DE CAJA -----------------

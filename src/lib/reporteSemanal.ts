@@ -18,15 +18,22 @@ export interface ReporteSemanal {
   articulos: FilaModalidad;
 }
 
-/** Rango lunes–domingo de la semana que contiene `hoy`. */
+/** Rango sábado–viernes de la semana que contiene `hoy` (semana operativa de la casa de empeño). */
 export function rangoSemanaActual(hoy: Date = new Date()): { desde: string; hasta: string } {
   const base = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-  const dow = (base.getDay() + 6) % 7; // lunes = 0 … domingo = 6
-  const lunes = new Date(base);
-  lunes.setDate(base.getDate() - dow);
-  const domingo = new Date(lunes);
-  domingo.setDate(lunes.getDate() + 6);
-  return { desde: aISOLocal(lunes), hasta: aISOLocal(domingo) };
+  const dow = (base.getDay() + 1) % 7; // sábado = 0 … viernes = 6
+  const sabado = new Date(base);
+  sabado.setDate(base.getDate() - dow);
+  const viernes = new Date(sabado);
+  viernes.setDate(sabado.getDate() + 6);
+  return { desde: aISOLocal(sabado), hasta: aISOLocal(viernes) };
+}
+
+/** Rango del mes calendario que contiene `hoy` (día 1 al último día del mes). */
+export function rangoMesActual(hoy: Date = new Date()): { desde: string; hasta: string } {
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const ultimo = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+  return { desde: aISOLocal(primero), hasta: aISOLocal(ultimo) };
 }
 
 const esVehiculoCat = (c: CategoriaPrenda) => c === "Vehículos";

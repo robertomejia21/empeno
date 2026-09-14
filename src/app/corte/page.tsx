@@ -1,13 +1,17 @@
 import { listarMovimientos, listarCortes } from "@/lib/db/repo";
 import { registrarMovimiento, registrarCorte } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
-import { Card, CardHeader, PageHeader, Button, Field, TextArea, ResumenChips } from "@/components/ui";
+import { Card, CardHeader, PageHeader, Button, Field, SelectField, TextArea, ResumenChips } from "@/components/ui";
 
 export default async function CortePage() {
   const [movs, cortes] = await Promise.all([listarMovimientos(), listarCortes()]);
   const hoy = hoyISO();
 
-  const esperado = movs.reduce((s, m) => s + (m.esEntrada ? m.monto : -m.monto), 0);
+  // Las transferencias son movimiento bancario, no efectivo físico — no
+  // cuentan para lo que debería haber en el cajón al contar.
+  const esperado = movs
+    .filter((m) => m.tipo !== "transferencia")
+    .reduce((s, m) => s + (m.esEntrada ? m.monto : -m.monto), 0);
   const delDia = movs.filter((m) => m.fecha.slice(0, 10) === hoy);
   const entradasDia = delDia.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0);
   const salidasDia = delDia.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0);
@@ -54,6 +58,31 @@ export default async function CortePage() {
             <div className="sm:col-span-2">
               <Button type="submit" className="w-full">Registrar corte del día</Button>
             </div>
+          </form>
+        </Card>
+      </div>
+
+      {/* Transferencias — entradas/salidas bancarias que no vienen de un
+          empeño (ej. traspaso a la cuenta del negocio, retiro por transfer.) */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card>
+          <CardHeader title="Transferencia" subtitle="Movimiento bancario — no cuenta como efectivo" />
+          <form action={registrarMovimiento} className="space-y-3 p-5">
+            <input type="hidden" name="tipo" value="transferencia" />
+            <SelectField
+              label="Dirección"
+              name="direccion"
+              options={[
+                { value: "entrada", label: "Entrada (recibida)" },
+                { value: "salida", label: "Salida (enviada)" },
+              ]}
+              defaultValue="entrada"
+              required
+            />
+            <Field label="Monto (MXN)" name="monto" type="number" step="0.01" required />
+            <Field label="Concepto" name="concepto" placeholder="Ej. Transferencia a cuenta BBVA" required />
+            <Field label="Referencia (opcional)" name="referencia" placeholder="No. de rastreo, folio…" />
+            <Button type="submit" variante="secondary" className="w-full">Registrar transferencia</Button>
           </form>
         </Card>
       </div>

@@ -1,8 +1,10 @@
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { calcularReporteSemanal, rangoSemanaActual } from "@/lib/reporteSemanal";
+import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual } from "@/lib/reporteSemanal";
 import { getUsuarioActual } from "@/lib/session";
-import { puedeAcceder } from "@/lib/auth";
+import { puedeAcceder, ROL_LABEL } from "@/lib/auth";
+import { formatFechaHora } from "@/lib/format";
+import type { RolUsuario } from "@/lib/types";
 
 function csv(rows: (string | number | null)[][]): string {
   const esc = (v: string | number | null) => {
@@ -25,7 +27,9 @@ const RUTA_REQUERIDA: Record<string, string> = {
   clientes: "/reportes",
   prendas: "/reportes",
   semanal: "/",
+  mensual: "/",
   cotizaciones: "/cotizaciones",
+  bitacora: "/bitacora",
 };
 
 export async function GET(req: Request, { params }: { params: Promise<{ tipo: string }> }) {
@@ -83,13 +87,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
     for (const x of pg) {
       rows.push([x.reciboNo, x.refrendoNo, x.tipo, x.fecha, x.intereses, x.almacenaje, x.moratorios, x.iva, x.abonoCapital, x.total, x.metodoPago, x.usuarioNombre]);
     }
-  } else if (tipo === "semanal") {
-    nombre = "reporte-semanal";
+  } else if (tipo === "semanal" || tipo === "mensual") {
+    nombre = tipo === "semanal" ? "reporte-semanal" : "reporte-mensual";
     const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
-    const { desde, hasta } = rangoSemanaActual();
+    const { desde, hasta } = tipo === "semanal" ? rangoSemanaActual() : rangoMesActual();
     const r = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
     rows = [
-      [`Información semanal casa empeño (${desde} a ${hasta})`, "", ""],
+      [`Información ${tipo === "semanal" ? "semanal" : "mensual"} casa empeño (${desde} a ${hasta})`, "", ""],
       ["Descripción", "Total", "Comentarios"],
       ["Ventas de vitrina", r.ventasVitrina, ""],
       ["Vehículos", "", ""],
@@ -119,6 +123,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
       ["", "", "", "", "", "", "", "", "", ""],
       ...bloque("DETALLES DEL ARTÍCULO", cot.filter((c) => c.tipo !== "vehiculo")),
     ];
+  } else if (tipo === "bitacora") {
+    nombre = "bitacora";
+    const eventos = await listarBitacora(1000);
+    rows = [["Fecha", "Usuario", "Rol", "Acción", "Detalle", "Referencia"]];
+    for (const x of eventos) {
+      if (!match(`${x.usuarioNombre ?? ""} ${x.accion} ${x.detalle ?? ""} ${x.referencia ?? ""}`)) continue;
+      const rolLabel = x.usuarioRol ? ROL_LABEL[x.usuarioRol as RolUsuario] ?? x.usuarioRol : null;
+      rows.push([formatFechaHora(x.fecha), x.usuarioNombre, rolLabel, x.accion, x.detalle, x.referencia]);
+    }
   } else {
     return new Response("Tipo no válido", { status: 400 });
   }

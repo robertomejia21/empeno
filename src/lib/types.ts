@@ -176,7 +176,8 @@ export type TipoMovimiento =
   | "retiro" // salida: retiro de efectivo
   | "deposito" // entrada: depósito de efectivo
   | "compra" // salida: compra directa de mercancía
-  | "cancelacion"; // entrada: reversa del préstamo al cancelar un contrato
+  | "cancelacion" // entrada: reversa del préstamo al cancelar un contrato
+  | "transferencia"; // entrada o salida bancaria — NO es efectivo físico, se excluye del conteo de caja
 
 export interface MovimientoCaja {
   id: ID;

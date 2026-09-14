@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { calcularReporteSemanal, rangoSemanaActual, type ReporteSemanal } from "@/lib/reporteSemanal";
+import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual, type ReporteSemanal } from "@/lib/reporteSemanal";
 import { resumenModalidades } from "@/lib/gps";
 import { GpsModalidades } from "@/components/GpsModalidades";
 import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
@@ -28,11 +28,14 @@ export default async function Tablero() {
 
   const semana = rangoSemanaActual();
   const reporteSemanal = calcularReporteSemanal(empenos, pagos, ventas, semana.desde, semana.hasta);
+  const mes = rangoMesActual();
+  const reporteMensual = calcularReporteSemanal(empenos, pagos, ventas, mes.desde, mes.hasta);
   const resumenGps = resumenModalidades(empenos);
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalPrestado = activos.reduce((s, e) => s + e.montoPrestado, 0);
   const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e) }));
+  const aRecuperar = conCalc.reduce((s, x) => s + x.calc.totalDesempeno, 0);
   const vencidos = conCalc.filter((x) => x.calc.vencido);
   const porVencer = conCalc
     .filter((x) => !x.calc.vencido && x.calc.diasParaVencer <= 7)
@@ -114,9 +117,10 @@ export default async function Tablero() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <Stat label="Empeños activos" valor={activos.length.toString()} icono="🤝" />
         <Stat label="Capital prestado" valor={formatMXN(capitalPrestado)} icono="💰" />
+        <Stat label="A recuperar" valor={formatMXN(aRecuperar)} icono="📈" />
         <Stat label="Saldo en caja" valor={formatMXN(saldoCaja)} icono="💵" tono={saldoCaja < 0 ? "danger" : "success"} />
         <Stat label="Vencidos" valor={vencidos.length.toString()} icono="⚠️" tono={vencidos.length > 0 ? "danger" : "muted"} />
       </div>
@@ -146,7 +150,8 @@ export default async function Tablero() {
       )}
 
       {/* Informe semanal */}
-      <ReporteSemanalCard reporte={reporteSemanal} />
+      <ReporteSemanalCard reporte={reporteSemanal} titulo="Informe semanal" descarga="/api/export/semanal" />
+      <ReporteSemanalCard reporte={reporteMensual} titulo="Informe mensual" descarga="/api/export/mensual" />
 
       {/* Gráficas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -175,26 +180,12 @@ export default async function Tablero() {
           {porVencer.length === 0 && vencidos.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-muted">No hay empeños por vencer. 🎉</p>
           ) : (
-            <ul className="divide-y divide-border">
-              {[...vencidos, ...porVencer].slice(0, 7).map(({ e, calc }) => (
-                <li key={e.id}>
-                  <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-4 px-5 py-3 transition hover:bg-surface-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {e.folio} · {e.cliente.nombre} {e.cliente.apellidoPaterno}
-                      </p>
-                      <p className="truncate text-xs text-muted">
-                        {e.prenda.descripcion} · vence {formatFecha(e.fechaVencimiento)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</span>
-                      {estadoEmpenoBadge(calc.vencido ? "vencido" : e.estado)}
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              {/* Separados en dos listas — antes se mezclaban en una sola y, con
+                  muchos vencidos, los "por vencer" nunca alcanzaban a mostrarse. */}
+              <ListaVencimiento titulo="Vencidos" tono="danger" items={vencidos} maximo={4} forzarVencido />
+              <ListaVencimiento titulo="Por vencer (≤ 7 días)" tono="warning" items={porVencer} maximo={4} />
+            </>
           )}
         </Card>
 
@@ -249,7 +240,15 @@ export default async function Tablero() {
   );
 }
 
-function ReporteSemanalCard({ reporte }: { reporte: ReporteSemanal }) {
+function ReporteSemanalCard({
+  reporte,
+  titulo,
+  descarga,
+}: {
+  reporte: ReporteSemanal;
+  titulo: string;
+  descarga: string;
+}) {
   const filas: { desc: string; total?: number; seccion?: boolean }[] = [
     { desc: "Ventas de vitrina", total: reporte.ventasVitrina },
     { desc: "Vehículos", seccion: true },
@@ -264,10 +263,10 @@ function ReporteSemanalCard({ reporte }: { reporte: ReporteSemanal }) {
   return (
     <Card className="mt-6">
       <CardHeader
-        title="Informe semanal"
+        title={titulo}
         subtitle={`Del ${formatFecha(reporte.desde)} al ${formatFecha(reporte.hasta)}`}
         action={
-          <a href="/api/export/semanal" className="text-sm font-medium text-primary">
+          <a href={descarga} className="text-sm font-medium text-primary">
             ⬇️ Descargar Excel
           </a>
         }
@@ -333,6 +332,57 @@ function EstLinea({ etiqueta, valor, tono = "muted" }: { etiqueta: string; valor
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted">{etiqueta}</span>
       <span className={`font-semibold ${color}`}>{valor}</span>
+    </div>
+  );
+}
+
+type EmpenoConCalc = { e: Awaited<ReturnType<typeof listarEmpenos>>[number]; calc: ReturnType<typeof calcularLiquidacion> };
+
+function ListaVencimiento({
+  titulo,
+  tono,
+  items,
+  maximo,
+  forzarVencido,
+}: {
+  titulo: string;
+  tono: "danger" | "warning";
+  items: EmpenoConCalc[];
+  maximo: number;
+  forzarVencido?: boolean;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <div className="flex items-center gap-2 px-5 py-2">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{titulo}</span>
+        <Badge tono={tono}>{items.length}</Badge>
+      </div>
+      <ul className="divide-y divide-border">
+        {items.slice(0, maximo).map(({ e, calc }) => (
+          <li key={e.id}>
+            <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-4 px-5 py-3 transition hover:bg-surface-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {e.folio} · {e.cliente.nombre} {e.cliente.apellidoPaterno}
+                </p>
+                <p className="truncate text-xs text-muted">
+                  {e.prenda.descripcion} · vence {formatFecha(e.fechaVencimiento)}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</span>
+                {estadoEmpenoBadge(forzarVencido || calc.vencido ? "vencido" : e.estado)}
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {items.length > maximo && (
+        <Link href="/recordatorios" className="block px-5 py-2 text-xs font-medium text-primary hover:underline">
+          Ver los {items.length - maximo} restantes →
+        </Link>
+      )}
     </div>
   );
 }

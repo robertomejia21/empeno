@@ -6,6 +6,7 @@ import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, sub
 import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen, leerArchivo } from "@/lib/imagen";
+import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import { CAMPOS_VEHICULO_VACIOS } from "@/lib/prenda";
 import { MapaResguardo } from "@/components/MapaResguardo";
 import { Card } from "@/components/ui";
@@ -232,14 +233,9 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
   const tasaEspecial = requiereAutorizacionTasa(tasa);
 
   const clientesFiltrados = useMemo(() => {
-    const q = busqCliente.trim().toLowerCase();
+    const q = busqCliente.trim();
     if (!q) return clientes;
-    return clientes.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(q) ||
-        (c.curp ?? "").toLowerCase().includes(q) ||
-        (c.telefono ?? "").toLowerCase().includes(q)
-    );
+    return clientes.filter((c) => coincideTexto([c.nombre, c.curp], q) || coincideTelefono(c.telefono, q));
   }, [busqCliente, clientes]);
 
   const vencimiento = useMemo(
@@ -247,9 +243,14 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
     [fechaInicio, periodo, plazo]
   );
 
-  // Al entrar al paso de intereses, sugerir tasa por historial
+  // Al entrar al paso de intereses, sugerir tasa por historial. Los artículos
+  // (todo lo que no sea Vehículos) llevan almacenaje = mismo % que el interés
+  // (ej. 10.8% + 10.8% = 21.6% mensual); los vehículos no cargan almacenaje.
   function irAPaso(n: number) {
-    if (n === 6) setTasa(historial.tasa);
+    if (n === 6) {
+      setTasa(historial.tasa);
+      setAlmacenajePct(esVehiculo ? 0 : historial.tasa);
+    }
     if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugerido(avaluoNum)));
     setPaso(n);
   }
@@ -596,6 +597,18 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <Campo label="Nivel de gasolina" value={veh.nivelGasolina} onChange={(v) => setVeh({ ...veh, nivelGasolina: v })} placeholder="1/2 tanque" />
                 </div>
 
+                {bien.serie && (
+                  <a
+                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => navigator.clipboard?.writeText(bien.serie).catch(() => {})}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info hover:opacity-90"
+                  >
+                    🔎 Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante →
+                  </a>
+                )}
+
                 <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
                   <p className="text-sm font-semibold text-foreground">🧾 Factura</p>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -718,7 +731,13 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => { setProductoSelId(p.id); setTasa(p.tasa); setPeriodo(p.periodo); setPlazo(p.plazoPeriodos); }}
+                          onClick={() => {
+                            setProductoSelId(p.id);
+                            setTasa(p.tasa);
+                            setPeriodo(p.periodo);
+                            setPlazo(p.plazoPeriodos);
+                            setAlmacenajePct(esVehiculo ? 0 : p.tasa);
+                          }}
                           className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
                             activo ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
                           }`}

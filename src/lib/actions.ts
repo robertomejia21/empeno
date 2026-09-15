@@ -30,7 +30,7 @@ import type {
   RolUsuario,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
@@ -405,7 +405,8 @@ export async function crearEmpeno(form: FormData) {
   const prendaCat = (await obtenerPrenda(prendaId))?.categoria;
   const almacenajePctForm = num(form, "almacenajePct");
   const almacenajePct = almacenajePctForm > 0 ? almacenajePctForm : prendaCat && prendaCat !== "Vehículos" ? tasaInteres : 0;
-  const ivaPct = num(form, "ivaPct");
+  // IVA fijo de la sucursal — no se toma del formulario, no es negociable.
+  const ivaPct = IVA_FIJO;
   const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
   const comisionista = sn(form, "comisionista");
   const centroCosto = sn(form, "centroCosto");
@@ -883,7 +884,7 @@ export async function crearEmpenoGuiado(
         monto_prestado: data.montoPrestado,
         tasa_interes: data.tasaInteres,
         almacenaje_pct: data.almacenajePct,
-        iva_pct: data.ivaPct,
+        iva_pct: IVA_FIJO, // fijo de la sucursal, no lo que mande el cliente
         metodo_pago: data.metodoPago,
         comisionista: data.comisionista,
         centro_costo: data.centroCosto,
@@ -1009,7 +1010,7 @@ export async function crearEmpenoGuiado(
     montoPrestado: data.montoPrestado,
     tasaInteres: data.tasaInteres,
     almacenajePct: data.almacenajePct,
-    ivaPct: data.ivaPct,
+    ivaPct: IVA_FIJO, // fijo de la sucursal, no lo que mande el cliente
     metodoPago: data.metodoPago,
     abonoCapital: 0,
     comisionista: data.comisionista,
@@ -1758,6 +1759,58 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
   store.cotizaciones.push(cot);
   revalidatePath("/cotizaciones");
   return { id: cot.id, folio: cot.folio };
+}
+
+/**
+ * Autocotización pública (página /cotiza-vehiculo): el cliente captura los
+ * datos básicos de su vehículo y cuánto necesita. Queda registrada como
+ * cotización normal, "sujeta a evaluación" — el valor real y el préstamo
+ * ofrecido los define el personal después, no hay tabla de precios todavía
+ * para calcular un estimado automático.
+ */
+export async function crearCotizacionPublica(input: {
+  nombre: string;
+  telefono: string;
+  descripcion: string;
+  marca: string | null;
+  modelo: string | null;
+  montoSolicitado: number;
+}): Promise<{ ok: boolean; folio?: string; error?: string }> {
+  if (!input.nombre.trim()) return { ok: false, error: "Falta el nombre." };
+  if (!formatearNumeroMX(input.telefono)) return { ok: false, error: "Teléfono inválido." };
+  if (!input.descripcion.trim()) return { ok: false, error: "Falta la descripción del vehículo." };
+  if (!input.montoSolicitado || input.montoSolicitado <= 0) {
+    return { ok: false, error: "Indica cuánto necesitas aproximadamente." };
+  }
+
+  const r = await crearCotizacion({
+    tipo: "vehiculo",
+    categoria: "Vehículos",
+    descripcion: input.descripcion.trim(),
+    prospectoNombre: input.nombre.trim(),
+    prospectoTelefono: input.telefono.trim(),
+    marca: input.marca,
+    submarca: null,
+    modelo: input.modelo,
+    serie: null,
+    placas: null,
+    kilometraje: null,
+    condicion: "bueno",
+    metal: null,
+    kilataje: null,
+    gramos: null,
+    valorMercado: 0,
+    valorEstimado: 0,
+    montoSolicitado: input.montoSolicitado,
+    busquedaFacebook: null,
+    porcentajePrestamo: 0,
+    prestamoOfrecido: 0,
+    contacto: "Cotizador web",
+    fotos: [],
+    notas: "Autocotización del cliente — sujeta a evaluación física del vehículo.",
+  });
+  if (!r.folio) return { ok: false, error: "No se pudo registrar. Intenta de nuevo." };
+  return { ok: true, folio: r.folio };
 }
 
 /** Cotizaciones sin acción en 24 h pasan a "no proceden" (vencida). Para el cron. */

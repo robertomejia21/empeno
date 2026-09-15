@@ -56,12 +56,19 @@ export function getStore(): Store {
       autorizaciones: [],
       citasGps: [],
       encuestas: [],
+      // "tasa" es el interés por separado (lo que de verdad se usa para
+      // calcular): en TRADICIONAL y COMPRA (artículos, no vehículos) el
+      // almacenaje se refleja igual que el interés, así que el % que ve el
+      // personal en el catálogo (ver AsistenteEmpeno) sale doblado — igual
+      // que en el sistema anterior (Tradicional 10.8+10.8=21.6%, Compra
+      // 0.36+0.36=0.72%). Vehículos y GPS no cargan almacenaje, se muestran tal cual.
       productosInteres: [
-        { id: "pi1", nombre: "MAQUINARIA", modalidad: null, tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 1, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi1", nombre: "TRADICIONAL", modalidad: null, tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 1, activo: true, creadoEn: new Date().toISOString() },
         { id: "pi2", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 2, activo: true, creadoEn: new Date().toISOString() },
         { id: "pi3", nombre: "GPS", modalidad: "gps", tipo: "tradicional", tasa: 10.8, periodo: "mensual", plazoPeriodos: 1, orden: 3, activo: true, creadoEn: new Date().toISOString() },
         { id: "pi4", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 8.64, periodo: "mensual", plazoPeriodos: 1, orden: 4, activo: true, creadoEn: new Date().toISOString() },
         { id: "pi5", nombre: "VEHÍCULOS", modalidad: "resguardo", tipo: "tradicional", tasa: 6.48, periodo: "mensual", plazoPeriodos: 1, orden: 5, activo: true, creadoEn: new Date().toISOString() },
+        { id: "pi6", nombre: "COMPRA", modalidad: null, tipo: "fijo", tasa: 0.36, periodo: "diario", plazoPeriodos: 1, orden: 6, activo: true, creadoEn: new Date().toISOString() },
       ],
     };
   }

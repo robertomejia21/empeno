@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, prestamoSugerido, requiereAutorizacionTasa } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugerido, requiereAutorizacionTasa, IVA_FIJO } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen, leerArchivo } from "@/lib/imagen";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
@@ -179,7 +179,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
   const [tasa, setTasa] = useState(10.8);
   const [productoSelId, setProductoSelId] = useState<string | null>(null);
   const [almacenajePct, setAlmacenajePct] = useState(0);
-  const [ivaPct, setIvaPct] = useState(0);
+  const ivaPct = IVA_FIJO; // fijo de la sucursal, no editable
   const [metodoPago, setMetodoPago] = useState("efectivo");
   const [comisionista, setComisionista] = useState("");
   const [periodo, setPeriodo] = useState<PeriodoInteres>("mensual");
@@ -242,6 +242,23 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
     () => calcularVencimiento(fechaInicio, periodo, plazo),
     [fechaInicio, periodo, plazo]
   );
+
+  // Vista previa de Refrendo/Desempeño con la fórmula real — mismos números
+  // que se van a cobrar después, no una versión simplificada.
+  const previewCalc = useMemo(() => {
+    if (montoNum <= 0 || tasa <= 0) return null;
+    return calcularLiquidacion({
+      montoPrestado: montoNum,
+      tasaInteres: tasa,
+      periodo,
+      fechaInicio,
+      fechaVencimiento: vencimiento,
+      diasGracia,
+      almacenajePct,
+      ivaPct,
+      abonoCapital: 0,
+    });
+  }, [montoNum, tasa, periodo, fechaInicio, vencimiento, diasGracia, almacenajePct, ivaPct]);
 
   // Al entrar al paso de intereses, sugerir tasa por historial. Los artículos
   // (todo lo que no sea Vehículos) llevan almacenaje = mismo % que el interés
@@ -559,6 +576,18 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   )}
                 </div>
 
+                {bien.serie && (
+                  <a
+                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => navigator.clipboard?.writeText(bien.serie).catch(() => {})}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info hover:opacity-90"
+                  >
+                    🔎 Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante →
+                  </a>
+                )}
+
                 <div className="rounded-lg border border-border bg-surface-2/50 p-4">
                   <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>
                   <div className="flex gap-2">
@@ -597,18 +626,6 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <Campo label="Nivel de gasolina" value={veh.nivelGasolina} onChange={(v) => setVeh({ ...veh, nivelGasolina: v })} placeholder="1/2 tanque" />
                 </div>
 
-                {bien.serie && (
-                  <a
-                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => navigator.clipboard?.writeText(bien.serie).catch(() => {})}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info hover:opacity-90"
-                  >
-                    🔎 Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante →
-                  </a>
-                )}
-
                 <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
                   <p className="text-sm font-semibold text-foreground">🧾 Factura</p>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -645,12 +662,6 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                     </a>
                   )}
                 </div>
-
-                <div>
-                  <Label>Daños visibles</Label>
-                  <textarea value={veh.danios} onChange={(e) => setVeh({ ...veh, danios: e.target.value })} rows={2}
-                    placeholder="Ej. Rayón en puerta trasera derecha, parabrisas estrellado" className={inputCls} />
-                </div>
               </>
             ) : esJoyeria ? (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -675,7 +686,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                 onChange={(e) => setComentariosBien(e.target.value)}
                 rows={3}
                 placeholder={esVehiculo
-                  ? "Estado general, fallas mecánicas, accesorios incluidos, observaciones…"
+                  ? "Daños visibles (rayones, golpes, parabrisas…), fallas mecánicas, accesorios incluidos, observaciones…"
                   : "¿Está dañado? Golpes, rayones, piezas faltantes, si enciende o no…"}
                 className={inputCls}
               />
@@ -712,6 +723,39 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
         {/* ---------- PASO 6: Intereses ---------- */}
         {paso === 6 && (
           <div className="space-y-4">
+            {/* Cotización: Préstamo/Avalúo uno junto al otro, y Refrendo/Desempeño
+                calculados en vivo con la fórmula real (interés+almacenaje+IVA) —
+                para comparar de un vistazo, como en el sistema anterior. */}
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div className="grid grid-cols-2 divide-x divide-border bg-surface-2">
+                <div className="p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Préstamo</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{formatMXN(montoNum)}</p>
+                </div>
+                <div className="p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Avalúo</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{formatMXN(avaluoNum)}</p>
+                </div>
+              </div>
+              {avaluoNum > 0 && montoNum > avaluoNum && (
+                <p className="bg-warning-soft px-4 py-2 text-xs font-medium text-warning">
+                  ⚠️ El préstamo supera el avalúo — verifica el monto.
+                </p>
+              )}
+              {previewCalc && (
+                <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+                  <div className="p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted">Refrendo</p>
+                    <p className="mt-1 text-lg font-semibold text-primary">{formatMXN(previewCalc.totalRefrendo)}</p>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted">Desempeño</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">{formatMXN(previewCalc.totalDesempeno)}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="rounded-lg bg-surface-2 p-4">
               <p className="text-sm text-muted">Cliente: <strong className="text-foreground">{nombreCliente}</strong> · {previos} empeños previos</p>
               <p className="mt-1 text-sm">
@@ -727,6 +771,11 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <div className="flex flex-wrap gap-2">
                     {productos.map((p) => {
                       const activo = productoSelId === p.id;
+                      // Vehículos/GPS no cargan almacenaje; el resto (Tradicional,
+                      // Compra) sí, igual al interés — el % mostrado va doblado,
+                      // como en el sistema anterior (10.8+10.8=21.6%, etc.).
+                      const productoEsVehiculo = p.nombre === "VEHÍCULOS" || p.modalidad === "gps";
+                      const pctMostrado = productoEsVehiculo ? p.tasa : p.tasa * 2;
                       return (
                         <button
                           key={p.id}
@@ -736,14 +785,14 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                             setTasa(p.tasa);
                             setPeriodo(p.periodo);
                             setPlazo(p.plazoPeriodos);
-                            setAlmacenajePct(esVehiculo ? 0 : p.tasa);
+                            setAlmacenajePct(productoEsVehiculo ? 0 : p.tasa);
                           }}
                           className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
                             activo ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
                           }`}
                         >
                           <span className="block font-medium">{p.nombre}{p.modalidad ? ` · ${p.modalidad}` : ""}</span>
-                          <span className="block text-xs text-muted">{p.tasa}% {p.periodo}</span>
+                          <span className="block text-xs text-muted">{pctMostrado}% {p.periodo}</span>
                         </button>
                       );
                     })}
@@ -763,7 +812,10 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
               <Campo label="Almacenaje (% por periodo)" type="number" value={String(almacenajePct)} onChange={(v) => setAlmacenajePct(parseFloat(v) || 0)} />
-              <Campo label="IVA (%)" type="number" value={String(ivaPct)} onChange={(v) => setIvaPct(parseFloat(v) || 0)} />
+              <div>
+                <Label>IVA (%)</Label>
+                <input value={`${ivaPct}% (fijo)`} disabled className={`${inputCls} cursor-not-allowed opacity-70`} />
+              </div>
               <div>
                 <Label>Método de pago</Label>
                 <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className={inputCls}>
@@ -806,9 +858,9 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               <Rev k="Bien" v={bien.descripcion} />
               <Rev k="Avalúo" v={formatMXN(avaluoNum)} />
               <Rev k="Préstamo" v={formatMXN(montoNum)} />
-              <Rev k="Interés" v={`${tasa}% ${periodo}`} />
-              <Rev k="Interés por periodo" v={formatMXN(montoNum * (tasa / 100))} />
-              <Rev k="A liquidar (1er periodo)" v={formatMXN(montoNum + montoNum * (tasa / 100))} />
+              <Rev k="Interés + almacenaje + IVA" v={`${tasa}% + ${almacenajePct}% + ${ivaPct}% ${periodo}`} />
+              <Rev k="Refrendo (periodo)" v={formatMXN(previewCalc?.totalRefrendo ?? 0)} />
+              <Rev k="Desempeño (total)" v={formatMXN(previewCalc?.totalDesempeno ?? 0)} />
               <Rev k="Inicio" v={formatFecha(fechaInicio)} />
               <Rev k="Vencimiento" v={formatFecha(vencimiento)} />
             </div>

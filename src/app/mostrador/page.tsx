@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listarEmpenos } from "@/lib/db/repo";
-import { calcularLiquidacion } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, SearchForm, EmptyState, Badge } from "@/components/ui";
@@ -224,6 +224,7 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
 }
 
 function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+  const moratorios = moratoriosSugeridos(e.montoPrestado, calc.vencido);
   return (
     <Card>
       <CardHeader title="Refrendo (pago del periodo)" subtitle="Renueva el contrato otro periodo" />
@@ -242,7 +243,7 @@ function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidaci
               <option value="tarjeta">Tarjeta</option>
             </select>
           </label>
-          <Num name="moratorios" label="Moratorios" />
+          <Num name="moratorios" label="Moratorios" defaultValue={moratorios} nota={calc.vencido ? "6% por atraso (editable)" : undefined} />
           <Num name="abonoCapital" label="Abono a capital" />
           <Num name="descuento" label="Descuento" />
           <Num name="recibido" label="Efectivo recibido" />
@@ -256,6 +257,7 @@ function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidaci
 }
 
 function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+  const moratorios = moratoriosSugeridos(e.montoPrestado, calc.vencido);
   return (
     <Card>
       <CardHeader title="Desempeño (liquidación)" subtitle="El cliente recupera su prenda" />
@@ -274,7 +276,7 @@ function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidac
               <option value="tarjeta">Tarjeta</option>
             </select>
           </label>
-          <Num name="moratorios" label="Moratorios" />
+          <Num name="moratorios" label="Moratorios" defaultValue={moratorios} nota={calc.vencido ? "6% por atraso (editable)" : undefined} />
           <Num name="descuento" label="Descuento" />
           <Num name="recibido" label="Efectivo recibido" />
         </div>
@@ -286,11 +288,12 @@ function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidac
   );
 }
 
-function Num({ name, label }: { name: string; label: string }) {
+function Num({ name, label, defaultValue, nota }: { name: string; label: string; defaultValue?: number; nota?: string }) {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
       {label}
-      <input name={name} type="number" step="0.01" placeholder="0.00" className={campoCls} />
+      <input name={name} type="number" step="0.01" placeholder="0.00" defaultValue={defaultValue || undefined} className={campoCls} />
+      {nota && <span className="text-[10px] text-info">{nota}</span>}
     </label>
   );
 }

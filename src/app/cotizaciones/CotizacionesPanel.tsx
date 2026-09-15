@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion, solicitarAvaluoMecanico } from "@/lib/actions";
 import { normalizarImagen } from "@/lib/imagen";
 import { prestamoSugerido } from "@/lib/interes";
+import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader } from "@/components/ui";
 import type { Cotizacion, ContactoCotizacion, CondicionArticulo, TipoCotizacion, CotizacionInput } from "@/lib/types";
@@ -40,18 +41,29 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
   const [guardando, setGuardando] = useState(false);
   const [abierto, setAbierto] = useState(false);
   const [filtro, setFiltro] = useState<"todas" | "vigentes" | "noproceden" | "empenadas">("todas");
+  const [busqueda, setBusqueda] = useState("");
 
   const visibles = useMemo(() => {
-    if (filtro === "todas") return cotizaciones;
-    return cotizaciones.filter((c) => {
-      const cls = clasifica(c);
-      return (
-        (filtro === "vigentes" && cls === "vigente") ||
-        (filtro === "noproceden" && cls === "noprocede") ||
-        (filtro === "empenadas" && cls === "empenada")
+    let r = cotizaciones;
+    if (filtro !== "todas") {
+      r = r.filter((c) => {
+        const cls = clasifica(c);
+        return (
+          (filtro === "vigentes" && cls === "vigente") ||
+          (filtro === "noproceden" && cls === "noprocede") ||
+          (filtro === "empenadas" && cls === "empenada")
+        );
+      });
+    }
+    if (busqueda.trim()) {
+      r = r.filter(
+        (c) =>
+          coincideTexto([c.folio, c.prospectoNombre, c.descripcion, c.marca, c.modelo], busqueda) ||
+          coincideTelefono(c.prospectoTelefono, busqueda)
       );
-    });
-  }, [cotizaciones, filtro]);
+    }
+    return r;
+  }, [cotizaciones, filtro, busqueda]);
 
   const set = <K extends keyof typeof FORM_VACIO>(k: K, v: (typeof FORM_VACIO)[K]) => setF((s) => ({ ...s, [k]: v }));
 
@@ -258,7 +270,13 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
       {/* Motivos de no empeño */}
       <MotivosNoEmpeno cotizaciones={cotizaciones} />
 
-      {/* Filtro */}
+      {/* Buscador + filtro */}
+      <input
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder="Buscar por nombre, teléfono, folio o descripción…"
+        className={`${inputCls} max-w-sm`}
+      />
       <div className="flex flex-wrap gap-2">
         {([["todas", "Todas"], ["vigentes", "Vigentes"], ["noproceden", "No proceden"], ["empenadas", "Empeñadas"]] as const).map(([v, l]) => (
           <button

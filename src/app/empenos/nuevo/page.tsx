@@ -24,6 +24,7 @@ export default async function NuevoEmpeno({
     id: p.id,
     folio: p.folio,
     descripcion: p.descripcion,
+    categoria: p.categoria,
     montoPrestamoSugerido: p.montoPrestamoSugerido,
     valorAvaluo: p.valorAvaluo,
   }));

@@ -3,9 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { crearEmpeno } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, IVA_FIJO } from "@/lib/interes";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { Card, CardHeader, Button, Field, SelectField, TextArea } from "@/components/ui";
+import type { CategoriaPrenda, PeriodoInteres } from "@/lib/types";
 
 interface ClienteOpt {
   id: string;
@@ -16,6 +17,7 @@ interface PrendaOpt {
   id: string;
   folio: string;
   descripcion: string;
+  categoria: CategoriaPrenda;
   montoPrestamoSugerido: number;
   valorAvaluo: number;
 }
@@ -46,6 +48,24 @@ export function EmpenoForm({
     () => calcularVencimiento(fechaInicio, periodo as "mensual" | "quincenal" | "semanal", plazo),
     [fechaInicio, periodo, plazo]
   );
+
+  // Artículos (todo lo que no sea Vehículos) cargan almacenaje = mismo % que
+  // el interés; IVA fijo de la sucursal. Mismos valores que aplica el servidor.
+  const almacenajePct = prenda && prenda.categoria !== "Vehículos" ? tasa : 0;
+  const previewCalc = useMemo(() => {
+    if (monto <= 0 || tasa <= 0) return null;
+    return calcularLiquidacion({
+      montoPrestado: monto,
+      tasaInteres: tasa,
+      periodo: periodo as PeriodoInteres,
+      fechaInicio,
+      fechaVencimiento: vencimiento,
+      diasGracia: 7,
+      almacenajePct,
+      ivaPct: IVA_FIJO,
+      abonoCapital: 0,
+    });
+  }, [monto, tasa, periodo, fechaInicio, vencimiento, almacenajePct]);
 
   // Cuando cambia el cliente, sugerir su tasa por historial
   function onCliente(id: string) {
@@ -176,6 +196,11 @@ export function EmpenoForm({
             />
           </label>
 
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">IVA (%)</span>
+            <input value={`${IVA_FIJO}% (fijo)`} disabled className="cursor-not-allowed rounded-lg border border-border bg-surface px-3 py-2 text-sm opacity-70 outline-none" />
+          </label>
+
           <SelectField
             label="Periodo"
             name="periodo"
@@ -217,17 +242,21 @@ export function EmpenoForm({
         </div>
       </Card>
 
-      {/* Resumen */}
-      <Card className="mt-6 border-primary/30 bg-primary-soft/30">
-        <div className="grid gap-4 p-5 sm:grid-cols-4">
+      {/* Cotización: Préstamo/Avalúo uno junto al otro, Refrendo/Desempeño con
+          la fórmula real — mismos números que se van a cobrar después. */}
+      <Card className="mt-6 overflow-hidden border-primary/30">
+        <div className="grid grid-cols-2 divide-x divide-border bg-primary-soft/30 sm:grid-cols-4">
           <Resumen etiqueta="Préstamo" valor={formatMXN(monto)} />
-          <Resumen etiqueta="Interés por periodo" valor={formatMXN(monto * (tasa / 100))} />
-          <Resumen
-            etiqueta="A liquidar (1er periodo)"
-            valor={formatMXN(monto + monto * (tasa / 100))}
-          />
-          <Resumen etiqueta="Vence" valor={formatFecha(vencimiento)} />
+          <Resumen etiqueta="Avalúo" valor={formatMXN(prenda?.valorAvaluo ?? 0)} />
+          <Resumen etiqueta="Refrendo (periodo)" valor={formatMXN(previewCalc?.totalRefrendo ?? 0)} />
+          <Resumen etiqueta="Desempeño (total)" valor={formatMXN(previewCalc?.totalDesempeno ?? 0)} />
         </div>
+        {prenda && monto > prenda.valorAvaluo && (
+          <p className="border-t border-border bg-warning-soft px-5 py-2 text-xs font-medium text-warning">
+            ⚠️ El préstamo supera el avalúo — verifica el monto.
+          </p>
+        )}
+        <p className="border-t border-border px-5 py-2 text-xs text-muted">Vence: {formatFecha(vencimiento)}</p>
       </Card>
 
       <div className="mt-6 flex justify-end gap-3">
@@ -247,8 +276,8 @@ export function EmpenoForm({
 
 function Resumen({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
-    <div>
-      <p className="text-xs text-muted">{etiqueta}</p>
+    <div className="p-4">
+      <p className="text-xs uppercase tracking-wide text-muted">{etiqueta}</p>
       <p className="mt-0.5 text-lg font-bold text-foreground">{valor}</p>
     </div>
   );

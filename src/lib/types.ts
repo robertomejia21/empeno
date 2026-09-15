@@ -316,6 +316,7 @@ export type ContactoCotizacion =
   | "Facebook"
   | "Recomendación"
   | "Cliente"
+  | "Cotizador web"
   | "Otro";
 
 export interface Cotizacion {

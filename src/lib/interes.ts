@@ -113,6 +113,21 @@ export function prestamoSugerido(valorAvaluo: number, porcentaje = 50): number {
 /** Tasa mínima del catálogo que NO requiere autorización de Dirección General. */
 export const TASA_MINIMA_LIBRE = 6.48;
 
+/** IVA fijo de la sucursal (zona fronteriza). No es editable por el personal. */
+export const IVA_FIJO = 8;
+
+/**
+ * "Desempeño extemporáneo" (Cláusula 11e del contrato): 6% del monto
+ * prestado cuando el desempeño/refrendo ocurre después del vencimiento
+ * (vencido los días de gracia). Es una SUGERENCIA precargada, no forzada —
+ * el personal la puede ajustar o condonar según el caso.
+ */
+export const TASA_MORATORIOS = 6;
+
+export function moratoriosSugeridos(montoPrestado: number, vencido: boolean): number {
+  return vencido ? Math.round(montoPrestado * (TASA_MORATORIOS / 100) * 100) / 100 : 0;
+}
+
 /** ¿Esta tasa requiere autorización de Dirección? (6.48% o menor). */
 export function requiereAutorizacionTasa(tasa: number): boolean {
   return tasa > 0 && tasa <= TASA_MINIMA_LIBRE;

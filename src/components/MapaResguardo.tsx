@@ -10,6 +10,13 @@ import { SUCURSAL } from "@/lib/negocio";
 
 const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
 
+// Ubicaciones fijas del negocio, para no tener que buscarlas cada vez.
+// Este componente es de uso interno (requiere sesión) — nunca se muestra al cliente.
+const LUGARES_FIJOS = [
+  { label: "🏪 Casa de empeño", texto: "Casa de empeño", url: "https://maps.app.goo.gl/2XGvvR3KLJy9KSfR7" },
+  { label: "📦 Resguardo (bóveda)", texto: "Resguardo (bóveda)", url: "https://maps.app.goo.gl/h2XnxGvWz9Wv9zep8" },
+] as const;
+
 const PIN_SVG =
   '<svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">' +
   '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#d96a10"/>' +
@@ -27,6 +34,8 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
   const [abierto, setAbierto] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  // Liga fija (Casa de empeño / Resguardo) elegida con un clic, en vez de un pin en el mapa.
+  const [lugarFijoUrl, setLugarFijoUrl] = useState<string | null>(null);
 
   const contRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LMap | null>(null);
@@ -37,15 +46,17 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
   const inputCls =
     "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
 
-  // Combina referencia + pin y avisa al formulario contenedor.
+  // Combina referencia + (liga fija o pin) y avisa al formulario contenedor.
   useEffect(() => {
-    const link = pin
-      ? `📍 https://www.google.com/maps?q=${pin.lat.toFixed(6)},${pin.lng.toFixed(6)}`
-      : null;
+    const link = lugarFijoUrl
+      ? `📍 ${lugarFijoUrl}`
+      : pin
+        ? `📍 https://www.google.com/maps?q=${pin.lat.toFixed(6)},${pin.lng.toFixed(6)}`
+        : null;
     onChange([referencia.trim() || null, link].filter(Boolean).join(" · "));
     // onChange es estable (setState del padre); no lo incluimos para no re-disparar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [referencia, pin]);
+  }, [referencia, pin, lugarFijoUrl]);
 
   // Inicializa el mapa la primera vez que se abre.
   useEffect(() => {
@@ -74,7 +85,7 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
       L.marker([SUCURSAL.lat, SUCURSAL.lng], { icon: sucursalIcon })
         .addTo(map)
         .bindTooltip(`🏪 ${SUCURSAL.nombre}`, { direction: "top", offset: [0, -38] });
-      map.on("click", (e) => setPin({ lat: e.latlng.lat, lng: e.latlng.lng }));
+      map.on("click", (e) => { setLugarFijoUrl(null); setPin({ lat: e.latlng.lat, lng: e.latlng.lng }); });
       mapRef.current = map;
       if (pin) markerRef.current = L.marker([pin.lat, pin.lng], { icon: iconRef.current }).addTo(map);
       setTimeout(() => map.invalidateSize(), 60);
@@ -120,6 +131,7 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
       }
       const lat = parseFloat(data[0].lat);
       const lng = parseFloat(data[0].lon);
+      setLugarFijoUrl(null);
       setPin({ lat, lng });
       setTimeout(() => mapRef.current?.setView([lat, lng], 16), 80);
     } catch {
@@ -132,6 +144,25 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-foreground">Ubicación de resguardo</label>
+
+      <div className="flex flex-wrap gap-2">
+        {LUGARES_FIJOS.map((l) => (
+          <button
+            key={l.url}
+            type="button"
+            onClick={() => {
+              setReferencia(l.texto);
+              setPin(null);
+              setLugarFijoUrl(l.url);
+            }}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+              lugarFijoUrl === l.url ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"
+            }`}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-2">
         <input

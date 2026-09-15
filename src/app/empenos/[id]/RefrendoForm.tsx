@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatMXN } from "@/lib/format";
+import { moratoriosSugeridos } from "@/lib/interes";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
 const campoCls =
@@ -15,12 +16,23 @@ export function RefrendoForm({
   accion,
   base,
   metodoDefault,
+  montoPrestado,
+  vencido,
 }: {
   accion: (form: FormData) => void | Promise<void>;
   base: number;
   metodoDefault: string;
+  montoPrestado: number;
+  vencido: boolean;
 }) {
-  const [v, setV] = useState({ moratorios: "", gastosAdmin: "", abonoCapital: "", descuento: "", recibido: "" });
+  const moratoriosInicial = moratoriosSugeridos(montoPrestado, vencido);
+  const [v, setV] = useState({
+    moratorios: moratoriosInicial ? String(moratoriosInicial) : "",
+    gastosAdmin: "",
+    abonoCapital: "",
+    descuento: "",
+    recibido: "",
+  });
   const n = (x: string) => {
     const f = parseFloat(x);
     return Number.isFinite(f) ? f : 0;
@@ -43,7 +55,13 @@ export function RefrendoForm({
             <option value="tarjeta">Tarjeta</option>
           </select>
         </label>
-        <Campo name="moratorios" label="Moratorios" value={v.moratorios} onChange={set("moratorios")} />
+        <Campo
+          name="moratorios"
+          label="Moratorios"
+          value={v.moratorios}
+          onChange={set("moratorios")}
+          nota={vencido ? "6% por atraso (editable)" : undefined}
+        />
         <Campo name="gastosAdmin" label="Gastos admin." value={v.gastosAdmin} onChange={set("gastosAdmin")} />
         <Campo name="abonoCapital" label="Abono a capital" value={v.abonoCapital} onChange={set("abonoCapital")} />
         <Campo name="descuento" label="Descuento" value={v.descuento} onChange={set("descuento")} />
@@ -73,17 +91,19 @@ export function RefrendoForm({
 }
 
 function Campo({
-  name, label, value, onChange,
+  name, label, value, onChange, nota,
 }: {
   name: string;
   label: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  nota?: string;
 }) {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
       {label}
       <input name={name} type="number" step="0.01" placeholder="0.00" value={value} onChange={onChange} className={campoCls} />
+      {nota && <span className="text-[10px] text-info">{nota}</span>}
     </label>
   );
 }

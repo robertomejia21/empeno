@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerEmpeno, contarRefrendos } from "@/lib/db/repo";
-import { calcularLiquidacion } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
@@ -110,7 +110,13 @@ export default async function EmpenoDetalle({
             {activo && (
               <div className="space-y-4 border-t border-border px-5 py-4">
                 {/* Refrendo / abono mensual con recibo */}
-                <RefrendoForm accion={refrendar} base={calc.totalRefrendo} metodoDefault={empeno.metodoPago} />
+                <RefrendoForm
+                  accion={refrendar}
+                  base={calc.totalRefrendo}
+                  metodoDefault={empeno.metodoPago}
+                  montoPrestado={empeno.montoPrestado}
+                  vencido={calc.vencido}
+                />
                 <form action={desempenar} className="rounded-xl border border-border bg-surface-2/40 p-4">
                   <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -123,7 +129,12 @@ export default async function EmpenoDetalle({
                         <option value="tarjeta">Tarjeta</option>
                       </select>
                     </label>
-                    <CampoNum name="moratorios" label="Moratorios" />
+                    <CampoNum
+                      name="moratorios"
+                      label="Moratorios"
+                      defaultValue={moratoriosSugeridos(empeno.montoPrestado, calc.vencido)}
+                      nota={calc.vencido ? "6% por atraso (editable)" : undefined}
+                    />
                     <CampoNum name="gastosAdmin" label="Gastos admin." />
                     <CampoNum name="rentaGps" label="Renta GPS" />
                     <CampoNum name="rentaSeguro" label="Renta seguro" />
@@ -265,11 +276,12 @@ export default async function EmpenoDetalle({
 const campoCls =
   "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
 
-function CampoNum({ name, label }: { name: string; label: string }) {
+function CampoNum({ name, label, defaultValue, nota }: { name: string; label: string; defaultValue?: number; nota?: string }) {
   return (
     <label className="flex flex-col gap-1 text-xs text-muted">
       {label}
-      <input name={name} type="number" step="0.01" placeholder="0.00" className={campoCls} />
+      <input name={name} type="number" step="0.01" placeholder="0.00" defaultValue={defaultValue || undefined} className={campoCls} />
+      {nota && <span className="text-[10px] text-info">{nota}</span>}
     </label>
   );
 }

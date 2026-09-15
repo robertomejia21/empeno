@@ -8,6 +8,11 @@ export function ProductosInteresConfig({ productos }: { productos: ProductoInter
   return (
     <Card className="mt-6">
       <CardHeader title="Productos de interés (catálogo)" subtitle="Tasas por departamento/modalidad — se usan en el asistente" />
+      <p className="px-5 pt-2 text-xs text-muted">
+        La tasa aquí es solo el <strong>interés</strong>. En Vehículos y GPS no se cobra almacenaje aparte.
+        En los demás (Tradicional, Compra…) el almacenaje se cobra igual al interés — por eso en el asistente
+        el % que ve el personal sale doblado (ej. 10.8% aquí → 21.6% en el catálogo del asistente).
+      </p>
 
       <div className="overflow-x-auto px-5 pt-2">
         <table className="w-full min-w-[640px] text-sm">

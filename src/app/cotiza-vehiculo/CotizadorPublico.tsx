@@ -15,8 +15,10 @@ export function CotizadorPublico() {
     modelo: "",
     montoSolicitado: "",
   });
+  const [sitioWeb, setSitioWeb] = useState(""); // honeypot — un humano nunca llena esto
   const [msg, setMsg] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
   const [folio, setFolio] = useState<string | null>(null);
 
   async function enviar() {
@@ -31,25 +33,34 @@ export function CotizadorPublico() {
         marca: form.marca.trim() || null,
         modelo: form.modelo.trim() || null,
         montoSolicitado: Number.isFinite(monto) ? monto : 0,
+        honeypot: sitioWeb,
       });
       if (!r.ok) {
         setMsg(r.error ?? "No se pudo enviar. Intenta de nuevo.");
         return;
       }
+      // Si el honeypot atrapó un bot, r.ok viene en true sin folio (se finge
+      // éxito a propósito) — mostramos la misma pantalla de éxito siempre,
+      // para no delatar que se detectó.
       setFolio(r.folio ?? null);
+      setEnviado(true);
     } finally {
       setEnviando(false);
     }
   }
 
-  if (folio) {
+  if (enviado) {
     return (
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-2xl">✅</div>
         <h2 className="text-lg font-semibold text-foreground">¡Recibimos tu solicitud!</h2>
         <p className="mt-2 text-sm text-muted">
-          Folio <strong className="text-foreground">{folio}</strong>. Te contactaremos por WhatsApp para
-          agendar la evaluación de tu vehículo.
+          {folio && (
+            <>
+              Folio <strong className="text-foreground">{folio}</strong>.{" "}
+            </>
+          )}
+          Te contactaremos por WhatsApp para agendar la evaluación de tu vehículo.
         </p>
         <p className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
           Este monto es un aproximado y está sujeto a evaluación física del vehículo.
@@ -65,6 +76,16 @@ export function CotizadorPublico() {
       </p>
 
       <div className="space-y-3">
+        {/* Honeypot: invisible para una persona, un bot que llena todo lo llena. */}
+        <input
+          type="text"
+          value={sitioWeb}
+          onChange={(e) => setSitioWeb(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="absolute -left-[9999px]"
+        />
         <div className="grid grid-cols-2 gap-3">
           <input
             placeholder="Marca (ej. Nissan)"

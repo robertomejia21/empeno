@@ -19,6 +19,7 @@ export function AgendaPublica({
   const [fecha, setFecha] = useState(hoyISO());
   const [slot, setSlot] = useState<string | null>(null);
   const [form, setForm] = useState({ clienteNombre: "", telefono: "", vehiculo: "" });
+  const [sitioWeb, setSitioWeb] = useState(""); // honeypot — un humano nunca llena esto
   const [msg, setMsg] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [confirmada, setConfirmada] = useState<{ fecha: string; hora: string } | null>(null);
@@ -44,6 +45,7 @@ export function AgendaPublica({
         telefono: form.telefono.trim(),
         vehiculo: form.vehiculo.trim() || null,
         notas: "Agendada por el cliente",
+        honeypot: sitioWeb,
       });
       if (!r.ok) {
         setMsg(r.error ?? "No se pudo agendar. Intenta otro horario.");
@@ -102,6 +104,16 @@ export function AgendaPublica({
 
       {slot && (
         <div className="mt-5 space-y-3">
+          {/* Honeypot: invisible para una persona, un bot que llena todo lo llena. */}
+          <input
+            type="text"
+            value={sitioWeb}
+            onChange={(e) => setSitioWeb(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            className="absolute -left-[9999px]"
+          />
           <p className="text-sm font-medium text-foreground">3. Tus datos</p>
           <input placeholder="Nombre completo" value={form.clienteNombre} onChange={(e) => setForm({ ...form, clienteNombre: e.target.value })} className={inputCls} />
           <input placeholder="Teléfono (WhatsApp)" value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} className={inputCls} />

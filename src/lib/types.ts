@@ -391,6 +391,8 @@ export interface CitaGpsInput {
   telefono: string | null;
   vehiculo: string | null;
   notas: string | null;
+  /** Campo trampa para bots — el personal nunca lo manda; si viene lleno, se descarta en silencio. */
+  honeypot?: string;
 }
 
 export interface CotizacionInput {

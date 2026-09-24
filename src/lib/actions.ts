@@ -35,6 +35,7 @@ import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia, formatearNumeroMX } from "@/lib/whatsapp";
+import { limitadoPorIP } from "@/lib/rateLimit";
 import { SUCURSAL, APP_URL } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
@@ -1775,7 +1776,11 @@ export async function crearCotizacionPublica(input: {
   marca: string | null;
   modelo: string | null;
   montoSolicitado: number;
+  /** Campo trampa para bots — un humano nunca lo llena. */
+  honeypot?: string;
 }): Promise<{ ok: boolean; folio?: string; error?: string }> {
+  if (input.honeypot) return { ok: true }; // bot: finge éxito, no revela que se detectó
+  if (await limitadoPorIP("cotiza-vehiculo")) return { ok: false, error: "Demasiados intentos. Espera unos minutos." };
   if (!input.nombre.trim()) return { ok: false, error: "Falta el nombre." };
   if (!formatearNumeroMX(input.telefono)) return { ok: false, error: "Teléfono inválido." };
   if (!input.descripcion.trim()) return { ok: false, error: "Falta la descripción del vehículo." };
@@ -2216,7 +2221,14 @@ async function notificarCitaAgendada(input: CitaGpsInput) {
 }
 
 export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean; error?: string }> {
-  if (await esInvitado()) return { ok: false, error: "En modo demo no se agendan citas." };
+  const actual = await getUsuarioActual();
+  if (actual?.rol === "invitado") return { ok: false, error: "En modo demo no se agendan citas." };
+  // Esta acción la usa tanto la página pública (sin sesión) como el personal
+  // desde /gps/citas — el honeypot/rate-limit solo aplica al público.
+  if (!actual?.esSesionReal) {
+    if (input.honeypot) return { ok: true }; // bot: finge éxito, no revela que se detectó
+    if (await limitadoPorIP("agendar-gps")) return { ok: false, error: "Demasiados intentos. Espera unos minutos." };
+  }
   if (!input.fecha || !input.hora) return { ok: false, error: "Falta fecha u hora." };
   // Página pública: exigir nombre y un teléfono válido (mitiga abuso/spam).
   if (!input.clienteNombre || !input.clienteNombre.trim()) return { ok: false, error: "Falta el nombre." };

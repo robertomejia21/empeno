@@ -67,7 +67,19 @@ export default async function ConfiguracionPage() {
         </Card>
       </div>
 
-      <ProductosInteresConfig productos={productos} />
+      {actual.rol === "admin" ? (
+        <ProductosInteresConfig productos={productos} />
+      ) : (
+        <Card className="mt-6">
+          <CardHeader
+            title="Productos de interés (catálogo)"
+            subtitle="Esta sección es exclusiva de Dirección General"
+          />
+          <p className="px-5 pb-5 text-sm text-muted">
+            Las tasas que usa el asistente de empeño solo las edita Dirección General.
+          </p>
+        </Card>
+      )}
 
       <div className="mt-6 rounded-xl border border-info/20 bg-info-soft px-5 py-4 text-sm text-info">
         ℹ️ Estos parámetros están definidos en código (<code>src/lib/compliance.ts</code> e{" "}

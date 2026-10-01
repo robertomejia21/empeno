@@ -33,7 +33,7 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
 import { enviarWhatsApp, enviarWhatsAppMedia, formatearNumeroMX } from "@/lib/whatsapp";
 import { limitadoPorIP } from "@/lib/rateLimit";
 import { SUCURSAL, APP_URL } from "@/lib/negocio";
@@ -57,6 +57,8 @@ async function esInvitado(): Promise<boolean> {
 const DESCUENTO_TOPE_LIBRE = 20;
 /** Tope absoluto de descuento, incluso con autorización de gerencia. */
 const DESCUENTO_TOPE_GERENCIA = 50;
+/** Tope de descuento en venta de artículos sin autorización de gerencia (% del avalúo). */
+const DESCUENTO_TOPE_VENTA = 40;
 
 /**
  * Valida el % de descuento contra el subtotal: hasta 20% cualquier rol,
@@ -752,6 +754,51 @@ export async function cancelarEmpeno(id: string) {
   redirect("/empenos");
 }
 
+/**
+ * Elimina un contrato de forma PERMANENTE de la base de datos (uso exclusivo
+ * de Dirección General, para depurar contratos de prueba). Borra también sus
+ * pagos y movimientos de caja ligados, y la prenda asociada. No se permite si
+ * la prenda ya se vendió a un tercero (eso sí es dinero real, con comprador).
+ * Queda registro en bitácora ANTES de borrar, como único rastro de auditoría.
+ */
+export async function eliminarEmpenoPermanente(id: string) {
+  const u = await getUsuarioActual();
+  if (!u || u.rol !== "admin") throw new Error("Solo Dirección General puede eliminar contratos.");
+  const e = await obtenerEmpeno(id);
+  if (!e) return;
+
+  const ventas = await listarVentas();
+  if (ventas.some((v) => v.prendaId === e.prendaId)) {
+    throw new Error("Esta prenda ya tiene una venta registrada; no se puede eliminar el contrato.");
+  }
+
+  await bitacoraAuto(
+    "Contrato eliminado permanentemente",
+    `${e.folio} · ${e.cliente.nombre} ${e.cliente.apellidoPaterno} · ${e.montoPrestado} MXN · estado previo: ${e.estado} · eliminado por ${u.nombre}`,
+    e.folio
+  );
+
+  if (supabaseConfigured) {
+    const sb = getServerSupabase();
+    await sb.from("pagos").delete().eq("empeno_id", id);
+    await sb.from("movimientos_caja").delete().eq("empeno_id", id);
+    await sb.from("empenos").delete().eq("id", id);
+    await sb.from("prendas").delete().eq("id", e.prendaId);
+  } else {
+    const store = getStore();
+    store.pagos = store.pagos.filter((p) => p.empenoId !== id);
+    store.movimientos = store.movimientos.filter((m) => m.empenoId !== id);
+    store.empenos = store.empenos.filter((x) => x.id !== id);
+    store.prendas = store.prendas.filter((p) => p.id !== e.prendaId);
+  }
+  revalidatePath("/empenos");
+  revalidatePath("/prendas");
+  revalidatePath("/caja");
+  revalidatePath("/reportes");
+  if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
+  redirect("/empenos");
+}
+
 /** Abono a capital: reduce el saldo del préstamo y entra a caja. */
 export async function abonarCapital(id: string, form: FormData) {
   if (await esInvitado()) return;
@@ -1261,6 +1308,19 @@ export async function registrarVenta(form: FormData) {
   const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
   const clienteId = sn(form, "clienteId");
   const notas = sn(form, "notas");
+
+  const prendaVendida = await obtenerPrenda(prendaId);
+  if (prendaVendida && prendaVendida.valorAvaluo > 0 && precio < prendaVendida.valorAvaluo) {
+    const pctDescuento = ((prendaVendida.valorAvaluo - precio) / prendaVendida.valorAvaluo) * 100;
+    if (pctDescuento > DESCUENTO_TOPE_VENTA) {
+      const rol = (await getUsuarioActual())?.rol;
+      if (rol !== "admin" && rol !== "gerente") {
+        throw new Error(
+          `Descuentos de más del ${DESCUENTO_TOPE_VENTA}% sobre el avalúo requieren autorización de Gerencia o Dirección General.`
+        );
+      }
+    }
+  }
 
   if (supabaseConfigured) {
     const sb = getServerSupabase();
@@ -1848,7 +1908,7 @@ export async function caducarCotizaciones(): Promise<{ caducadas: number }> {
 
 async function soloDireccion() {
   const u = await getUsuarioActual();
-  if (!u || (u.rol !== "admin" && u.rol !== "gerente")) throw new Error("Solo Dirección o Gerente.");
+  if (!u || u.rol !== "admin") throw new Error("Solo Dirección General.");
   return u;
 }
 

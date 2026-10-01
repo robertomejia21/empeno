@@ -90,7 +90,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
   } else if (tipo === "semanal" || tipo === "mensual") {
     nombre = tipo === "semanal" ? "reporte-semanal" : "reporte-mensual";
     const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
-    const { desde, hasta } = tipo === "semanal" ? rangoSemanaActual() : rangoMesActual();
+    const url = new URL(req.url);
+    const desdeParam = url.searchParams.get("desde");
+    const hastaParam = url.searchParams.get("hasta");
+    const porDefecto = tipo === "semanal" ? rangoSemanaActual() : rangoMesActual();
+    const desde = desdeParam || porDefecto.desde;
+    const hasta = hastaParam || porDefecto.hasta;
     const r = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
     rows = [
       [`Información ${tipo === "semanal" ? "semanal" : "mensual"} casa empeño (${desde} a ${hasta})`, "", ""],

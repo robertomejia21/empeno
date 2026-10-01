@@ -3,19 +3,29 @@ import { listarEmpenos, listarPrendasEnVenta } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarARemate } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
-import { Card, CardHeader, PageHeader, EmptyState } from "@/components/ui";
+import { Card, CardHeader, PageHeader, EmptyState, SearchForm } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { coincideTexto } from "@/lib/buscar";
 
-export default async function RematesPage() {
+export default async function RematesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
   const [empenos, enVenta] = await Promise.all([
     listarEmpenos(),
     listarPrendasEnVenta(),
   ]);
 
+  const t = (q ?? "").trim();
   const vencidos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")
     .map((e) => ({ e, calc: calcularLiquidacion(e) }))
     .filter((x) => x.calc.vencido)
+    .filter((x) =>
+      t ? coincideTexto([x.e.folio, x.e.prenda.descripcion, x.e.cliente.nombre, x.e.cliente.apellidoPaterno], t) : true
+    )
     .sort((a, b) => a.calc.diasParaVencer - b.calc.diasParaVencer);
 
   return (
@@ -29,12 +39,15 @@ export default async function RematesPage() {
         <Card className="lg:col-span-2">
           <CardHeader
             title="Vencidos por rematar"
-            subtitle={`${vencidos.length} empeños superaron el plazo y días de gracia`}
+            subtitle={t ? `${vencidos.length} resultado(s) para "${q}"` : `${vencidos.length} empeños superaron el plazo y días de gracia`}
           />
+          <div className="px-5 pt-4">
+            <SearchForm q={q} placeholder="Buscar por folio, cliente, prenda…" />
+          </div>
           {vencidos.length === 0 ? (
             <EmptyState
-              titulo="Sin vencidos"
-              descripcion="No hay empeños vencidos pendientes de remate. 🎉"
+              titulo={t ? "Sin resultados" : "Sin vencidos"}
+              descripcion={t ? "No hay vencidos que coincidan con la búsqueda." : "No hay empeños vencidos pendientes de remate. 🎉"}
             />
           ) : (
             <div className="divide-y divide-border">

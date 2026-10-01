@@ -13,9 +13,75 @@ interface Item {
   resumen: string;
   detalle: string;
   imagen?: string;
+  nuevo?: boolean;
 }
 
 const ITEMS: Item[] = [
+  {
+    titulo: "Eliminar un contrato de prueba, de forma permanente",
+    estado: "listo",
+    resumen: "Dirección General ya puede borrar por completo un contrato de prueba (y su prenda) de la base de datos.",
+    detalle:
+      "Exclusivo de Dirección General, desde el detalle del contrato. Borra el contrato, su prenda y sus pagos — no se puede deshacer, y el sistema no lo permite si esa prenda ya se le vendió a un cliente real (para no perder un dato de venta de verdad).",
+    nuevo: true,
+  },
+  {
+    titulo: "Conteo de vehículos por modalidad",
+    estado: "listo",
+    resumen: "El resumen de cartera ahora dice cuántos vehículos hay con GPS, cuántos en resguardo, y cuántas motos en resguardo.",
+    detalle: "Se agregó a la tarjeta \"Resumen de cartera\" de Reportes, junto a los demás totales.",
+    nuevo: true,
+  },
+  {
+    titulo: "Inventario por categoría",
+    estado: "listo",
+    resumen: "Reportes ya muestra cuántas piezas y cuánto valor hay por categoría (joyería, electrónica, vehículos…).",
+    detalle: "Nueva tarjeta en Reportes, separada de \"Valor de inventario\".",
+    nuevo: true,
+  },
+  {
+    titulo: "Reportes: desglose por vehículos y artículos",
+    estado: "listo",
+    resumen: "Nueva tabla en Reportes que separa empeños, refrendos y desempeños entre Vehículos y Artículos.",
+    detalle:
+      "Usa el mismo cálculo que ya traía el informe semanal del tablero, pero aplicado al periodo que elijas en Reportes — con su propia descarga en Excel.",
+    nuevo: true,
+  },
+  {
+    titulo: "Reportes con rango de fechas",
+    estado: "listo",
+    resumen: "Ya se puede elegir \"del — al\" en Reportes, en vez de ver siempre el mes actual.",
+    detalle: "El flujo de ingresos y egresos, y su descarga en Excel, ahora respetan el rango de fechas que elijas.",
+    nuevo: true,
+  },
+  {
+    titulo: "Catálogo de tasas, solo para Dirección General",
+    estado: "listo",
+    resumen: "La pantalla donde se editan las tasas de interés ahora es exclusiva de Dirección General.",
+    detalle: "Gerencia ya puede ver el resto de Configuración, pero ya no puede modificar el catálogo de tasas.",
+    nuevo: true,
+  },
+  {
+    titulo: "Descuento en ventas, con autorización de Gerencia",
+    estado: "listo",
+    resumen: "Si al vender un artículo el descuento pasa del 40% del avalúo, el sistema pide un usuario de Gerencia o Dirección General.",
+    detalle: "Aplica en el punto de venta de artículos en remate; por debajo del 40% cualquier usuario puede vender normalmente.",
+    nuevo: true,
+  },
+  {
+    titulo: "Buscar en Remates",
+    estado: "listo",
+    resumen: "Ya se puede buscar por folio, cliente o descripción dentro de los empeños vencidos listos para remate.",
+    detalle: "Mismo buscador que ya usan Mostrador, Clientes, Empeños y Prendas.",
+    nuevo: true,
+  },
+  {
+    titulo: "Se quitó el informe mensual del tablero",
+    estado: "listo",
+    resumen: "El tablero principal ya no muestra la tarjeta de \"Informe mensual\" — quedó solo el semanal.",
+    detalle: "La descarga en Excel del mes completo sigue disponible para quien la necesite.",
+    nuevo: true,
+  },
   {
     titulo: "Cotizador de vehículos, en línea",
     estado: "listo",
@@ -91,15 +157,15 @@ const ITEMS: Item[] = [
   },
   {
     titulo: "Protección contra spam en los formularios públicos",
-    estado: "camino",
+    estado: "listo",
     resumen: "Que nadie pueda tronar el cotizador ni la agenda de citas a propósito, ni con un bot simple.",
-    detalle:
-      "Ya está construido y probado — límite de intentos por visitante y una trampa invisible para bots. Falta solo subirlo.",
+    detalle: "Límite de intentos por visitante y una trampa invisible para bots, en ambos formularios públicos.",
   },
 ];
 
 export default function AvancesPage() {
   const listos = ITEMS.filter((i) => i.estado === "listo").length;
+  const nuevos = ITEMS.filter((i) => i.nuevo).length;
 
   return (
     <div className="min-h-screen bg-surface-2">
@@ -121,6 +187,7 @@ export default function AvancesPage() {
         {/* Resumen */}
         <div className="mb-8 flex flex-wrap items-center gap-3">
           <Badge tono="success">{listos} cambios ya en producción</Badge>
+          {nuevos > 0 && <Badge tono="info">🆕 {nuevos} nuevos desde la última actualización</Badge>}
           {ITEMS.some((i) => i.estado === "camino") && (
             <Badge tono="warning">{ITEMS.filter((i) => i.estado === "camino").length} en camino</Badge>
           )}
@@ -132,7 +199,10 @@ export default function AvancesPage() {
             <Card key={item.titulo} className="overflow-hidden">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4">
                 <div>
-                  <h2 className="text-base font-semibold tracking-tight text-foreground">{item.titulo}</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-semibold tracking-tight text-foreground">{item.titulo}</h2>
+                    {item.nuevo && <Badge tono="info">🆕 Nuevo</Badge>}
+                  </div>
                   <p className="mt-1 text-sm text-muted">{item.resumen}</p>
                 </div>
                 <Badge tono={item.estado === "listo" ? "success" : "warning"}>

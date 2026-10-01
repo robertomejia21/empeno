@@ -96,6 +96,9 @@ export default async function VentasPage() {
                               className={`${inputCls} pl-6 text-base font-semibold text-foreground`}
                             />
                           </div>
+                          <span className="mt-1 block text-[11px] text-muted">
+                            Descuentos de más del 40% del avalúo requieren usuario de Gerencia o Dirección General.
+                          </span>
                         </label>
                         <label className="block">
                           <span className="mb-1 block text-[11px] font-medium text-muted">Método de pago</span>

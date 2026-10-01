@@ -1,9 +1,12 @@
-import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas, listarPagos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { formatMXN, formatPorcentaje, hoyISO } from "@/lib/format";
+import { formatMXN, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
 import { PrintButton } from "@/components/actions-ui";
+import { rangoMesActual, calcularReporteSemanal } from "@/lib/reporteSemanal";
+import { ReporteSemanalCard } from "@/components/ReportePorModalidad";
+import { normalizarBusqueda } from "@/lib/buscar";
 
 const EXPORTS = [
   { tipo: "empenos", label: "Empeños" },
@@ -13,13 +16,41 @@ const EXPORTS = [
   { tipo: "prendas", label: "Inventario" },
 ];
 
-export default async function ReportesPage() {
-  const [empenos, movimientos, prendas, ventas] = await Promise.all([
+export default async function ReportesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; hasta?: string }>;
+}) {
+  const { desde: desdeParam, hasta: hastaParam } = await searchParams;
+  const rangoPorDefecto = rangoMesActual();
+  const desde = desdeParam || rangoPorDefecto.desde;
+  const hasta = hastaParam || rangoPorDefecto.hasta;
+
+  const [empenos, movimientos, prendas, ventas, pagos] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),
     listarPrendas(),
     listarVentas(),
+    listarPagos(),
   ]);
+
+  const reportePeriodo = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+
+  // Vehículos en garantía: por modalidad (GPS / resguardo) y motocicletas en resguardo.
+  const vehiculosActivos = prendas.filter((p) => p.categoria === "Vehículos" && p.estado === "empenada");
+  const vehiculosGps = vehiculosActivos.filter((p) => p.modalidad === "gps").length;
+  const vehiculosResguardo = vehiculosActivos.filter((p) => p.modalidad === "resguardo");
+  const motosResguardo = vehiculosResguardo.filter((p) => normalizarBusqueda(p.tipoVehiculo ?? "").includes("moto")).length;
+
+  // Inventario por categoría de artículo.
+  const porCategoria = new Map<string, { n: number; monto: number }>();
+  for (const p of prendas) {
+    if (p.estado !== "empenada" && p.estado !== "en_venta") continue;
+    const actual = porCategoria.get(p.categoria) ?? { n: 0, monto: 0 };
+    actual.n += 1;
+    actual.monto += p.valorAvaluo;
+    porCategoria.set(p.categoria, actual);
+  }
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const carteraActiva = activos.reduce((s, e) => s + e.montoPrestado, 0);
@@ -41,12 +72,14 @@ export default async function ReportesPage() {
   });
   const maxEstado = Math.max(1, ...porEstado.map((x) => x.n));
 
-  // Ingresos del mes por tipo
-  const mes = hoyISO().slice(0, 7);
-  const delMes = movimientos.filter((m) => m.fecha.slice(0, 7) === mes);
-  const ingresosMes = delMes.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0);
-  const egresosMes = delMes.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0);
-  const ingresoInteres = delMes
+  // Ingresos del periodo seleccionado, por tipo
+  const delPeriodo = movimientos.filter((m) => {
+    const f = m.fecha.slice(0, 10);
+    return f >= desde && f <= hasta;
+  });
+  const ingresosMes = delPeriodo.filter((m) => m.esEntrada).reduce((s, m) => s + m.monto, 0);
+  const egresosMes = delPeriodo.filter((m) => !m.esEntrada).reduce((s, m) => s + m.monto, 0);
+  const ingresoInteres = delPeriodo
     .filter((m) => m.tipo === "refrendo" || m.tipo === "desempeno")
     .reduce((s, m) => s + m.monto, 0);
 
@@ -111,6 +144,34 @@ export default async function ReportesPage() {
         ))}
       </div>
 
+      <form className="no-print mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted">Desde</span>
+          <input
+            type="date"
+            name="desde"
+            defaultValue={desde}
+            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-muted">Hasta</span>
+          <input
+            type="date"
+            name="hasta"
+            defaultValue={hasta}
+            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm"
+          />
+        </label>
+        <button
+          type="submit"
+          className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium hover:bg-surface"
+        >
+          Filtrar
+        </button>
+        <span className="text-xs text-muted">Aplica al flujo y al desglose por vehículos/artículos de abajo.</span>
+      </form>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi label="Cartera activa" valor={formatMXN(carteraActiva)} hint="capital prestado vigente" />
         <Kpi label="Interés devengado" valor={formatMXN(interesDevengado)} hint="sobre empeños activos" />
@@ -155,14 +216,14 @@ export default async function ReportesPage() {
         </Card>
 
         <Card>
-          <CardHeader title={`Flujo del mes (${mes})`} />
+          <CardHeader title="Flujo del periodo" subtitle={`Del ${desde} al ${hasta}`} />
           <div className="space-y-4 p-5">
             <Linea etiqueta="Ingresos" valor={formatMXN(ingresosMes)} tono="success" />
             <Linea etiqueta="Egresos (préstamos/gastos)" valor={formatMXN(egresosMes)} tono="danger" />
             <Linea etiqueta="Ingreso por intereses (refrendo/desempeño)" valor={formatMXN(ingresoInteres)} />
             <div className="border-t border-border pt-4">
               <Linea
-                etiqueta="Resultado neto del mes"
+                etiqueta="Resultado neto del periodo"
                 valor={formatMXN(ingresosMes - egresosMes)}
                 tono={ingresosMes - egresosMes >= 0 ? "success" : "danger"}
                 fuerte
@@ -189,9 +250,29 @@ export default async function ReportesPage() {
             <Linea etiqueta="Desempeñados (recuperados)" valor={String(desempenados)} />
             <Linea etiqueta="Rematados (perdidos)" valor={String(rematados)} />
             <Linea etiqueta="Prendas en inventario" valor={String(prendas.length)} />
+            <div className="border-t border-border pt-4">
+              <Linea etiqueta="Vehículos con GPS" valor={String(vehiculosGps)} />
+              <Linea etiqueta="Vehículos en resguardo" valor={String(vehiculosResguardo.length)} />
+              <Linea etiqueta="Motocicletas en resguardo" valor={String(motosResguardo)} />
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader title="Inventario por categoría" subtitle="Prendas empeñadas o en venta" />
+          <div className="space-y-3 p-5">
+            {[...porCategoria.entries()].map(([cat, { n, monto }]) => (
+              <Linea key={cat} etiqueta={`${cat} (${n})`} valor={formatMXN(monto)} />
+            ))}
           </div>
         </Card>
       </div>
+
+      <ReporteSemanalCard
+        reporte={reportePeriodo}
+        titulo="Desglose por vehículos y artículos"
+        descarga={`/api/export/mensual?desde=${desde}&hasta=${hasta}`}
+      />
     </div>
   );
 }

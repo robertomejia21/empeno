@@ -194,13 +194,24 @@ export default function AvancesPage() {
         </div>
 
         {/* Lista de cambios */}
+        {nuevos > 0 && (
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted">
+            Actualización — ronda de junta del jueves 24 de septiembre
+          </h2>
+        )}
         <div className="space-y-6">
-          {ITEMS.map((item) => (
-            <Card key={item.titulo} className="overflow-hidden">
+          {ITEMS.map((item, i) => (
+            <div key={item.titulo}>
+              {i > 0 && ITEMS[i - 1].nuevo && !item.nuevo && (
+                <h2 className="mb-6 mt-2 text-sm font-bold uppercase tracking-wide text-muted">
+                  Actualizaciones anteriores
+                </h2>
+              )}
+              <Card className="overflow-hidden">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-semibold tracking-tight text-foreground">{item.titulo}</h2>
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">{item.titulo}</h3>
                     {item.nuevo && <Badge tono="info">🆕 Nuevo</Badge>}
                   </div>
                   <p className="mt-1 text-sm text-muted">{item.resumen}</p>
@@ -222,7 +233,8 @@ export default function AvancesPage() {
                   />
                 </div>
               )}
-            </Card>
+              </Card>
+            </div>
           ))}
         </div>
 

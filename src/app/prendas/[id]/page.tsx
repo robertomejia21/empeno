@@ -10,6 +10,19 @@ import { generarQR, urlPrenda } from "@/lib/qr";
 const campoCls =
   "w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm";
 
+/**
+ * Extrae el enlace de mapa de un texto de ubicación. Soporta tanto una liga
+ * pegada a mano, como el formato "referencia · 📍 liga" que arma MapaResguardo
+ * — antes, si el texto no EMPEZABA con "http", se mandaba completo a una
+ * búsqueda de texto en Maps, lo que ubicaba el pin en un lugar incorrecto.
+ */
+function enlaceMaps(texto: string | null): string | null {
+  if (!texto) return null;
+  const m = texto.match(/https?:\/\/\S+/);
+  if (m) return m[0];
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(texto)}`;
+}
+
 export default async function PrendaDetalle({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = await obtenerPrenda(id);
@@ -142,8 +155,8 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
             <div className="border-t border-border pt-3">
               <p className="text-xs text-muted">Ubicación de resguardo</p>
               <p className="text-sm font-medium text-foreground">{p.ubicacionResguardo ?? "Sin asignar"}</p>
-              {p.resguardo.mapsUrl && (
-                <a href={p.resguardo.mapsUrl} target="_blank" rel="noopener noreferrer"
+              {(p.resguardo.mapsUrl || p.ubicacionResguardo) && (
+                <a href={p.resguardo.mapsUrl || enlaceMaps(p.ubicacionResguardo)!} target="_blank" rel="noopener noreferrer"
                   className="mt-1 inline-flex text-xs font-medium text-info underline-offset-2 hover:underline">
                   📍 Ver en el mapa →
                 </a>
@@ -185,15 +198,14 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
           {p.gpsUbicacion && (
             <div className="border-t border-border px-5 py-4">
               <p className="text-xs uppercase tracking-wide text-muted">Ubicación del GPS</p>
+              <p className="mt-1 text-sm text-foreground">{p.gpsUbicacion}</p>
               <a
-                href={/^https?:\/\//.test(p.gpsUbicacion)
-                  ? p.gpsUbicacion
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.gpsUbicacion)}`}
+                href={enlaceMaps(p.gpsUbicacion)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-1 inline-flex text-sm font-medium text-info underline-offset-2 hover:underline"
               >
-                📍 {p.gpsUbicacion} →
+                📍 Ver en el mapa →
               </a>
             </div>
           )}

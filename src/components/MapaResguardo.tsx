@@ -28,7 +28,13 @@ const SUCURSAL_SVG =
   '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#1d4ed8"/>' +
   '<text x="14" y="19" font-size="12" text-anchor="middle" fill="#fff">🏪</text></svg>';
 
-export function MapaResguardo({ onChange }: { onChange: (texto: string) => void }) {
+export function MapaResguardo({
+  onChange,
+  label = "Ubicación de resguardo",
+}: {
+  onChange: (texto: string) => void;
+  label?: string;
+}) {
   const [referencia, setReferencia] = useState("");
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [abierto, setAbierto] = useState(false);
@@ -143,7 +149,7 @@ export function MapaResguardo({ onChange }: { onChange: (texto: string) => void 
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-foreground">Ubicación de resguardo</label>
+      <label className="block text-sm font-medium text-foreground">{label}</label>
 
       <div className="flex flex-wrap gap-2">
         {LUGARES_FIJOS.map((l) => (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { crearPrenda } from "@/lib/actions";
 import { prestamoSugerido } from "@/lib/interes";
 import { Card, CardHeader, Button, Field, SelectField, TextArea } from "@/components/ui";
+import { MapaResguardo } from "@/components/MapaResguardo";
 import type { CategoriaPrenda } from "@/lib/types";
 
 const categorias: { value: CategoriaPrenda; label: string }[] = [
@@ -23,6 +24,8 @@ export function PrendaForm() {
   const [montoSolicitado, setMontoSolicitado] = useState<number>(0);
   const [valorAvaluo, setValorAvaluo] = useState<number>(0);
   const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
+  const [gpsUbicacion, setGpsUbicacion] = useState("");
+  const [ubicacionResguardo, setUbicacionResguardo] = useState("");
 
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
@@ -98,9 +101,10 @@ export function PrendaForm() {
               </button>
             </div>
             {modalidad === "gps" && (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 space-y-4">
                 <Field label="GPS mensual (MXN)" name="gpsMensual" type="number" step="0.01" />
-                <Field label="Ubicación del GPS" name="gpsUbicacion" placeholder="Coordenadas o liga de Maps" />
+                <input type="hidden" name="gpsUbicacion" value={gpsUbicacion} />
+                <MapaResguardo label="Ubicación del GPS" onChange={setGpsUbicacion} />
               </div>
             )}
           </div>
@@ -181,11 +185,8 @@ export function PrendaForm() {
       <Card className="mt-6">
         <CardHeader title="Resguardo y notas" />
         <div className="grid gap-4 p-5">
-          <Field
-            label="Ubicación de resguardo"
-            name="ubicacionResguardo"
-            placeholder="Ej. Bóveda - Caja 3 / Estacionamiento"
-          />
+          <input type="hidden" name="ubicacionResguardo" value={ubicacionResguardo} />
+          <MapaResguardo onChange={setUbicacionResguardo} />
           <TextArea
             label="Comentarios del bien (estado y daños)"
             name="notas"

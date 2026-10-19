@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { obtenerPrenda } from "@/lib/db/repo";
 import { subirFotoPrenda, eliminarFotoPrenda, actualizarResguardo } from "@/lib/actions";
+import { HistorialFotosVehiculo } from "./HistorialFotosVehiculo";
 import { formatMXN, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
@@ -93,6 +94,15 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
           </a>
         </div>
       </div>
+
+      {esVehiculo && p.fotos.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader title="Historial del vehículo" subtitle="Primera foto vs. más reciente, para ver si hay cambios" />
+          <div className="p-5">
+            <HistorialFotosVehiculo fotos={p.fotos} />
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">

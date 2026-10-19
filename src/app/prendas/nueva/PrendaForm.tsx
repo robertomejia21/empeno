@@ -6,6 +6,8 @@ import { crearPrenda } from "@/lib/actions";
 import { prestamoSugerido } from "@/lib/interes";
 import { Card, CardHeader, Button, Field, SelectField, TextArea } from "@/components/ui";
 import { MapaResguardo } from "@/components/MapaResguardo";
+import { rangoPorAnio } from "@/lib/valorVehiculoReferencia";
+import { formatMXN } from "@/lib/format";
 import type { CategoriaPrenda } from "@/lib/types";
 
 const categorias: { value: CategoriaPrenda; label: string }[] = [
@@ -26,10 +28,12 @@ export function PrendaForm() {
   const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
   const [gpsUbicacion, setGpsUbicacion] = useState("");
   const [ubicacionResguardo, setUbicacionResguardo] = useState("");
+  const [modeloAnio, setModeloAnio] = useState("");
 
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
   const sugerido = prestamoSugerido(valorAvaluo);
+  const rangoReferencia = esVehiculo ? rangoPorAnio(parseInt(modeloAnio, 10)) : null;
 
   return (
     <form action={crearPrenda}>
@@ -73,11 +77,31 @@ export function PrendaForm() {
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Marca" name="marca" placeholder="Ej. Nissan" />
             <Field label="Submarca / línea" name="submarca" placeholder="Ej. Versa" />
-            <Field label="Modelo (año)" name="modelo" placeholder="Ej. 2020" />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-foreground">Modelo (año)</span>
+              <input
+                name="modelo"
+                value={modeloAnio}
+                onChange={(e) => setModeloAnio(e.target.value)}
+                placeholder="Ej. 2020"
+                className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20"
+              />
+            </label>
             <Field label="Color" name="color" />
             <Field label="Número de serie (NIV)" name="serie" />
             <Field label="Placas" name="placas" />
           </div>
+
+          {rangoReferencia && (
+            <div className="mx-5 mb-5 rounded-lg border border-info/20 bg-info-soft px-4 py-3 text-sm text-info">
+              📖 Referencia externa para {rangoReferencia.anioDesde}–{rangoReferencia.anioHasta}: valor comercial{" "}
+              {rangoReferencia.valorDesde === rangoReferencia.valorHasta
+                ? formatMXN(rangoReferencia.valorDesde)
+                : `${formatMXN(rangoReferencia.valorDesde)}–${formatMXN(rangoReferencia.valorHasta)}`}{" "}
+              · préstamo sugerido {formatMXN(rangoReferencia.prestamoDesde)}–{formatMXN(rangoReferencia.prestamoHasta)}.
+              Es solo una guía, no reemplaza el avalúo físico.
+            </div>
+          )}
 
           <div className="mx-5 mb-5 rounded-lg border border-border bg-surface-2/50 p-4">
             <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>

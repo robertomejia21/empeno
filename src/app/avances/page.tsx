@@ -18,26 +18,98 @@ interface Item {
 
 const ITEMS: Item[] = [
   {
+    titulo: "Pin de ubicación corregido en vehículos",
+    estado: "listo",
+    resumen: "El mapa de ubicación de los vehículos (en GPS y en resguardo) ya marca el lugar correcto — antes a veces se iba a un punto equivocado.",
+    detalle:
+      "Ahora, al dar de alta un vehículo, se usa el mismo mapa interactivo (buscar dirección o marcar el punto en el mapa) en los dos lugares donde se captura, en vez de escribir la ubicación a mano.",
+    nuevo: true,
+  },
+  {
+    titulo: "Checklist diario de vehículos en resguardo",
+    estado: "listo",
+    resumen: "Nueva pantalla para revisar físicamente cada día los vehículos que están guardados en la sucursal.",
+    detalle:
+      "Lista automáticamente los vehículos en resguardo y permite marcar presente, exterior, interior, llantas, fugas, cerrado/seguro, llaves, batería y carrocería de cada uno, con espacio para notas e incidencias del día. Queda guardado el historial.",
+    nuevo: true,
+  },
+  {
+    titulo: "Checklist del mecánico corregido",
+    estado: "listo",
+    resumen: "La lista de revisión que llena el mecánico al avaluar un vehículo ya coincide exactamente con el formato oficial.",
+    detalle: "Tenía un punto de más (\"Cauchos\") y le faltaba uno (\"Gasolina\") comparado con el Excel real que usa la sucursal — ya quedó igual.",
+    nuevo: true,
+  },
+  {
+    titulo: "La fecha de pago ya no se recorre",
+    estado: "listo",
+    resumen: "El día de pago de un contrato queda fijo desde que se abre — antes, pagar antes o después iba corriendo la fecha poco a poco.",
+    detalle:
+      "Además, si el día de pago cae en domingo o día festivo, el sistema avisa que el cliente puede pagar el día hábil más cercano sin que eso cambie la fecha registrada.",
+    nuevo: true,
+  },
+  {
+    titulo: "Historial de fotos del vehículo",
+    estado: "listo",
+    resumen: "En la ficha de cada vehículo ya se ve, lado a lado, la primera foto (cuando ingresó) contra la más reciente, para comparar su estado.",
+    detalle: "Un botón abre todas las fotos ordenadas por fecha, dejando siempre fija la primera como punto de referencia.",
+    nuevo: true,
+  },
+  {
+    titulo: "Guía de valor de vehículo por año",
+    estado: "listo",
+    resumen: "Al capturar el año del vehículo, se muestra como referencia el valor comercial estimado y el préstamo sugerido para ese rango de años.",
+    detalle: "Es solo una guía (con datos que ustedes proporcionaron) — nunca reemplaza el avalúo físico real.",
+    nuevo: true,
+  },
+  {
+    titulo: "Más seguridad en firmas y documentos financieros",
+    estado: "listo",
+    resumen: "Se reforzaron varios puntos de seguridad detectados en una revisión completa del sistema.",
+    detalle:
+      "La firma digital del cliente en el contrato ya no se puede borrar desde el enlace público; los recibos y estados de cuenta ya verifican que quien los descarga tenga el rol correcto; y la encuesta pública quedó protegida contra spam, igual que los demás formularios abiertos.",
+    nuevo: true,
+  },
+  {
+    titulo: "Tope antilavado en todos los movimientos grandes",
+    estado: "listo",
+    resumen: "La regla que divide un movimiento de más de $999,999 (exigida por la ley contra lavado de dinero) ya aplica en refrendo, desempeño, ventas, compras y abonos — antes solo cubría el préstamo inicial.",
+    detalle: "También se agregó un tope: ya no se puede abonar a capital más de lo que realmente se debe.",
+    nuevo: true,
+  },
+  {
+    titulo: "Verificación REPUVE obligatoria para empeñar un vehículo",
+    estado: "listo",
+    resumen: "Ya no se puede crear el contrato de un vehículo sin haber registrado la verificación REPUVE (sin reporte de robo) — antes solo lo pedía el asistente guiado, no el alta rápida.",
+    detalle: "Se agregó esa verificación también a la pantalla de alta rápida de vehículos, para que no quede ningún camino sin el candado.",
+    nuevo: true,
+  },
+  {
+    titulo: "Ajustes visuales: tablero, corte de caja y menú",
+    estado: "listo",
+    resumen: "Se revisó el diseño de todo el sistema y se corrigieron varios detalles que se veían mal en celular o se sentían inconsistentes.",
+    detalle:
+      "El tablero y reportes ya no se cortan en pantallas angostas; la tarjeta de apertura de caja ya no deja espacio vacío; el menú lateral ya no estorba en tablets; y \"Enviar a remate\" cambió de rojo a ámbar para no confundirse con las acciones de cancelar/eliminar (que sí son irreversibles).",
+    nuevo: true,
+  },
+  {
     titulo: "Eliminar un contrato de prueba, de forma permanente",
     estado: "listo",
     resumen: "Dirección General ya puede borrar por completo un contrato de prueba (y su prenda) de la base de datos.",
     detalle:
       "Exclusivo de Dirección General, desde el detalle del contrato. Borra el contrato, su prenda y sus pagos — no se puede deshacer, y el sistema no lo permite si esa prenda ya se le vendió a un cliente real (para no perder un dato de venta de verdad).",
-    nuevo: true,
   },
   {
     titulo: "Conteo de vehículos por modalidad",
     estado: "listo",
     resumen: "El resumen de cartera ahora dice cuántos vehículos hay con GPS, cuántos en resguardo, y cuántas motos en resguardo.",
     detalle: "Se agregó a la tarjeta \"Resumen de cartera\" de Reportes, junto a los demás totales.",
-    nuevo: true,
   },
   {
     titulo: "Inventario por categoría",
     estado: "listo",
     resumen: "Reportes ya muestra cuántas piezas y cuánto valor hay por categoría (joyería, electrónica, vehículos…).",
     detalle: "Nueva tarjeta en Reportes, separada de \"Valor de inventario\".",
-    nuevo: true,
   },
   {
     titulo: "Reportes: desglose por vehículos y artículos",
@@ -45,42 +117,36 @@ const ITEMS: Item[] = [
     resumen: "Nueva tabla en Reportes que separa empeños, refrendos y desempeños entre Vehículos y Artículos.",
     detalle:
       "Usa el mismo cálculo que ya traía el informe semanal del tablero, pero aplicado al periodo que elijas en Reportes — con su propia descarga en Excel.",
-    nuevo: true,
   },
   {
     titulo: "Reportes con rango de fechas",
     estado: "listo",
     resumen: "Ya se puede elegir \"del — al\" en Reportes, en vez de ver siempre el mes actual.",
     detalle: "El flujo de ingresos y egresos, y su descarga en Excel, ahora respetan el rango de fechas que elijas.",
-    nuevo: true,
   },
   {
     titulo: "Catálogo de tasas, solo para Dirección General",
     estado: "listo",
     resumen: "La pantalla donde se editan las tasas de interés ahora es exclusiva de Dirección General.",
     detalle: "Gerencia ya puede ver el resto de Configuración, pero ya no puede modificar el catálogo de tasas.",
-    nuevo: true,
   },
   {
     titulo: "Descuento en ventas, con autorización de Gerencia",
     estado: "listo",
     resumen: "Si al vender un artículo el descuento pasa del 40% del avalúo, el sistema pide un usuario de Gerencia o Dirección General.",
     detalle: "Aplica en el punto de venta de artículos en remate; por debajo del 40% cualquier usuario puede vender normalmente.",
-    nuevo: true,
   },
   {
     titulo: "Buscar en Remates",
     estado: "listo",
     resumen: "Ya se puede buscar por folio, cliente o descripción dentro de los empeños vencidos listos para remate.",
     detalle: "Mismo buscador que ya usan Mostrador, Clientes, Empeños y Prendas.",
-    nuevo: true,
   },
   {
     titulo: "Se quitó el informe mensual del tablero",
     estado: "listo",
     resumen: "El tablero principal ya no muestra la tarjeta de \"Informe mensual\" — quedó solo el semanal.",
     detalle: "La descarga en Excel del mes completo sigue disponible para quien la necesite.",
-    nuevo: true,
   },
   {
     titulo: "Cotizador de vehículos, en línea",
@@ -196,7 +262,7 @@ export default function AvancesPage() {
         {/* Lista de cambios */}
         {nuevos > 0 && (
           <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted">
-            Actualización — ronda de junta del jueves 24 de septiembre
+            Actualización — 19 de octubre
           </h2>
         )}
         <div className="space-y-6">

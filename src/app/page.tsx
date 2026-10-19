@@ -153,7 +153,7 @@ export default async function Tablero() {
 
       {/* Gráficas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Ingresos vs egresos" subtitle="Últimos 6 meses" />
           <div className="p-5">
             <BarrasIngresoEgreso datos={serie} />
@@ -169,7 +169,7 @@ export default async function Tablero() {
 
       {/* Por vencer + inventario */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader
             title="Por vencer y vencidos"
             subtitle="Empeños que requieren atención"
@@ -201,7 +201,7 @@ export default async function Tablero() {
 
       {/* Mejores clientes + estadísticas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Mejores clientes" subtitle="Por capital prestado" />
           {mejoresClientes.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-muted">Aún no hay clientes con empeños.</p>

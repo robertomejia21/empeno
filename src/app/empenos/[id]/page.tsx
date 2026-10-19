@@ -256,7 +256,7 @@ export default async function EmpenoDetalle({
         </div>
 
         {puedeCancelar && (
-          <Card className="mt-6 border-danger/20">
+          <Card className="mt-6">
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
               <div>
                 <p className="text-sm font-semibold text-foreground">Cancelar contrato</p>
@@ -266,7 +266,7 @@ export default async function EmpenoDetalle({
               </div>
               <form action={cancelar}>
                 <ConfirmSubmit
-                  variante="danger"
+                  variante="secondary"
                   confirmacion={`¿Cancelar el contrato ${empeno.folio}? Esta acción no se puede deshacer.`}
                 >
                   Cancelar contrato

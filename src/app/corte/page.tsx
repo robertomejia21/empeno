@@ -30,7 +30,7 @@ export default async function CortePage() {
         ]}
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid items-start gap-6 lg:grid-cols-3">
         {/* Apertura rápida */}
         <Card>
           <CardHeader title="Apertura de caja" subtitle="Fondo inicial del día" />

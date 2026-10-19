@@ -28,7 +28,7 @@ export function Sidebar({ usuario }: { usuario: UsuarioProp | null }) {
   const grupos = gruposVisibles(usuario?.rol);
 
   return (
-    <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-fg md:flex">
+    <aside className="no-print sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar text-sidebar-fg lg:flex">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-soft">
           <MarcaIcono className="h-7 w-7" />
@@ -114,7 +114,7 @@ export function MobileMenu({ usuario }: { usuario: UsuarioProp | null }) {
   return (
     <>
       {/* Barra superior (solo móvil) */}
-      <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar px-4 py-2.5 text-sidebar-fg md:hidden">
+      <header className="no-print sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-sidebar px-4 py-2.5 text-sidebar-fg lg:hidden">
         <Link href="/" className="flex items-center gap-2">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
             <MarcaIcono className="h-6 w-6" />
@@ -136,7 +136,7 @@ export function MobileMenu({ usuario }: { usuario: UsuarioProp | null }) {
 
       {/* Drawer */}
       {abierto && (
-        <div className="no-print fixed inset-0 z-50 md:hidden">
+        <div className="no-print fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setAbierto(false)} />
           <aside className="absolute left-0 top-0 flex h-full w-72 max-w-[85%] flex-col bg-sidebar text-sidebar-fg shadow-elevated">
             <div className="flex items-center justify-between border-b border-sidebar-border px-5 py-4">

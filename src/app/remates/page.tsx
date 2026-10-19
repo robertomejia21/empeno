@@ -66,7 +66,7 @@ export default async function RematesPage({
                     <span className="text-sm text-muted">avalúo {formatMXN(e.prenda.valorAvaluo)}</span>
                     <form action={enviarARemate.bind(null, e.id)}>
                       <ConfirmSubmit
-                        variante="danger"
+                        variante="warning"
                         confirmacion={`¿Enviar ${e.folio} a remate? La prenda pasará a estar en venta.`}
                       >
                         Enviar a remate

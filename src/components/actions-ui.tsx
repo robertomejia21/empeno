@@ -23,16 +23,18 @@ export function ConfirmSubmit({
 }: {
   children: React.ReactNode;
   confirmacion: string;
-  variante?: "primary" | "danger" | "secondary";
+  variante?: "primary" | "danger" | "warning" | "secondary";
   className?: string;
 }) {
   const { pending } = useFormStatus();
   const clases =
     variante === "danger"
       ? "bg-danger text-white hover:opacity-90"
-      : variante === "secondary"
-        ? "border border-border bg-surface text-foreground hover:bg-surface-2"
-        : "bg-primary text-primary-fg hover:opacity-90";
+      : variante === "warning"
+        ? "bg-warning text-neutral-900 hover:opacity-90"
+        : variante === "secondary"
+          ? "border border-border bg-surface text-foreground hover:bg-surface-2"
+          : "bg-primary text-primary-fg hover:opacity-90";
   return (
     <button
       type="submit"

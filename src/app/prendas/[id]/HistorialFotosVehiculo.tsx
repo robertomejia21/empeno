@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatFechaHora } from "@/lib/format";
 import { fechaDeFotoUrl } from "@/lib/fotos";
 
 /** Historial del vehículo: siempre compara la primera foto contra la más reciente. */
 export function HistorialFotosVehiculo({ fotos }: { fotos: string[] }) {
   const [abierto, setAbierto] = useState(false);
+  const cerrarRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!abierto) return;
+    cerrarRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAbierto(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [abierto]);
+
   if (fotos.length === 0) return null;
 
   const primera = fotos[0];
@@ -35,12 +47,18 @@ export function HistorialFotosVehiculo({ fotos }: { fotos: string[] }) {
           onClick={() => setAbierto(false)}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="historial-fotos-titulo"
             className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface p-5 shadow-elevated"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-foreground">Historial de fotos del vehículo</h3>
+              <h3 id="historial-fotos-titulo" className="text-base font-semibold text-foreground">
+                Historial de fotos del vehículo
+              </h3>
               <button
+                ref={cerrarRef}
                 type="button"
                 onClick={() => setAbierto(false)}
                 className="rounded-lg border border-border px-2.5 py-1 text-sm text-muted hover:bg-surface-2"

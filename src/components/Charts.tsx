@@ -24,8 +24,8 @@ export function BarrasIngresoEgreso({ datos }: { datos: BarraMes[] }) {
   const barW = Math.min(18, grupo / 3);
 
   return (
-    <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[460px]">
+    <div className="w-full min-w-0 overflow-x-auto">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-0">
         {/* líneas guía */}
         {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const y = padY + innerH * (1 - t);

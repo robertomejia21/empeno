@@ -797,6 +797,18 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               </div>
             )}
 
+            {productoSelId && (() => {
+              const p = productos.find((x) => x.id === productoSelId);
+              if (!p) return null;
+              const esVeh = p.nombre === "VEHÍCULOS" || p.modalidad === "gps";
+              if (esVeh) return null;
+              return (
+                <p className="-mt-2 mb-3 text-xs text-info">
+                  ℹ️ En {p.nombre.toLowerCase()} el almacenaje se cobra igual al interés — por eso {p.tasa}% (interés) +{" "}
+                  {p.tasa}% (almacenaje) = {p.tasa * 2}% en el catálogo.
+                </p>
+              );
+            })()}
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
               <Campo label="Almacenaje (% por periodo)" type="number" value={String(almacenajePct)} onChange={(v) => setAlmacenajePct(parseFloat(v) || 0)} />

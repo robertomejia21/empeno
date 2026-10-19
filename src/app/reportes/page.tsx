@@ -180,7 +180,7 @@ export default async function ReportesPage({
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Ingresos vs egresos" subtitle="Últimos 6 meses" />
           <div className="p-5">
             <BarrasIngresoEgreso datos={serieMeses} />

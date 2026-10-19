@@ -384,6 +384,31 @@ export interface CitaGps {
   creadoEn: string;
 }
 
+// ---- Checklist diario de vehículos en resguardo ----
+
+export interface FilaChecklistVehiculo {
+  prendaId: ID;
+  presente: boolean;
+  exterior: boolean;
+  interior: boolean;
+  llantas: boolean;
+  fugas: boolean;
+  cerradoSeguro: boolean;
+  llaves: boolean;
+  bateria: boolean;
+  carroceria: boolean;
+  observaciones: string | null;
+}
+
+export interface ChecklistVehicular {
+  id: ID;
+  fecha: string; // ISO date
+  responsable: string;
+  filas: FilaChecklistVehiculo[];
+  incidencias: string | null;
+  creadoEn: string;
+}
+
 export interface CitaGpsInput {
   fecha: string;
   hora: string;

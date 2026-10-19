@@ -309,6 +309,17 @@ export function rowToCitaGps(r: any): import("@/lib/types").CitaGps {
   };
 }
 
+export function rowToChecklistVehicular(r: any): import("@/lib/types").ChecklistVehicular {
+  return {
+    id: r.id,
+    fecha: r.fecha,
+    responsable: r.responsable,
+    filas: r.filas ?? [],
+    incidencias: r.incidencias ?? null,
+    creadoEn: r.creado_en,
+  };
+}
+
 export function rowToAutorizacion(r: any): import("@/lib/types").Autorizacion {
   const n = (v: any) => (v == null ? null : Number(v));
   return {

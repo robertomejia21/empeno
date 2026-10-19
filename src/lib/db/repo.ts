@@ -25,6 +25,7 @@ import {
   rowToCotizacion,
   rowToAutorizacion,
   rowToCitaGps,
+  rowToChecklistVehicular,
   rowToEncuesta,
   rowToProductoInteres,
 } from "@/lib/supabase/map";
@@ -346,6 +347,18 @@ export async function listarCitasGps(): Promise<import("@/lib/types").CitaGps[]>
     return (data ?? []).map(rowToCitaGps);
   }
   return getStore().citasGps.slice().sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+}
+
+export async function listarChecklistsVehiculares(): Promise<import("@/lib/types").ChecklistVehicular[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("checklists_vehiculares")
+      .select("*")
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(rowToChecklistVehicular);
+  }
+  return getStore().checklistsVehiculares.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
 export async function listarEncuestas(): Promise<import("@/lib/types").Encuesta[]> {

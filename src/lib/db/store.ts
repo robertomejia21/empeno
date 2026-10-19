@@ -34,6 +34,7 @@ interface Store {
   citasGps: import("@/lib/types").CitaGps[];
   encuestas: import("@/lib/types").Encuesta[];
   productosInteres: import("@/lib/types").ProductoInteres[];
+  checklistsVehiculares: import("@/lib/types").ChecklistVehicular[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -55,6 +56,7 @@ export function getStore(): Store {
       cotizaciones: [],
       autorizaciones: [],
       citasGps: [],
+      checklistsVehiculares: [],
       encuestas: [],
       // "tasa" es el interés por separado (lo que de verdad se usa para
       // calcular): en TRADICIONAL y COMPRA (artículos, no vehículos) el

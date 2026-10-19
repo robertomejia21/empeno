@@ -105,10 +105,10 @@ export const ROL_LABEL: Record<RolUsuario, string> = {
 const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   admin: "*",
   gerente: "*",
-  lider: ["/", "/mostrador", "/empenos", "/cotizaciones", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/vencimientos", "/cobranza", "/autorizaciones", "/gps"],
+  lider: ["/", "/mostrador", "/empenos", "/cotizaciones", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/vencimientos", "/cobranza", "/autorizaciones", "/gps", "/checklist-vehiculos"],
   atencion: ["/", "/mostrador", "/empenos", "/cotizaciones", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/apartados"],
   cobranza: ["/", "/cobranza", "/vencimientos", "/clientes", "/empenos", "/recordatorios", "/conversaciones", "/buscar"],
-  cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza", "/gps"],
+  cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza", "/gps", "/checklist-vehiculos"],
   valuador: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
   // Mecánico: acceso EXCLUSIVO a los avalúos de vehículos (reforzado en el middleware).
   mecanico: ["/avaluos"],

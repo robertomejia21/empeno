@@ -28,6 +28,7 @@ import type {
   EstadoCitaGps,
   EncuestaInput,
   RolUsuario,
+  FilaChecklistVehiculo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
@@ -2340,6 +2341,38 @@ export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean
   await notificarCitaAgendada(input);
   revalidatePath("/gps/citas");
   return { ok: true };
+}
+
+/** Guarda el checklist diario de revisión física de vehículos en resguardo. */
+export async function guardarChecklistVehicular(
+  responsable: string,
+  filas: FilaChecklistVehiculo[],
+  incidencias: string | null
+) {
+  if (await esInvitado()) return;
+  if (!responsable.trim() || filas.length === 0) throw new Error("Falta el responsable o no hay vehículos para revisar.");
+  const fecha = hoyISO();
+
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("checklists_vehiculares").insert({
+      fecha,
+      responsable: responsable.trim(),
+      filas,
+      incidencias: incidencias?.trim() || null,
+    });
+    if (error) throw error;
+  } else {
+    getStore().checklistsVehiculares.unshift({
+      id: nuevoId("cv"),
+      fecha,
+      responsable: responsable.trim(),
+      filas,
+      incidencias: incidencias?.trim() || null,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  await bitacoraAuto("Checklist diario de vehículos", `${filas.length} vehículo(s) revisados`, responsable.trim());
+  revalidatePath("/checklist-vehiculos");
 }
 
 /** Recordatorio de citas de GPS del día siguiente (para el cron). */

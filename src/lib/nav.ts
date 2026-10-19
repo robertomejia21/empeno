@@ -52,6 +52,7 @@ export const navGroups: NavGroup[] = [
       { href: "/gps", label: "GPS y resguardo", icon: "📡" },
       { href: "/gps/citas", label: "Citas de GPS", icon: "📅" },
       { href: "/avaluos", label: "Avalúos (mecánico)", icon: "🔧" },
+      { href: "/checklist-vehiculos", label: "Checklist diario", icon: "✅" },
     ],
   },
   {

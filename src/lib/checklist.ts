@@ -2,6 +2,7 @@
 // Tomada del formato "08.CHECKLIST MECANICO".
 export const CHECKLIST_MECANICO = [
   "Batería",
+  "Gasolina",
   "Luces traseras",
   "Luces bajas",
   "Luces altas",
@@ -13,9 +14,8 @@ export const CHECKLIST_MECANICO = [
   "Bujías",
   "Alternador",
   "Tren delantero y trasero",
-  "Cauchos",
   "Rodamientos",
-  "Tripoides",
+  "Tripoides (Transmisión)",
   "Gomas y bujes",
   "Frenos delanteros",
   "Frenos traseros",

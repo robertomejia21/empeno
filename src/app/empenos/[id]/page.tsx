@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerEmpeno, contarRefrendos } from "@/lib/db/repo";
-import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento } from "@/lib/interes";
+import { esDiaInhabil } from "@/lib/diasInhabiles";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno, eliminarEmpenoPermanente } from "@/lib/actions";
 import { getUsuarioActual } from "@/lib/session";
 import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
@@ -42,6 +43,11 @@ export default async function EmpenoDetalle({
   const puedeCancelar =
     (empeno.estado === "borrador" || empeno.estado === "activo") && empeno.abonoCapital === 0 && refrendos === 0;
   const esAdmin = (await getUsuarioActual())?.rol === "admin";
+  // La fecha de pago queda fija desde el contrato: el próximo vencimiento
+  // siempre ancla al periodo anterior (ver refrendarEmpeno), nunca al día
+  // real de pago — aquí solo se avisa si ese día fijo cae en domingo/festivo.
+  const proximoVenc = calcularVencimiento(empeno.fechaVencimiento, empeno.periodo, empeno.plazoPeriodos);
+  const proximoVencInhabil = esDiaInhabil(proximoVenc);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -119,6 +125,7 @@ export default async function EmpenoDetalle({
                   metodoDefault={empeno.metodoPago}
                   montoPrestado={empeno.montoPrestado}
                   vencido={calc.vencido}
+                  proximoVencInhabil={proximoVencInhabil}
                 />
                 <form action={desempenar} className="rounded-xl border border-border bg-surface-2/40 p-4">
                   <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>

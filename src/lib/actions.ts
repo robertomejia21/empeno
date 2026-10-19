@@ -535,7 +535,11 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
 
   const refrendoNo = (await contarRefrendos(id)) + 1;
   const hoy = hoyISO();
-  const nuevoVenc = calcularVencimiento(hoy, e.periodo, e.plazoPeriodos);
+  // La fecha de pago queda fija desde el contrato original: el siguiente
+  // vencimiento siempre avanza un periodo desde el vencimiento ANTERIOR, no
+  // desde el día real en que el cliente refrenda — así el día de pago no se
+  // va recorriendo con cada pago adelantado o atrasado.
+  const nuevoVenc = calcularVencimiento(e.fechaVencimiento, e.periodo, e.plazoPeriodos);
 
   const pagoBase = {
     empeno_id: id,

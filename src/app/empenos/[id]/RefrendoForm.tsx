@@ -18,12 +18,14 @@ export function RefrendoForm({
   metodoDefault,
   montoPrestado,
   vencido,
+  proximoVencInhabil,
 }: {
   accion: (form: FormData) => void | Promise<void>;
   base: number;
   metodoDefault: string;
   montoPrestado: number;
   vencido: boolean;
+  proximoVencInhabil?: boolean;
 }) {
   const moratoriosInicial = moratoriosSugeridos(montoPrestado, vencido);
   const [v, setV] = useState({
@@ -45,6 +47,12 @@ export function RefrendoForm({
   return (
     <form action={accion} className="rounded-xl bg-surface-2 p-4">
       <p className="mb-3 text-sm font-semibold text-foreground">Refrendo / abono mensual</p>
+      {proximoVencInhabil && (
+        <p className="mb-3 rounded-lg border border-info/20 bg-info-soft px-3 py-2 text-xs text-info">
+          📅 El siguiente día de pago cae en domingo o festivo. El cliente puede pagar el día hábil más cercano sin
+          recargo — la fecha de pago registrada no se mueve por esto.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Método de pago

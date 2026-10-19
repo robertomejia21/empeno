@@ -6,7 +6,6 @@ import type {
   Cliente,
   Prenda,
   Empeno,
-  MovimientoCaja,
   TipoIdentificacion,
   CategoriaPrenda,
   PeriodoInteres,
@@ -106,19 +105,31 @@ function num(form: FormData, key: string): number {
   return Number.isFinite(v) ? v : 0;
 }
 
-/** Registra la salida de caja del préstamo (dividida por tope antilavado). */
-async function registrarSalidaPrestamo(empenoId: string, folio: string, monto: number) {
-  const partes = dividirMontoAML(monto);
+/**
+ * Inserta un movimiento de caja, dividido en partes si supera el tope
+ * antilavado ($999,999 c/u — LFPIORPI) — antes solo se aplicaba a la salida
+ * del préstamo; ahora se usa en cualquier movimiento que pueda ser grande
+ * (refrendo, desempeño, venta, compra, abono).
+ */
+async function registrarMovimientoCaja(datos: {
+  tipo: TipoMovimiento;
+  monto: number;
+  esEntrada: boolean;
+  concepto: string;
+  empenoId?: string | null;
+  referencia?: string | null;
+}) {
+  const partes = dividirMontoAML(datos.monto);
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     for (let i = 0; i < partes.length; i++) {
       await sb.from("movimientos_caja").insert({
-        tipo: "prestamo",
+        tipo: datos.tipo,
         monto: partes[i],
-        es_entrada: false,
-        concepto: `Préstamo empeño ${folio}${partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : ""}`,
-        empeno_id: empenoId,
-        referencia: folio,
+        es_entrada: datos.esEntrada,
+        concepto: `${datos.concepto}${partes.length > 1 ? ` (parte ${i + 1}/${partes.length})` : ""}`,
+        empeno_id: datos.empenoId ?? null,
+        referencia: datos.referencia ?? null,
       });
     }
   } else {
@@ -127,16 +138,28 @@ async function registrarSalidaPrestamo(empenoId: string, folio: string, monto: n
       store.movimientos.push({
         id: nuevoId("m"),
         fecha: new Date().toISOString(),
-        tipo: "prestamo",
+        tipo: datos.tipo,
         monto: m,
-        esEntrada: false,
-        concepto: `Préstamo empeño ${folio}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
-        empenoId,
-        referencia: folio,
+        esEntrada: datos.esEntrada,
+        concepto: `${datos.concepto}${arr.length > 1 ? ` (parte ${i + 1}/${arr.length})` : ""}`,
+        empenoId: datos.empenoId ?? null,
+        referencia: datos.referencia ?? null,
         creadoEn: new Date().toISOString(),
       })
     );
   }
+}
+
+/** Registra la salida de caja del préstamo (dividida por tope antilavado). */
+async function registrarSalidaPrestamo(empenoId: string, folio: string, monto: number) {
+  await registrarMovimientoCaja({
+    tipo: "prestamo",
+    monto,
+    esEntrada: false,
+    concepto: `Préstamo empeño ${folio}`,
+    empenoId,
+    referencia: folio,
+  });
 }
 
 // ----------------- CLIENTES -----------------
@@ -406,7 +429,14 @@ export async function crearEmpeno(form: FormData) {
   // El formulario simple no captura almacenaje: los artículos (todo lo que no
   // sea Vehículos) lo cargan igual al interés (ej. 10.8% + 10.8% = 21.6%
   // mensual); los vehículos no cargan almacenaje por esta vía.
-  const prendaCat = (await obtenerPrenda(prendaId))?.categoria;
+  const prendaEmp = await obtenerPrenda(prendaId);
+  const prendaCat = prendaEmp?.categoria;
+  // Candado de servidor: un vehículo no puede entrar a un empeño sin haber
+  // pasado la verificación REPUVE/robo — antes solo lo bloqueaba la UI del
+  // asistente, y esta vía (alta rápida + /empenos/nuevo) no lo exigía.
+  if (prendaCat === "Vehículos" && !prendaEmp?.verificado) {
+    throw new Error("Este vehículo todavía no tiene verificación REPUVE registrada; no se puede empeñar.");
+  }
   const almacenajePctForm = num(form, "almacenajePct");
   const almacenajePct = almacenajePctForm > 0 ? almacenajePctForm : prendaCat && prendaCat !== "Vehículos" ? tasaInteres : 0;
   // IVA fijo de la sucursal — no se toma del formulario, no es negociable.
@@ -517,7 +547,8 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
     return Number.isFinite(v) ? v : 0;
   };
-  const abonoCapital = g("abonoCapital");
+  const capitalPendiente = Math.max(0, e.montoPrestado - e.abonoCapital);
+  const abonoCapital = Math.min(g("abonoCapital"), capitalPendiente);
   const moratorios = g("moratorios");
   const descuento = g("descuento");
   const gastosAdmin = g("gastosAdmin");
@@ -583,10 +614,6 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
         abono_capital: e.abonoCapital + abonoCapital,
       })
       .eq("id", id);
-    await sb.from("movimientos_caja").insert({
-      tipo: "refrendo", monto: total, es_entrada: true,
-      concepto: `Refrendo ${e.folio} (recibo)`, empeno_id: id, referencia: e.folio,
-    });
   } else {
     const store = getStore();
     pagoId = nuevoId("pg");
@@ -604,11 +631,11 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
       subtotal, total, efectivo, tarjeta, transferencia, cambio, metodoPago,
       usuarioNombre: u?.nombre ?? null, fecha: new Date().toISOString(), creadoEn: new Date().toISOString(),
     });
-    store.movimientos.push({
-      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "refrendo", monto: total, esEntrada: true,
-      concepto: `Refrendo ${e.folio} (recibo)`, empenoId: id, referencia: e.folio, creadoEn: new Date().toISOString(),
-    });
   }
+  await registrarMovimientoCaja({
+    tipo: "refrendo", monto: total, esEntrada: true,
+    concepto: `Refrendo ${e.folio} (recibo)`, empenoId: id, referencia: e.folio,
+  });
   await bitacoraAuto("Refrendo registrado", `${total} MXN`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
@@ -687,10 +714,6 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
     pagoId = pago.id;
     await sb.from("empenos").update({ estado: "desempenado" }).eq("id", id);
     await sb.from("prendas").update({ estado: "desempenada" }).eq("id", e.prendaId);
-    await sb.from("movimientos_caja").insert({
-      tipo: "desempeno", monto: total, es_entrada: true,
-      concepto: `Desempeño empeño ${e.folio}`, empeno_id: id, referencia: e.folio,
-    });
   } else {
     const store = getStore();
     pagoId = nuevoId("pg");
@@ -706,11 +729,11 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
       subtotal, total, efectivo, tarjeta, transferencia, cambio, metodoPago,
       usuarioNombre: u?.nombre ?? null, fecha: new Date().toISOString(), creadoEn: new Date().toISOString(),
     });
-    store.movimientos.push({
-      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "desempeno", monto: total, esEntrada: true,
-      concepto: `Desempeño empeño ${e.folio}`, empenoId: e.id, referencia: e.folio, creadoEn: new Date().toISOString(),
-    });
   }
+  await registrarMovimientoCaja({
+    tipo: "desempeno", monto: total, esEntrada: true,
+    concepto: `Desempeño empeño ${e.folio}`, empenoId: id, referencia: e.folio,
+  });
   await bitacoraAuto("Desempeño registrado", `${total} MXN`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
@@ -741,21 +764,17 @@ export async function cancelarEmpeno(id: string) {
     const sb = getServerSupabase();
     await sb.from("empenos").update({ estado: "cancelado" }).eq("id", id);
     await sb.from("prendas").update({ estado: "en_avaluo" }).eq("id", e.prendaId);
-    await sb.from("movimientos_caja").insert({
-      tipo: "cancelacion", monto: e.montoPrestado, es_entrada: true,
-      concepto: `Cancelación empeño ${e.folio}`, empeno_id: id, referencia: e.folio,
-    });
   } else {
     const store = getStore();
     const emp = store.empenos.find((x) => x.id === id);
     if (emp) emp.estado = "cancelado";
     const prenda = store.prendas.find((p) => p.id === e.prendaId);
     if (prenda) prenda.estado = "en_avaluo";
-    store.movimientos.push({
-      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "cancelacion", monto: e.montoPrestado, esEntrada: true,
-      concepto: `Cancelación empeño ${e.folio}`, empenoId: id, referencia: e.folio, creadoEn: new Date().toISOString(),
-    });
   }
+  await registrarMovimientoCaja({
+    tipo: "cancelacion", monto: e.montoPrestado, esEntrada: true,
+    concepto: `Cancelación empeño ${e.folio}`, empenoId: id, referencia: e.folio,
+  });
   await bitacoraAuto("Empeño cancelado", `${e.montoPrestado} MXN revertidos`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
@@ -812,27 +831,32 @@ export async function eliminarEmpenoPermanente(id: string) {
 /** Abono a capital: reduce el saldo del préstamo y entra a caja. */
 export async function abonarCapital(id: string, form: FormData) {
   if (await esInvitado()) return;
-  const monto = num(form, "monto");
-  if (monto <= 0) return;
+  const montoForm = num(form, "monto");
+  if (montoForm <= 0) return;
 
+  let folio = "";
+  let monto = montoForm;
   if (supabaseConfigured) {
     const sb = getServerSupabase();
-    const { data, error } = await sb.from("empenos").select("folio, abono_capital").eq("id", id).single();
+    const { data, error } = await sb.from("empenos").select("folio, monto_prestado, abono_capital").eq("id", id).single();
     if (error) throw error;
+    folio = data.folio;
+    const pendiente = Math.max(0, Number(data.monto_prestado ?? 0) - Number(data.abono_capital ?? 0));
+    monto = Math.min(montoForm, pendiente);
     await sb.from("empenos").update({ abono_capital: Number(data.abono_capital ?? 0) + monto }).eq("id", id);
-    await sb.from("movimientos_caja").insert({
-      tipo: "abono", monto, es_entrada: true, concepto: `Abono a capital ${data.folio}`, empeno_id: id, referencia: data.folio,
-    });
   } else {
     const store = getStore();
     const e = store.empenos.find((x) => x.id === id);
     if (!e) return;
+    folio = e.folio;
+    const pendiente = Math.max(0, e.montoPrestado - e.abonoCapital);
+    monto = Math.min(montoForm, pendiente);
     e.abonoCapital += monto;
-    store.movimientos.push({
-      id: nuevoId("m"), fecha: new Date().toISOString(), tipo: "abono", monto, esEntrada: true,
-      concepto: `Abono a capital ${e.folio}`, empenoId: e.id, referencia: e.folio, creadoEn: new Date().toISOString(),
-    });
   }
+  if (monto <= 0) return;
+  await registrarMovimientoCaja({
+    tipo: "abono", monto, esEntrada: true, concepto: `Abono a capital ${folio}`, empenoId: id, referencia: folio,
+  });
   await bitacoraAuto("Abono a capital", `${monto} MXN`, `empeño ${id}`);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/caja");
@@ -846,6 +870,11 @@ export async function crearEmpenoGuiado(
   data: EmpenoGuiadoPayload
 ): Promise<{ empenoId: string; folio: string }> {
   if (await esInvitado()) throw new Error("Modo demo: solo lectura, no se puede guardar.");
+  // Candado de servidor (además del de la UI del asistente): un vehículo no
+  // puede quedar empeñado sin verificación REPUVE/robo registrada.
+  if (data.prenda.categoria === "Vehículos" && !data.prenda.verificado) {
+    throw new Error("Este vehículo todavía no tiene verificación REPUVE registrada; no se puede empeñar.");
+  }
   const fechaVencimiento = calcularVencimiento(data.fechaInicio, data.periodo, data.plazoPeriodos);
   // Tasa especial (≤ 6.48%): el empeño se crea en BORRADOR hasta que Dirección autorice.
   const especial = requiereAutorizacionTasa(data.tasaInteres);
@@ -1223,7 +1252,8 @@ export async function subirFotoPrenda(prendaId: string, formData: FormData) {
 
 /** Actualiza la ubicación de resguardo (Matriz o externa, con pin de mapa). */
 export async function actualizarResguardo(prendaId: string, form: FormData) {
-  if (await esInvitado()) return;
+  const u = await getUsuarioActual();
+  if (!u || !["admin", "gerente", "cajero", "valuador"].includes(u.rol)) throw new Error("No autorizado.");
   const resguardo: Resguardo = {
     tipo: (s(form, "tipoUbicacion") || "Matriz") as Resguardo["tipo"],
     calle: sn(form, "calle"),
@@ -1332,6 +1362,7 @@ export async function registrarVenta(form: FormData) {
     }
   }
 
+  let folioVenta = "";
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data: v, error } = await sb
@@ -1340,16 +1371,10 @@ export async function registrarVenta(form: FormData) {
       .select("id, folio")
       .single();
     if (error) throw error;
+    folioVenta = v.folio;
     await sb.from("prendas").update({ estado: "vendida" }).eq("id", prendaId);
     // Si la prenda venía de un empeño en remate, marcarlo rematado
     await sb.from("empenos").update({ estado: "rematado" }).eq("prenda_id", prendaId).eq("estado", "en_remate");
-    await sb.from("movimientos_caja").insert({
-      tipo: "venta",
-      monto: precio,
-      es_entrada: true,
-      concepto: `Venta ${v.folio}`,
-      referencia: v.folio,
-    });
   } else {
     const store = getStore();
     const venta: Venta = {
@@ -1364,22 +1389,15 @@ export async function registrarVenta(form: FormData) {
       creadoEn: new Date().toISOString(),
     };
     store.ventas.push(venta);
+    folioVenta = venta.folio;
     const p = store.prendas.find((x) => x.id === prendaId);
     if (p) p.estado = "vendida";
     const e = store.empenos.find((x) => x.prendaId === prendaId && x.estado === "en_remate");
     if (e) e.estado = "rematado";
-    store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "venta",
-      monto: precio,
-      esEntrada: true,
-      concepto: `Venta ${venta.folio}`,
-      empenoId: null,
-      referencia: venta.folio,
-      creadoEn: new Date().toISOString(),
-    });
   }
+  await registrarMovimientoCaja({
+    tipo: "venta", monto: precio, esEntrada: true, concepto: `Venta ${folioVenta}`, referencia: folioVenta,
+  });
   await bitacoraAuto("Venta registrada", `${precio} MXN`, null);
   revalidatePath("/ventas");
   revalidatePath("/prendas");
@@ -1404,6 +1422,7 @@ export async function crearCompra(form: FormData) {
     serie: sn(form, "serie"),
   };
 
+  let folioCompra = "";
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data: p, error } = await sb
@@ -1429,13 +1448,7 @@ export async function crearCompra(form: FormData) {
       .select("folio")
       .single();
     if (ec) throw ec;
-    await sb.from("movimientos_caja").insert({
-      tipo: "compra",
-      monto,
-      es_entrada: false,
-      concepto: `Compra directa ${c.folio}`,
-      referencia: c.folio,
-    });
+    folioCompra = c.folio;
   } else {
     const store = getStore();
     const prenda: Prenda = {
@@ -1479,18 +1492,11 @@ export async function crearCompra(form: FormData) {
       creadoEn: new Date().toISOString(),
     };
     store.compras.push(compra);
-    store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "compra",
-      monto,
-      esEntrada: false,
-      concepto: `Compra directa ${compra.folio}`,
-      empenoId: null,
-      referencia: compra.folio,
-      creadoEn: new Date().toISOString(),
-    });
+    folioCompra = compra.folio;
   }
+  await registrarMovimientoCaja({
+    tipo: "compra", monto, esEntrada: false, concepto: `Compra directa ${folioCompra}`, referencia: folioCompra,
+  });
   await bitacoraAuto("Compra directa", `${monto} MXN`, null);
   revalidatePath("/compras");
   revalidatePath("/prendas");
@@ -1508,6 +1514,7 @@ export async function crearApartado(form: FormData) {
   const precioTotal = num(form, "precioTotal");
   const enganche = num(form, "enganche");
 
+  let folioApartado = "";
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data: a, error } = await sb
@@ -1523,16 +1530,8 @@ export async function crearApartado(form: FormData) {
       .select("folio")
       .single();
     if (error) throw error;
+    folioApartado = a.folio;
     await sb.from("prendas").update({ estado: "apartada" }).eq("id", prendaId);
-    if (enganche > 0) {
-      await sb.from("movimientos_caja").insert({
-        tipo: "abono",
-        monto: enganche,
-        es_entrada: true,
-        concepto: `Enganche apartado ${a.folio}`,
-        referencia: a.folio,
-      });
-    }
   } else {
     const store = getStore();
     const apartado: Apartado = {
@@ -1548,20 +1547,14 @@ export async function crearApartado(form: FormData) {
       creadoEn: new Date().toISOString(),
     };
     store.apartados.push(apartado);
+    folioApartado = apartado.folio;
     const p = store.prendas.find((x) => x.id === prendaId);
     if (p) p.estado = "apartada";
-    if (enganche > 0)
-      store.movimientos.push({
-        id: nuevoId("m"),
-        fecha: new Date().toISOString(),
-        tipo: "abono",
-        monto: enganche,
-        esEntrada: true,
-        concepto: `Enganche apartado ${apartado.folio}`,
-        empenoId: null,
-        referencia: apartado.folio,
-        creadoEn: new Date().toISOString(),
-      });
+  }
+  if (enganche > 0) {
+    await registrarMovimientoCaja({
+      tipo: "abono", monto: enganche, esEntrada: true, concepto: `Enganche apartado ${folioApartado}`, referencia: folioApartado,
+    });
   }
   revalidatePath("/apartados");
   revalidatePath("/prendas");
@@ -1584,12 +1577,8 @@ export async function abonarApartado(id: string, form: FormData) {
       .update({ abonado: nuevoAbonado, estado: liquidado ? "liquidado" : "activo" })
       .eq("id", id);
     if (liquidado) await sb.from("prendas").update({ estado: "vendida" }).eq("id", a.prenda_id);
-    await sb.from("movimientos_caja").insert({
-      tipo: "abono",
-      monto,
-      es_entrada: true,
-      concepto: `Abono apartado ${a.folio}`,
-      referencia: a.folio,
+    await registrarMovimientoCaja({
+      tipo: "abono", monto, esEntrada: true, concepto: `Abono apartado ${a.folio}`, referencia: a.folio,
     });
   } else {
     const store = getStore();
@@ -1601,16 +1590,8 @@ export async function abonarApartado(id: string, form: FormData) {
       const p = store.prendas.find((x) => x.id === a.prendaId);
       if (p) p.estado = "vendida";
     }
-    store.movimientos.push({
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo: "abono",
-      monto,
-      esEntrada: true,
-      concepto: `Abono apartado ${a.folio}`,
-      empenoId: null,
-      referencia: a.folio,
-      creadoEn: new Date().toISOString(),
+    await registrarMovimientoCaja({
+      tipo: "abono", monto, esEntrada: true, concepto: `Abono apartado ${a.folio}`, referencia: a.folio,
     });
   }
   revalidatePath("/apartados");
@@ -1642,36 +1623,25 @@ export async function cancelarApartado(id: string) {
 // ----------------- CAJA -----------------
 
 export async function registrarMovimiento(form: FormData) {
-  if (await esInvitado()) return;
+  const u = await getUsuarioActual();
+  if (!u || !["admin", "gerente", "cajero"].includes(u.rol)) throw new Error("No autorizado.");
   const tipo = (s(form, "tipo") || "gasto") as TipoMovimiento;
+  // "Gasto" es el tipo de mayor riesgo (sale dinero sin un préstamo/venta que
+  // lo respalde) — se reserva a Dirección General o Gerencia.
+  if (tipo === "gasto" && !["admin", "gerente"].includes(u.rol)) {
+    throw new Error("Solo Dirección General o Gerencia pueden registrar un gasto manual.");
+  }
   const entradas: TipoMovimiento[] = ["desempeno", "refrendo", "abono", "venta", "apertura", "deposito"];
   // "transferencia" puede ser entrada o salida según lo que elija el usuario
   // (a diferencia de los demás tipos, que ya implican una sola dirección).
   const esEntrada = tipo === "transferencia" ? form.get("direccion") === "entrada" : entradas.includes(tipo);
-  const datos = {
+  await registrarMovimientoCaja({
     tipo,
     monto: num(form, "monto"),
-    es_entrada: esEntrada,
+    esEntrada,
     concepto: s(form, "concepto") || "Movimiento manual",
     referencia: sn(form, "referencia"),
-  };
-  if (supabaseConfigured) {
-    const { error } = await getServerSupabase().from("movimientos_caja").insert(datos);
-    if (error) throw error;
-  } else {
-    const mov: MovimientoCaja = {
-      id: nuevoId("m"),
-      fecha: new Date().toISOString(),
-      tipo,
-      monto: datos.monto,
-      esEntrada: datos.es_entrada,
-      concepto: datos.concepto,
-      empenoId: null,
-      referencia: datos.referencia,
-      creadoEn: new Date().toISOString(),
-    };
-    getStore().movimientos.push(mov);
-  }
+  });
   revalidatePath("/caja");
   revalidatePath("/corte");
 }
@@ -2365,7 +2335,8 @@ export async function guardarChecklistVehicular(
   filas: FilaChecklistVehiculo[],
   incidencias: string | null
 ) {
-  if (await esInvitado()) return;
+  const u = await getUsuarioActual();
+  if (!u || !["admin", "gerente", "lider", "cajero"].includes(u.rol)) throw new Error("No autorizado.");
   if (!responsable.trim() || filas.length === 0) throw new Error("Falta el responsable o no hay vehículos para revisar.");
   const fecha = hoyISO();
 

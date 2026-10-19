@@ -29,6 +29,8 @@ export function PrendaForm() {
   const [gpsUbicacion, setGpsUbicacion] = useState("");
   const [ubicacionResguardo, setUbicacionResguardo] = useState("");
   const [modeloAnio, setModeloAnio] = useState("");
+  const [sinRobo, setSinRobo] = useState(false);
+  const [repuveFolio, setRepuveFolio] = useState("");
 
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
@@ -131,6 +133,38 @@ export function PrendaForm() {
                 <MapaResguardo label="Ubicación del GPS" onChange={setGpsUbicacion} />
               </div>
             )}
+          </div>
+
+          <div className="mx-5 mb-5 rounded-lg border border-warning/30 bg-warning-soft p-4">
+            <p className="mb-2 text-sm font-semibold text-foreground">Verificación REPUVE</p>
+            <p className="mb-2 text-xs text-muted">
+              Obligatoria antes de poder empeñar este vehículo.{" "}
+              <a
+                href="https://www2.repuve.gob.mx:8443/ciudadania/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-info underline-offset-2 hover:underline"
+              >
+                🔎 Abrir REPUVE →
+              </a>
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="flex flex-1 flex-col gap-1.5">
+                <span className="text-sm font-medium text-foreground">Folio de consulta REPUVE</span>
+                <input
+                  value={repuveFolio}
+                  onChange={(e) => setRepuveFolio(e.target.value)}
+                  placeholder="Folio o referencia de la consulta"
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary-2 focus:ring-2 focus:ring-primary-2/20"
+                />
+              </label>
+              <label className="flex items-center gap-2 pb-1.5 text-sm font-medium text-foreground">
+                <input type="checkbox" checked={sinRobo} onChange={(e) => setSinRobo(e.target.checked)} className="h-4 w-4 accent-primary" />
+                REPUVE consultado: SIN reporte de robo
+              </label>
+            </div>
+            <input type="hidden" name="verificado" value={sinRobo ? "on" : ""} />
+            <input type="hidden" name="repuveFolio" value={repuveFolio} />
           </div>
         </Card>
       ) : esJoyeria ? (

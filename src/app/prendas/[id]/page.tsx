@@ -7,6 +7,7 @@ import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
 import { generarQR, urlPrenda } from "@/lib/qr";
+import { direccionResguardo } from "@/lib/resguardo";
 
 const campoCls =
   "w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm";
@@ -44,6 +45,8 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
     ["Kilataje", p.kilataje],
     ["Gramos", p.gramos != null ? `${p.gramos} g` : null],
     ["Resguardo", p.ubicacionResguardo],
+    ["Domicilio de resguardo", direccionResguardo(p.resguardo)],
+    ["Tipo de resguardo", p.resguardo.tipo === "Externa" ? "Externa / otra sucursal" : null],
   ];
 
   const esVehiculo = p.categoria === "Vehículos";
@@ -112,28 +115,46 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
               <p className="text-sm text-muted">Aún no hay fotos de esta prenda.</p>
             ) : (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {p.fotos.map((url) => (
-                  <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
-                    {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? (
-                      <video src={url} controls className="aspect-square w-full object-cover" />
-                    ) : (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={url} alt={p.descripcion} className="aspect-square w-full object-cover" />
-                    )}
-                    <form
-                      action={eliminarFotoPrenda.bind(null, p.id, url)}
-                      className="absolute right-1 top-1 opacity-0 transition group-hover:opacity-100"
-                    >
-                      <button
-                        type="submit"
-                        className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-danger"
-                        title="Eliminar"
+                {p.fotos.map((url, i) => {
+                  const esPrimera = esVehiculo && i === 0 && p.fotos.length > 1;
+                  return (
+                    <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
+                      {esPrimera && (
+                        <span className="absolute left-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-semibold text-primary-fg">
+                          📌 Primera
+                        </span>
+                      )}
+                      {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? (
+                        <video src={url} controls className="aspect-square w-full object-cover" />
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={url} alt={p.descripcion} className="aspect-square w-full object-cover" />
+                      )}
+                      <form
+                        action={eliminarFotoPrenda.bind(null, p.id, url)}
+                        className="absolute right-1 top-1 opacity-0 transition group-hover:opacity-100"
                       >
-                        ✕
-                      </button>
-                    </form>
-                  </div>
-                ))}
+                        {esPrimera ? (
+                          <ConfirmSubmit
+                            variante="danger"
+                            className="!rounded-md !bg-black/60 !px-2 !py-1 !text-xs hover:!bg-danger"
+                            confirmacion="Esta es la primera foto del vehículo (referencia de ingreso para comparar). ¿Borrarla de todos modos?"
+                          >
+                            ✕
+                          </ConfirmSubmit>
+                        ) : (
+                          <button
+                            type="submit"
+                            className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-danger"
+                            title="Eliminar"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </form>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -186,7 +207,12 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
                 </div>
                 <input name="cp" defaultValue={p.resguardo.cp ?? ""} placeholder="Código postal" className={campoCls} />
                 <input name="referencia" defaultValue={p.resguardo.referencia ?? ""} placeholder="Referencia (bóveda, estante, estacionamiento…)" className={campoCls} />
-                <input name="mapsUrl" defaultValue={p.resguardo.mapsUrl ?? ""} placeholder="Link de Google Maps (opcional)" className={campoCls} />
+                <input
+                  name="mapsUrl"
+                  defaultValue={p.resguardo.mapsUrl || (p.ubicacionResguardo ? enlaceMaps(p.ubicacionResguardo) ?? "" : "")}
+                  placeholder="Link de Google Maps (opcional)"
+                  className={campoCls}
+                />
                 <ConfirmSubmit variante="secondary" confirmacion="¿Actualizar la ubicación?">Guardar ubicación</ConfirmSubmit>
               </form>
             </div>

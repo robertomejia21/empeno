@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { obtenerMovimiento } from "@/lib/db/repo";
 import { EMPRESA } from "@/lib/compliance";
+import { getUsuarioActual } from "@/lib/session";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 const fechaHora = (iso: string) =>
@@ -15,6 +16,10 @@ const tipoLabel: Record<string, string> = {
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // El mecánico está restringido por diseño a /avaluos; no debe poder bajar
+  // recibos financieros de otros clientes por URL directa.
+  const actual = await getUsuarioActual();
+  if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;
   const m = await obtenerMovimiento(id);
   if (!m) return new Response("No encontrado", { status: 404 });

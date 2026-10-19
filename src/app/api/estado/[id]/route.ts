@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { obtenerCliente, listarEmpenos, listarMovimientos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { EMPRESA } from "@/lib/compliance";
+import { getUsuarioActual } from "@/lib/session";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 const fecha = (iso: string) =>
@@ -13,6 +14,8 @@ const estadoLabel: Record<string, string> = {
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const actual = await getUsuarioActual();
+  if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;
   const cliente = await obtenerCliente(id);
   if (!cliente) return new Response("No encontrado", { status: 404 });

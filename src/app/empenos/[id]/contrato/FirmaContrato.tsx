@@ -4,7 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { guardarFirmaEmpeno } from "@/lib/actions";
 
-export function FirmaContrato({ empenoId, yaFirmado }: { empenoId: string; yaFirmado: boolean }) {
+export function FirmaContrato({
+  empenoId,
+  yaFirmado,
+  publico = false,
+}: {
+  empenoId: string;
+  yaFirmado: boolean;
+  /** true en el enlace público /firmar — oculta borrar una firma ya capturada. */
+  publico?: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const router = useRouter();
   const dibujando = useRef(false);
@@ -71,13 +80,15 @@ export function FirmaContrato({ empenoId, yaFirmado }: { empenoId: string; yaFir
     return (
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium text-success">✓ El contrato ya fue firmado por el cliente.</p>
-        <button
-          type="button"
-          onClick={() => guardarFirmaEmpeno(empenoId, "").then(() => router.refresh())}
-          className="text-xs font-medium text-danger hover:underline"
-        >
-          Borrar firma y volver a firmar
-        </button>
+        {!publico && (
+          <button
+            type="button"
+            onClick={() => guardarFirmaEmpeno(empenoId, "").then(() => router.refresh())}
+            className="text-xs font-medium text-danger hover:underline"
+          >
+            Borrar firma y volver a firmar
+          </button>
+        )}
       </div>
     );
   }

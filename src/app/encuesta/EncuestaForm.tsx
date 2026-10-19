@@ -30,6 +30,7 @@ const VACIO: EncuestaInput = {
 export function EncuestaForm() {
   const [r, setR] = useState<EncuestaInput>(VACIO);
   const [comentario, setComentario] = useState("");
+  const [sitioWeb, setSitioWeb] = useState(""); // trampa para bots
   const [enviando, setEnviando] = useState(false);
   const [listo, setListo] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -49,7 +50,11 @@ export function EncuestaForm() {
     setEnviando(true);
     setMsg(null);
     try {
-      await guardarEncuesta({ ...r, comentario: comentario.trim() || null });
+      const res = await guardarEncuesta({ ...r, comentario: comentario.trim() || null }, sitioWeb);
+      if (!res.ok) {
+        setMsg("Demasiados intentos. Espera unos minutos e inténtalo de nuevo.");
+        return;
+      }
       setListo(true);
     } finally {
       setEnviando(false);
@@ -101,6 +106,17 @@ export function EncuestaForm() {
         <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3}
           className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary" />
       </div>
+
+      <input
+        type="text"
+        name="sitioWeb"
+        value={sitioWeb}
+        onChange={(e) => setSitioWeb(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute -left-[9999px]"
+      />
 
       {msg && <p className="text-sm text-danger">{msg}</p>}
       <button type="button" onClick={enviar} disabled={enviando}

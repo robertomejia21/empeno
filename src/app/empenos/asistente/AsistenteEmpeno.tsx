@@ -647,20 +647,8 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                     <Campo label="Seguro mensual (MXN)" type="number" value={veh.seguroMensual} onChange={(v) => setVeh({ ...veh, seguroMensual: v })} />
                     <Campo label="Pensión mensual (MXN)" type="number" value={veh.pensionMensual} onChange={(v) => setVeh({ ...veh, pensionMensual: v })} />
                     <Campo label="GPS mensual (MXN)" type="number" value={veh.gpsMensual} onChange={(v) => setVeh({ ...veh, gpsMensual: v })} />
-                    <Campo label="Ubicación del GPS" value={veh.gpsUbicacion} onChange={(v) => setVeh({ ...veh, gpsUbicacion: v })} placeholder="Coordenadas o liga de Maps" />
                   </div>
-                  {veh.gpsUbicacion && (
-                    <a
-                      href={/^https?:\/\//.test(veh.gpsUbicacion)
-                        ? veh.gpsUbicacion
-                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(veh.gpsUbicacion)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex text-sm font-medium text-info underline-offset-2 hover:underline"
-                    >
-                      📍 Ver ubicación en el mapa →
-                    </a>
-                  )}
+                  <MapaResguardo label="Ubicación del GPS" onChange={(v) => setVeh({ ...veh, gpsUbicacion: v })} />
                 </div>
               </>
             ) : esJoyeria ? (

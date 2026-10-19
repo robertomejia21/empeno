@@ -32,7 +32,7 @@ export default async function FirmarPage({ params }: { params: Promise<{ id: str
         </div>
 
         <div className="mt-4 rounded-xl border border-border bg-surface p-5">
-          <FirmaContrato empenoId={empeno.id} yaFirmado={!!empeno.firmaCliente} />
+          <FirmaContrato empenoId={empeno.id} yaFirmado={!!empeno.firmaCliente} publico />
         </div>
       </div>
     </div>

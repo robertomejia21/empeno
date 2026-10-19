@@ -536,10 +536,15 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   const refrendoNo = (await contarRefrendos(id)) + 1;
   const hoy = hoyISO();
   // La fecha de pago queda fija desde el contrato original: el siguiente
-  // vencimiento siempre avanza un periodo desde el vencimiento ANTERIOR, no
-  // desde el día real en que el cliente refrenda — así el día de pago no se
-  // va recorriendo con cada pago adelantado o atrasado.
-  const nuevoVenc = calcularVencimiento(e.fechaVencimiento, e.periodo, e.plazoPeriodos);
+  // vencimiento siempre avanza desde el vencimiento ANTERIOR (conserva el
+  // día fijo de pago), no desde el día real en que el cliente refrenda. Si
+  // el contrato llevaba varios periodos sin refrendar, se avanza periodo a
+  // periodo hasta llegar a hoy o más adelante — nunca se queda anclado en
+  // el pasado (eso dejaría el contrato "vencido" otra vez de inmediato).
+  let nuevoVenc = e.fechaVencimiento;
+  do {
+    nuevoVenc = calcularVencimiento(nuevoVenc, e.periodo, e.plazoPeriodos);
+  } while (nuevoVenc < hoy);
 
   const pagoBase = {
     empeno_id: id,
@@ -641,7 +646,7 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   );
   const u = await getUsuarioActual();
   validarDescuento(descuento, subtotal, u?.rol);
-  const total = round2(subtotal - e.abonoCapital - descuento);
+  const total = Math.max(0, round2(subtotal - e.abonoCapital - descuento));
   const recibido = g("recibido");
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
   const tarjeta = metodoPago === "tarjeta" ? total : 0;
@@ -2210,6 +2215,13 @@ export async function guardarFirmaEmpeno(empenoId: string, firmaDataUrl: string)
   if (!empenoFirma) return;
   // No sobrescribir una firma ya registrada (evita manipulación desde el enlace público).
   if (empenoFirma.firmaCliente && firmaDataUrl) return;
+  // Borrar una firma ya registrada (firmaDataUrl vacío) solo lo puede hacer
+  // personal con sesión real — el enlace público de /firmar nunca debe poder
+  // borrar una firma legal ya capturada.
+  if (empenoFirma.firmaCliente && !firmaDataUrl) {
+    const actual = await getUsuarioActual();
+    if (!actual?.esSesionReal) return;
+  }
   const ahora = new Date().toISOString();
   if (supabaseConfigured) {
     const { error } = await getServerSupabase()
@@ -2401,7 +2413,9 @@ export async function enviarRecordatoriosCitasGps(): Promise<{ enviados: number;
 // ----------------- ENCUESTA DE SATISFACCIÓN -----------------
 
 /** Guarda una respuesta de la encuesta (pública, la responde el cliente). */
-export async function guardarEncuesta(input: EncuestaInput): Promise<{ ok: boolean }> {
+export async function guardarEncuesta(input: EncuestaInput, honeypot?: string): Promise<{ ok: boolean }> {
+  if (honeypot) return { ok: true }; // bot: finge éxito, no revela que se detectó
+  if (await limitadoPorIP("encuesta")) return { ok: false };
   if (supabaseConfigured) {
     const { error } = await getServerSupabase().from("encuestas").insert({
       amable: input.amable,

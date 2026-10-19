@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { obtenerPago, obtenerEmpeno } from "@/lib/db/repo";
 import { EMPRESA } from "@/lib/compliance";
+import { getUsuarioActual } from "@/lib/session";
 
 const mxn = new Intl.NumberFormat("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fechaHora = (iso: string) =>
@@ -11,6 +12,8 @@ const fechaHora = (iso: string) =>
 const tituloTipo: Record<string, string> = { refrendo: "REFRENDO", abono: "ABONO", desempeno: "DESEMPEÑO" };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const actual = await getUsuarioActual();
+  if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;
   const pago = await obtenerPago(id);
   if (!pago) return new Response("No encontrado", { status: 404 });

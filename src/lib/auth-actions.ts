@@ -6,7 +6,7 @@ import type { RolUsuario } from "./types";
 import { SESSION_COOKIE, firmarSesion } from "./auth";
 import { hashPassword, verifyPassword } from "./password";
 import { getUsuarioActual } from "./session";
-import { supabaseConfigured, getServerSupabase } from "./supabase/server";
+import { supabaseConfigured, getServerSupabase, getAuthSupabase } from "./supabase/server";
 import { registrarBitacora } from "./bitacora";
 
 export async function iniciarSesion(form: FormData) {
@@ -16,18 +16,36 @@ export async function iniciarSesion(form: FormData) {
 
   if (!supabaseConfigured) redirect("/login?error=config");
 
-  const { data } = await getServerSupabase()
+  const { data: fila } = await getServerSupabase()
     .from("usuarios")
     .select("*")
     .eq("email", email)
-    .eq("activo", true)
     .maybeSingle();
 
-  if (!data || !verifyPassword(password, data.password_hash)) {
-    redirect("/login?error=1");
+  // Un usuario dado de baja en la tabla no entra, aunque exista en Supabase Auth.
+  if (fila && !fila.activo) redirect("/login?error=1");
+
+  // 1) Supabase Auth. El rol sale de la tabla `usuarios` o, si no está ahí,
+  //    de app_metadata.rol (solo editable con la service role, no por el usuario).
+  const { data: auth } = await getAuthSupabase().auth.signInWithPassword({ email, password });
+  let data: { id: string; nombre: string; rol: RolUsuario } | null = null;
+  if (auth.user) {
+    const rolMeta = auth.user.app_metadata?.rol as RolUsuario | undefined;
+    const rol = (fila?.rol as RolUsuario | undefined) ?? rolMeta;
+    if (!rol) redirect("/login?error=sinrol");
+    data = {
+      id: fila?.id ?? auth.user.id,
+      nombre: fila?.nombre ?? (auth.user.user_metadata?.nombre as string | undefined) ?? email,
+      rol,
+    };
+  } else if (fila?.password_hash && verifyPassword(password, fila.password_hash)) {
+    // 2) Respaldo: usuarios antiguos con contraseña en la tabla `usuarios`.
+    data = { id: fila.id, nombre: fila.nombre, rol: fila.rol as RolUsuario };
   }
 
-  const token = await firmarSesion({ uid: data.id, nombre: data.nombre, rol: data.rol as RolUsuario });
+  if (!data) redirect("/login?error=1");
+
+  const token = await firmarSesion({ uid: data.id, nombre: data.nombre, rol: data.rol });
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,

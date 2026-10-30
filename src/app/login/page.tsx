@@ -48,7 +48,9 @@ export default async function LoginPage({
               <div className="rounded-lg border border-danger/20 bg-danger-soft px-3 py-2 text-sm text-danger">
                 {error === "config"
                   ? "La autenticación no está configurada en el servidor."
-                  : "Correo o contraseña incorrectos."}
+                  : error === "sinrol"
+                    ? "Tu usuario no tiene un rol asignado. Pide al administrador que te lo asigne."
+                    : "Correo o contraseña incorrectos."}
               </div>
             )}
 

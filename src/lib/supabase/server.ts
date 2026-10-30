@@ -25,3 +25,18 @@ export function getServerSupabase(): SupabaseClient {
   }
   return cached;
 }
+
+/**
+ * Cliente con la llave pública, solo para validar credenciales contra
+ * Supabase Auth (signInWithPassword). No guarda sesión: la sesión de la app
+ * sigue siendo nuestra cookie firmada.
+ */
+export function getAuthSupabase(): SupabaseClient {
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error("Supabase Auth no está configurado (faltan variables de entorno).");
+  }
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}

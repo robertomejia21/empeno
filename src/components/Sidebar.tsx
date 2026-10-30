@@ -119,9 +119,7 @@ function NavLista({
   return (
     <nav className={`flex-1 overflow-y-auto py-3 ${riel ? "px-2" : "px-2.5"}`}>
       {grupos.map((grupo, gi) => {
-        const contieneActivo = grupo.items.some((i) => i.href === activo);
-        // El grupo de la página actual siempre se muestra abierto.
-        const abierto = riel || contieneActivo || !cerrados.includes(grupo.titulo);
+        const abierto = riel || !cerrados.includes(grupo.titulo);
         return (
           <div key={grupo.titulo} className={gi > 0 ? (riel ? "mt-2 border-t border-sidebar-border pt-2" : "mt-1") : ""}>
             {!riel && (

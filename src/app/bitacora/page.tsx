@@ -5,6 +5,7 @@ import { ROL_LABEL } from "@/lib/auth";
 import { formatFechaHora } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, EmptyState } from "@/components/ui";
 import type { RolUsuario } from "@/lib/types";
+import { Download } from "lucide-react";
 
 export default async function BitacoraPage() {
   const actual = await getUsuarioActual();
@@ -18,11 +19,14 @@ export default async function BitacoraPage() {
         title="Bitácora"
         subtitle="Registro de auditoría de operaciones"
         action={
+          // Descarga de archivo desde una ruta API: un <a> normal es lo correcto aquí.
+          // eslint-disable-next-line @next/next/no-html-link-for-pages
           <a
             href="/api/export/bitacora"
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+            className="shadow-soft inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition hover:bg-surface-2"
           >
-            ⬇️ Descargar Excel/CSV
+            <Download className="h-4 w-4" aria-hidden />
+            Descargar Excel/CSV
           </a>
         }
       />
@@ -33,7 +37,7 @@ export default async function BitacoraPage() {
           <EmptyState titulo="Sin eventos" descripcion="Aquí aparecerán las acciones registradas en el sistema." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-180 text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Fecha</th>
@@ -46,7 +50,7 @@ export default async function BitacoraPage() {
                 {eventos.map((e) => (
                   <tr key={e.id} className="hover:bg-surface-2">
                     <td className="whitespace-nowrap px-5 py-3 text-muted">{formatFechaHora(e.fecha)}</td>
-                    <td className="px-5 py-3">
+                    <td className="whitespace-nowrap px-5 py-3">
                       <span className="font-medium text-foreground">{e.usuarioNombre}</span>
                       {e.usuarioRol && (
                         <span className="ml-2 text-xs text-muted">{ROL_LABEL[e.usuarioRol as RolUsuario] ?? e.usuarioRol}</span>

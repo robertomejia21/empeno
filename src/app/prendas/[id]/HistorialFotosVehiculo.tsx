@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ArrowRight, Pin, X } from "lucide-react";
 import { formatFechaHora } from "@/lib/format";
 import { fechaDeFotoUrl } from "@/lib/fotos";
 
@@ -27,7 +28,7 @@ export function HistorialFotosVehiculo({ fotos }: { fotos: string[] }) {
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:max-w-3xl">
         <FotoConFecha url={primera} etiqueta="Primera (ingreso)" />
         <FotoConFecha url={actual} etiqueta={mismaFoto ? "Única foto" : "Más reciente"} />
       </div>
@@ -35,25 +36,25 @@ export function HistorialFotosVehiculo({ fotos }: { fotos: string[] }) {
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="mt-3 text-sm font-medium text-info underline-offset-2 hover:underline"
+          className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline"
         >
-          Ver las {fotos.length} fotos por fecha →
+          Ver las {fotos.length} fotos por fecha <ArrowRight className="h-4 w-4" aria-hidden />
         </button>
       )}
 
       {abierto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm sm:p-4"
           onClick={() => setAbierto(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="historial-fotos-titulo"
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-surface p-5 shadow-elevated"
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-surface p-4 shadow-elevated sm:p-5"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h3 id="historial-fotos-titulo" className="text-base font-semibold text-foreground">
                 Historial de fotos del vehículo
               </h3>
@@ -61,17 +62,17 @@ export function HistorialFotosVehiculo({ fotos }: { fotos: string[] }) {
                 ref={cerrarRef}
                 type="button"
                 onClick={() => setAbierto(false)}
-                className="rounded-lg border border-border px-2.5 py-1 text-sm text-muted hover:bg-surface-2"
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-sm text-muted transition hover:bg-surface-2 hover:text-foreground"
               >
-                ✕ Cerrar
+                <X className="h-4 w-4" aria-hidden /> Cerrar
               </button>
             </div>
             <div className="space-y-4">
               {fotos.map((url, i) => (
                 <div key={url} className={i === 0 ? "rounded-xl border-2 border-primary p-2" : "rounded-xl border border-border p-2"}>
                   {i === 0 && (
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
-                      📌 Referencia fija — primera foto
+                    <p className="mb-1.5 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-primary">
+                      <Pin className="h-3.5 w-3.5" aria-hidden /> Referencia fija — primera foto
                     </p>
                   )}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -93,8 +94,8 @@ function FotoConFecha({ url, etiqueta }: { url: string; etiqueta: string }) {
     <div className="overflow-hidden rounded-xl border border-border">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={url} alt={etiqueta} className="aspect-square w-full object-cover" />
-      <div className="px-2.5 py-2">
-        <p className="text-xs font-semibold text-foreground">{etiqueta}</p>
+      <div className="min-w-0 px-2.5 py-2">
+        <p className="truncate text-xs font-semibold text-foreground">{etiqueta}</p>
         <p className="text-[11px] text-muted">{fecha ? formatFechaHora(fecha) : "Fecha no disponible"}</p>
       </div>
     </div>

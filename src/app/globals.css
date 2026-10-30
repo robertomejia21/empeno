@@ -1,74 +1,76 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f4f1;
+  /* Paleta: Orange #ec5e27 + Milk #f8f8f5 */
+  --background: #f8f8f5;
   --surface: #ffffff;
-  --surface-2: #faf8f5;
-  --foreground: #1c1917;
-  --muted: #79716b;
-  --border: #ece9e4;
+  --surface-2: #f3f2ee;
+  --foreground: #1f1d1a;
+  --muted: #6f6a63;
+  --border: #e8e6e0;
 
-  /* Naranja de la marca Turbo Presta */
-  --primary: #d96a10;
-  --primary-2: #f7941d;
+  --primary: #ec5e27;
+  --primary-2: #f27a45;
   --primary-fg: #ffffff;
-  --primary-soft: #fdeedb;
+  --primary-soft: #fdece4;
 
-  /* Azul de la marca (cintillo del logo) */
-  --brand: #1b6fb8;
-  --brand-2: #2e9be0;
+  /* Acento secundario: naranja profundo (antes azul) */
+  --brand: #c4471a;
+  --brand-2: #e0632f;
   --brand-fg: #ffffff;
-  --brand-soft: #e3f0fa;
+  --brand-soft: #fbe4d9;
 
-  --success: #15803d;
-  --success-soft: #dcfce7;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
-  --warning: #a16207;
-  --warning-soft: #fef9c3;
-  --info: #1d4ed8;
-  --info-soft: #dbeafe;
+  --success: #16794a;
+  --success-soft: #e3f4ea;
+  --danger: #c0352b;
+  --danger-soft: #fde8e6;
+  --warning: #a35f00;
+  --warning-soft: #fdf1d8;
+  --info: #2f5fbf;
+  --info-soft: #e6eefb;
 
-  /* Sidebar oscuro premium */
-  --sidebar: #1c1917;
-  --sidebar-2: #292524;
-  --sidebar-fg: #e7e5e4;
-  --sidebar-muted: #a8a29e;
-  --sidebar-border: #38332e;
-  --gold: #e9b949;
+  /* Sidebar claro */
+  --sidebar: #ffffff;
+  --sidebar-2: #f3f2ee;
+  --sidebar-fg: #1f1d1a;
+  --sidebar-muted: #6f6a63;
+  --sidebar-border: #ebe9e3;
+  --gold: #ec5e27;
 }
 
 .dark {
-  --background: #0c0a09;
-  --surface: #1a1715;
-  --surface-2: #232020;
-  --foreground: #f5f3f0;
-  --muted: #a8a29e;
-  --border: #322d29;
+  --background: #131210;
+  --surface: #1c1a17;
+  --surface-2: #25221e;
+  --foreground: #f4f2ed;
+  --muted: #a39d94;
+  --border: #302c27;
 
-  --primary: #f7941d;
-  --primary-2: #fbb040;
-  --primary-fg: #1a1207;
-  --primary-soft: #3a2a12;
+  --primary: #f26a34;
+  --primary-2: #f5864f;
+  --primary-fg: #ffffff;
+  --primary-soft: #3b2117;
 
-  --brand: #4aa8e8;
-  --brand-2: #6fc0f2;
-  --brand-fg: #06182a;
-  --brand-soft: #12283c;
+  --brand: #f5864f;
+  --brand-2: #f8a173;
+  --brand-fg: #1a0d06;
+  --brand-soft: #3b2117;
 
-  --success: #4ade80;
-  --success-soft: #0f2e1a;
-  --danger: #f87171;
-  --danger-soft: #3a1715;
-  --warning: #fbbf24;
-  --warning-soft: #332b10;
-  --info: #60a5fa;
-  --info-soft: #14233f;
+  --success: #4ccb8a;
+  --success-soft: #133024;
+  --danger: #f2756b;
+  --danger-soft: #3a1a17;
+  --warning: #f2b544;
+  --warning-soft: #352a12;
+  --info: #7ea6f2;
+  --info-soft: #18243d;
 
-  /* El sidebar ya es oscuro; lo dejamos consistente */
-  --sidebar: #15120f;
-  --sidebar-2: #232020;
-  --sidebar-border: #322d29;
+  --sidebar: #181613;
+  --sidebar-2: #25221e;
+  --sidebar-fg: #f4f2ed;
+  --sidebar-muted: #a39d94;
+  --sidebar-border: #2a2622;
+  --gold: #f26a34;
 }
 
 @theme inline {
@@ -116,14 +118,12 @@ body {
 }
 
 /* ---- Utilidades premium ---- */
+/* Nombres históricos: hoy son el naranja plano de la marca. */
 .bg-gold-gradient {
-  background-image: linear-gradient(135deg, var(--primary-2) 0%, var(--primary) 100%);
+  background-color: var(--primary);
 }
 .text-gold-gradient {
-  background-image: linear-gradient(135deg, #fbb040 0%, #f7941d 50%, #d96a10 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--primary);
 }
 .bg-brand-gradient {
   background-image: linear-gradient(135deg, var(--brand-2) 0%, var(--brand) 100%);
@@ -144,7 +144,7 @@ body {
     0 12px 32px -8px rgba(28, 25, 23, 0.14);
 }
 .ring-gold {
-  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+  box-shadow: 0 0 0 3px rgba(236, 94, 39, 0.15);
 }
 
 /* Scrollbar sutil */
@@ -153,12 +153,12 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d6d3d1;
+  background: var(--border);
   border-radius: 9999px;
   border: 3px solid var(--background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b8b2ac;
+  background: var(--muted);
 }
 
 /* ---- Animaciones de la landing ---- */
@@ -201,9 +201,9 @@ body {
 }
 
 @keyframes pulso-anillo {
-  0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
-  70% { box-shadow: 0 0 0 16px rgba(217, 119, 6, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(236, 94, 39, 0.4); }
+  70% { box-shadow: 0 0 0 16px rgba(236, 94, 39, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(236, 94, 39, 0); }
 }
 
 .anim-flotar { animation: flotar 6s ease-in-out infinite; }

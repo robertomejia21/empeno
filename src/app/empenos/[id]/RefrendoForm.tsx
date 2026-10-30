@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
 import { formatMXN } from "@/lib/format";
 import { moratoriosSugeridos } from "@/lib/interes";
 import { ConfirmSubmit } from "@/components/actions-ui";
 
 const campoCls =
-  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
+  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 /**
  * Refrendo / abono con cálculo del total en vivo.
@@ -45,15 +46,18 @@ export function RefrendoForm({
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
 
   return (
-    <form action={accion} className="rounded-xl bg-surface-2 p-4">
+    <form action={accion} className="rounded-xl border border-border bg-surface-2/60 p-4">
       <p className="mb-3 text-sm font-semibold text-foreground">Refrendo / abono mensual</p>
       {proximoVencInhabil && (
-        <p className="mb-3 rounded-lg border border-info/20 bg-info-soft px-3 py-2 text-xs text-info">
-          📅 El siguiente día de pago cae en domingo o festivo. El cliente puede pagar el día hábil más cercano sin
+        <p className="mb-3 flex items-start gap-2 rounded-lg border border-info/20 bg-info-soft px-3 py-2 text-xs text-info">
+          <CalendarDays className="mt-px h-4 w-4 shrink-0" aria-hidden />
+          <span>
+          El siguiente día de pago cae en domingo o festivo. El cliente puede pagar el día hábil más cercano sin
           recargo — la fecha de pago registrada no se mueve por esto.
+          </span>
         </p>
       )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-xs text-muted">
           Método de pago
           <select name="metodoPago" defaultValue={metodoDefault} className={campoCls}>

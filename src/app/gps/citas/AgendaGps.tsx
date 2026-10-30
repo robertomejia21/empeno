@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { agendarCitaGps, actualizarEstadoCitaGps } from "@/lib/actions";
 import { HORARIOS_GPS } from "@/lib/citas";
 import { hoyISO, formatFecha } from "@/lib/format";
+import { Check, CircleAlert, X } from "lucide-react";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import type { CitaGps } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function AgendaGps({ citas }: { citas: CitaGps[] }) {
   const router = useRouter();
@@ -59,13 +60,13 @@ export function AgendaGps({ citas }: { citas: CitaGps[] }) {
     <div className="space-y-6">
       <Card>
         <CardHeader title="Disponibilidad" subtitle="Horario de instalación: 8:00 a 16:00" />
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-4 sm:p-6">
           <div className="max-w-xs">
             <label className="mb-1.5 block text-sm font-medium text-foreground">Fecha</label>
             <input type="date" min={hoyISO()} value={fecha} onChange={(e) => { setFecha(e.target.value); setSlot(null); }} className={inputCls} />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-6">
             {HORARIOS_GPS.map((h) => {
               const cita = ocupados.get(h);
               const activo = slot === h;
@@ -75,11 +76,11 @@ export function AgendaGps({ citas }: { citas: CitaGps[] }) {
                   type="button"
                   disabled={!!cita}
                   onClick={() => setSlot(h)}
-                  className={`rounded-lg border px-2 py-2.5 text-sm font-medium transition ${
+                  className={`rounded-xl border px-2 py-2.5 text-sm font-medium transition ${
                     cita
                       ? "cursor-not-allowed border-border bg-surface-2 text-muted"
                       : activo
-                        ? "border-primary bg-primary text-primary-fg"
+                        ? "border-primary bg-primary text-primary-fg shadow-soft"
                         : "border-border bg-surface text-foreground hover:border-primary hover:bg-primary-soft"
                   }`}
                 >
@@ -91,7 +92,7 @@ export function AgendaGps({ citas }: { citas: CitaGps[] }) {
           </div>
 
           {slot && (
-            <div className="space-y-3 rounded-xl border border-primary/30 bg-primary-soft/40 p-4">
+            <div className="space-y-3 rounded-xl border border-primary/25 bg-primary-soft/50 p-4">
               <p className="text-sm font-semibold text-foreground">
                 Agendar cita · {formatFecha(fecha)} a las {slot}
               </p>
@@ -101,12 +102,16 @@ export function AgendaGps({ citas }: { citas: CitaGps[] }) {
                 <input placeholder="Vehículo (marca, placas…)" value={form.vehiculo} onChange={(e) => setForm({ ...form, vehiculo: e.target.value })} className={inputCls} />
                 <input placeholder="Notas (opcional)" value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} className={inputCls} />
               </div>
-              {msg && <p className="text-sm text-danger">{msg}</p>}
-              <div className="flex gap-2">
-                <button type="button" onClick={reservar} disabled={guardando} className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+              {msg && (
+                <p className="flex items-start gap-1.5 text-sm text-danger">
+                  <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {msg}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={reservar} disabled={guardando} className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:brightness-110 disabled:opacity-50">
                   {guardando ? "Agendando…" : "Confirmar cita"}
                 </button>
-                <button type="button" onClick={() => { setSlot(null); setMsg(null); }} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
+                <button type="button" onClick={() => { setSlot(null); setMsg(null); }} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-2">
                   Cancelar
                 </button>
               </div>
@@ -122,22 +127,22 @@ export function AgendaGps({ citas }: { citas: CitaGps[] }) {
         ) : (
           <ul className="divide-y divide-border">
             {proximas.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
                     {formatFecha(c.fecha)} · {c.hora} — {c.clienteNombre ?? "—"}
                   </p>
-                  <p className="text-xs text-muted">
+                  <p className="break-words text-xs text-muted">
                     {[c.vehiculo, c.telefono, c.notas].filter(Boolean).join(" · ") || "—"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge tono="info">{c.hora}</Badge>
-                  <button type="button" onClick={() => actualizarEstadoCitaGps(c.id, "completada").then(() => router.refresh())} className="rounded-lg border border-border px-3 py-1 text-xs font-medium hover:bg-surface-2">
-                    ✓ Completada
+                  <button type="button" onClick={() => actualizarEstadoCitaGps(c.id, "completada").then(() => router.refresh())} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs font-medium text-success transition hover:bg-success-soft">
+                    <Check className="h-3.5 w-3.5" aria-hidden /> Completada
                   </button>
-                  <button type="button" onClick={() => actualizarEstadoCitaGps(c.id, "cancelada").then(() => router.refresh())} className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-danger hover:bg-surface-2">
-                    Cancelar
+                  <button type="button" onClick={() => actualizarEstadoCitaGps(c.id, "cancelada").then(() => router.refresh())} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs font-medium text-danger transition hover:bg-danger-soft">
+                    <X className="h-3.5 w-3.5" aria-hidden /> Cancelar
                   </button>
                 </div>
               </li>

@@ -6,6 +6,7 @@ import { ROLES, ROL_LABEL, authHabilitada } from "@/lib/auth";
 import { Card, CardHeader, PageHeader, Button, Field, SelectField, Badge } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
 import type { RolUsuario } from "@/lib/types";
+import { TriangleAlert } from "lucide-react";
 
 export default async function UsuariosPage() {
   const actual = await getUsuarioActual();
@@ -18,14 +19,17 @@ export default async function UsuariosPage() {
       <PageHeader title="Usuarios" subtitle="Gestión de accesos y roles del personal" />
 
       {!authHabilitada() && (
-        <div className="mb-6 rounded-xl border border-warning/20 bg-warning-soft px-5 py-3 text-sm text-warning">
-          ⚠️ La autenticación está en <strong>modo demo</strong> (sin <code>AUTH_SECRET</code>). Los usuarios que
-          crees aquí solo tendrán efecto cuando se active la autenticación en el servidor.
+        <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warning/20 bg-warning-soft px-4 py-3 text-sm text-warning sm:px-5">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="min-w-0">
+            La autenticación está en <strong>modo demo</strong> (sin <code>AUTH_SECRET</code>). Los usuarios que
+            crees aquí solo tendrán efecto cuando se active la autenticación en el servidor.
+          </p>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
+      <div className="grid gap-6 lg:grid-cols-3 2xl:grid-cols-4">
+        <Card className="self-start lg:col-span-1">
           <CardHeader title="Nuevo usuario" />
           <form action={crearUsuario} className="space-y-4 p-5">
             <Field label="Nombre" name="nombre" required />
@@ -36,13 +40,13 @@ export default async function UsuariosPage() {
           </form>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2 2xl:col-span-3">
           <CardHeader title="Personal" subtitle={`${usuarios.length} usuarios`} />
           {usuarios.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-muted">Aún no hay usuarios registrados.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-160 text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                     <th className="px-5 py-3 font-medium">Nombre</th>
@@ -66,12 +70,12 @@ export default async function UsuariosPage() {
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <details className="relative">
-                            <summary className="cursor-pointer list-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-2">
+                            <summary className="cursor-pointer list-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium transition hover:bg-surface-2">
                               Editar
                             </summary>
                             <form
                               action={editarUsuario.bind(null, u.id)}
-                              className="absolute right-0 z-10 mt-2 w-72 space-y-3 rounded-xl border border-border bg-surface p-4 text-left shadow-lg"
+                              className="shadow-elevated absolute right-0 z-10 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border border-border bg-surface p-4 text-left"
                             >
                               <Field label="Nombre" name="nombre" defaultValue={u.nombre} required />
                               <Field label="Correo" name="email" type="email" defaultValue={u.email} required />

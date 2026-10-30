@@ -5,9 +5,10 @@ import { agendarCitaGps } from "@/lib/actions";
 import { HORARIOS_GPS } from "@/lib/citas";
 import { hoyISO, formatFecha } from "@/lib/format";
 import type { CitaGps } from "@/lib/types";
+import { CircleCheck, MapPin } from "lucide-react";
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function AgendaPublica({
   citas,
@@ -60,20 +61,25 @@ export function AgendaPublica({
   if (confirmada) {
     return (
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-2xl">✅</div>
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+          <CircleCheck className="h-7 w-7" aria-hidden />
+        </div>
         <h2 className="text-lg font-semibold text-foreground">¡Cita confirmada!</h2>
         <p className="mt-2 text-sm text-muted">
           Te esperamos el <strong className="text-foreground">{formatFecha(confirmada.fecha)}</strong> a las{" "}
           <strong className="text-foreground">{confirmada.hora} hrs</strong>.
         </p>
-        <p className="mt-1 text-sm text-muted">📍 {sucursal.nombre} — {sucursal.direccion}</p>
+        <p className="mt-1 flex items-start justify-center gap-1.5 text-sm text-muted">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>{sucursal.nombre} — {sucursal.direccion}</span>
+        </p>
         <p className="mt-3 text-xs text-muted">Te enviamos la confirmación por WhatsApp al número que registraste.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-card sm:p-5">
       <p className="text-sm font-medium text-foreground">1. Elige el día</p>
       <input type="date" min={hoyISO()} value={fecha} onChange={(e) => { setFecha(e.target.value); setSlot(null); }} className={`${inputCls} mt-2`} />
 
@@ -88,7 +94,7 @@ export function AgendaPublica({
               type="button"
               disabled={taken}
               onClick={() => setSlot(h)}
-              className={`rounded-lg border px-2 py-2.5 text-sm font-medium transition ${
+              className={`rounded-xl border px-2 py-2.5 text-sm font-medium tabular-nums transition ${
                 taken
                   ? "cursor-not-allowed border-border bg-surface-2 text-muted line-through"
                   : activo
@@ -123,7 +129,7 @@ export function AgendaPublica({
             type="button"
             onClick={reservar}
             disabled={guardando}
-            className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg hover:opacity-90 disabled:opacity-50"
+            className="shadow-soft w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-fg transition hover:brightness-105 disabled:opacity-50"
           >
             {guardando ? "Agendando…" : `Confirmar cita · ${formatFecha(fecha)} ${slot}`}
           </button>

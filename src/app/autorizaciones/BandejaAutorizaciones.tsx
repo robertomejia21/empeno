@@ -6,6 +6,7 @@ import { resolverAutorizacion } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, Badge } from "@/components/ui";
 import type { Autorizacion, EstadoAutorizacion } from "@/lib/types";
+import { Check, CircleCheck, X } from "lucide-react";
 
 const TONO: Record<EstadoAutorizacion, "warning" | "success" | "danger"> = {
   pendiente: "warning",
@@ -36,7 +37,10 @@ export function BandejaAutorizaciones({
           subtitle={puedeResolver ? "Aprueba o rechaza como Dirección General" : "En espera de resolución de Dirección General"}
         />
         {pendientes.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">No hay solicitudes pendientes. 🎉</p>
+          <p className="flex items-center justify-center gap-2 px-5 py-8 text-center text-sm text-muted">
+            <CircleCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
+            No hay solicitudes pendientes.
+          </p>
         ) : (
           <ul className="divide-y divide-border">
             {pendientes.map((a) => (
@@ -53,8 +57,8 @@ export function BandejaAutorizaciones({
         ) : (
           <ul className="divide-y divide-border">
             {resueltas.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
-                <div className="min-w-0">
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm sm:px-5">
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-foreground">
                     {a.folio} · {a.clienteNombre ?? "—"} · tasa {a.tasaSolicitada ?? "?"}%
                   </p>
@@ -89,10 +93,10 @@ function Solicitud({ a, puedeResolver }: { a: Autorizacion; puedeResolver: boole
   }
 
   return (
-    <li className="px-5 py-4">
+    <li className="px-4 py-4 sm:px-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">
+        <div className="min-w-0 flex-1">
+          <p className="wrap-break-word font-medium text-foreground">
             {a.folio} · Tasa especial {a.tasaSolicitada ?? "?"}%
             <span className="text-muted"> (catálogo {a.tasaEstandar ?? "?"}%)</span>
           </p>
@@ -116,23 +120,25 @@ function Solicitud({ a, puedeResolver }: { a: Autorizacion; puedeResolver: boole
             value={comentario}
             onChange={(e) => setComentario(e.target.value)}
             placeholder="Comentario (opcional)"
-            className="min-w-[180px] flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="min-w-0 flex-1 basis-48 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm outline-none transition focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="button"
             disabled={procesando}
             onClick={() => resolver(true)}
-            className="rounded-lg bg-success px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            ✓ Aprobar
+            <Check className="h-4 w-4" aria-hidden />
+            Aprobar
           </button>
           <button
             type="button"
             disabled={procesando}
             onClick={() => resolver(false)}
-            className="rounded-lg bg-danger px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-danger px-4 py-1.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
           >
-            ✕ Rechazar
+            <X className="h-4 w-4" aria-hidden />
+            Rechazar
           </button>
         </div>
       )}

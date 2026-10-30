@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { crearCotizacionPublica } from "@/lib/actions";
+import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-xl border border-border bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 export function CotizadorPublico() {
   const [form, setForm] = useState({
@@ -52,7 +53,9 @@ export function CotizadorPublico() {
   if (enviado) {
     return (
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-2xl">✅</div>
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+          <CircleCheck className="h-7 w-7" aria-hidden />
+        </div>
         <h2 className="text-lg font-semibold text-foreground">¡Recibimos tu solicitud!</h2>
         <p className="mt-2 text-sm text-muted">
           {folio && (
@@ -62,7 +65,8 @@ export function CotizadorPublico() {
           )}
           Te contactaremos por WhatsApp para agendar la evaluación de tu vehículo.
         </p>
-        <p className="mt-3 rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">
+        <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-warning-soft px-3 py-2 text-left text-xs text-warning">
+          <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
           Este monto es un aproximado y está sujeto a evaluación física del vehículo.
         </p>
       </div>
@@ -70,8 +74,9 @@ export function CotizadorPublico() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-5 shadow-card">
-      <p className="mb-4 rounded-lg bg-info-soft px-3 py-2 text-xs text-info">
+    <div className="rounded-2xl border border-border bg-surface p-4 shadow-card sm:p-5">
+      <p className="mb-4 flex items-start gap-1.5 rounded-lg bg-info-soft px-3 py-2 text-xs text-info">
+        <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
         Cuéntanos de tu vehículo y cuánto necesitas — el monto final se confirma cuando lo evaluemos en sucursal.
       </p>
 
@@ -130,7 +135,7 @@ export function CotizadorPublico() {
           type="button"
           onClick={enviar}
           disabled={enviando}
-          className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg hover:opacity-90 disabled:opacity-50"
+          className="shadow-soft w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-fg transition hover:brightness-105 disabled:opacity-50"
         >
           {enviando ? "Enviando…" : "Cotizar mi vehículo"}
         </button>

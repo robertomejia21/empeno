@@ -4,6 +4,8 @@ import { registrarVenta } from "@/lib/actions";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { Card, CardHeader, PageHeader, EmptyState, Badge } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { CircleCheck, Package, Receipt, ShoppingCart, Tag, Wallet } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 const inputCls =
   "w-full rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-sm outline-none transition focus:border-primary-2 focus:bg-surface focus:ring-2 focus:ring-primary-2/20";
@@ -29,16 +31,16 @@ export default async function VentasPage() {
       />
 
       {/* Resumen */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <ResumenPOS etiqueta="Disponibles" valor={enVenta.length.toString()} icono="🏷️" />
-        <ResumenPOS etiqueta="Vendido hoy" valor={formatMXN(montoHoy)} icono="🧾" tono="primary" />
-        <ResumenPOS etiqueta="Ventas hoy" valor={ventasHoy.length.toString()} icono="✅" />
-        <ResumenPOS etiqueta="Vendido histórico" valor={formatMXN(totalVendido)} icono="💰" tono="success" />
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <ResumenPOS etiqueta="Disponibles" valor={enVenta.length.toString()} icono={Tag} />
+        <ResumenPOS etiqueta="Vendido hoy" valor={formatMXN(montoHoy)} icono={Receipt} tono="primary" />
+        <ResumenPOS etiqueta="Ventas hoy" valor={ventasHoy.length.toString()} icono={CircleCheck} />
+        <ResumenPOS etiqueta="Vendido histórico" valor={formatMXN(totalVendido)} icono={Wallet} tono="success" />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 2xl:grid-cols-4">
         {/* Catálogo de artículos a la venta */}
-        <div className="lg:col-span-2">
+        <div className="min-w-0 lg:col-span-2 2xl:col-span-3">
           {enVenta.length === 0 ? (
             <Card>
               <EmptyState
@@ -52,7 +54,7 @@ export default async function VentasPage() {
                 <h2 className="text-sm font-semibold text-foreground">Artículos a la venta</h2>
                 <span className="text-xs text-muted">{enVenta.length} disponible(s)</span>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {enVenta.map((p) => (
                   <form
                     key={p.id}
@@ -67,7 +69,9 @@ export default async function VentasPage() {
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img src={p.fotos[0]} alt={p.descripcion} className="h-full w-full object-cover transition group-hover:scale-105" />
                       ) : (
-                        <span className="flex h-full w-full items-center justify-center text-4xl text-muted">📦</span>
+                        <span className="flex h-full w-full items-center justify-center text-muted">
+                          <Package className="h-10 w-10" strokeWidth={1.5} aria-hidden />
+                        </span>
                       )}
                       <span className="absolute left-2 top-2">
                         <Badge tono="muted">{p.categoria}</Badge>
@@ -103,9 +107,9 @@ export default async function VentasPage() {
                         <label className="block">
                           <span className="mb-1 block text-[11px] font-medium text-muted">Método de pago</span>
                           <select name="metodoPago" className={inputCls}>
-                            <option value="efectivo">💵 Efectivo</option>
-                            <option value="tarjeta">💳 Tarjeta</option>
-                            <option value="transferencia">🏦 Transferencia</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                            <option value="transferencia">Transferencia</option>
                           </select>
                         </label>
                       </div>
@@ -115,7 +119,8 @@ export default async function VentasPage() {
                           confirmacion={`¿Registrar la venta de ${p.descripcion}?`}
                           className="w-full"
                         >
-                          🛒 Vender
+                          <ShoppingCart className="h-4 w-4" aria-hidden />
+                          Vender
                         </ConfirmSubmit>
                       </div>
                     </div>
@@ -160,17 +165,25 @@ export default async function VentasPage() {
 function ResumenPOS({
   etiqueta, valor, icono, tono = "muted",
 }: {
-  etiqueta: string; valor: string; icono: string; tono?: "muted" | "primary" | "success";
+  etiqueta: string; valor: string; icono: LucideIcon; tono?: "muted" | "primary" | "success";
 }) {
+  const Icono = icono;
   const color = tono === "primary" ? "text-primary" : tono === "success" ? "text-success" : "text-foreground";
-  const iconBg = tono === "primary" ? "bg-primary-soft" : tono === "success" ? "bg-success-soft" : "bg-surface-2";
+  const iconBg =
+    tono === "primary"
+      ? "bg-primary-soft text-primary"
+      : tono === "success"
+        ? "bg-success-soft text-success"
+        : "bg-surface-2 text-muted";
   return (
-    <Card className="p-4">
+    <Card className="min-w-0 p-4">
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 text-[13px] font-medium text-muted">{etiqueta}</p>
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm ${iconBg}`}>{icono}</span>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${iconBg}`}>
+          <Icono className="h-4 w-4" aria-hidden />
+        </span>
       </div>
-      <p className={`mt-2 text-xl font-bold leading-none tracking-tight tabular-nums sm:text-2xl ${color}`}>{valor}</p>
+      <p className={`mt-2 truncate text-lg font-bold leading-none tracking-tight tabular-nums sm:text-2xl ${color}`}>{valor}</p>
     </Card>
   );
 }

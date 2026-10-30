@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, Camera, Download, FileSignature, Hourglass, Printer, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { obtenerEmpeno, contarRefrendos } from "@/lib/db/repo";
 import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento } from "@/lib/interes";
 import { esDiaInhabil } from "@/lib/diasInhabiles";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno, eliminarEmpenoPermanente } from "@/lib/actions";
 import { getUsuarioActual } from "@/lib/session";
-import { formatMXN, formatFecha, formatFechaLarga, formatPorcentaje } from "@/lib/format";
+import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
@@ -50,54 +51,62 @@ export default async function EmpenoDetalle({
   const proximoVencInhabil = esDiaInhabil(proximoVenc);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-7xl">
       <div className="no-print">
         <VolverLink href="/empenos" label="Empeños" />
         <PageHeader
           title={`Empeño ${empeno.folio}`}
           subtitle={`Creado el ${formatFechaLarga(empeno.creadoEn)}`}
           action={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/empenos/${empeno.id}/contrato`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"
               >
-                📝 Contrato PROFECO
+                <FileSignature className="h-4 w-4" aria-hidden /> Contrato PROFECO
               </Link>
               <a
                 href={`/api/boleta/${empeno.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-3.5 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"
               >
-                📄 Descargar PDF
+                <Download className="h-4 w-4" aria-hidden /> Descargar PDF
               </a>
-              <PrintButton>🖨️ Imprimir</PrintButton>
+              <PrintButton>
+                <Printer className="h-4 w-4" aria-hidden /> Imprimir
+              </PrintButton>
               {estadoEmpenoBadge(estadoMostrar)}
             </div>
           }
         />
 
         {empeno.estado === "borrador" && (
-          <div className="mb-6 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-            ⏳ Este empeño está en <strong>borrador</strong>, pendiente de autorización de Dirección por tasa especial. No se puede cerrar (refrendar/desempeñar) hasta que se autorice en{" "}
+          <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+            <Hourglass className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>
+            Este empeño está en <strong>borrador</strong>, pendiente de autorización de Dirección por tasa especial. No se puede cerrar (refrendar/desempeñar) hasta que se autorice en{" "}
             <Link href="/autorizaciones" className="font-semibold underline underline-offset-2">Autorizaciones</Link>.
+            </p>
           </div>
         )}
 
         {calc.vencido && activo && (
-          <div className="mb-6 rounded-lg border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
-            ⚠️ Este empeño está <strong>vencido</strong> (venció el{" "}
+          <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>
+            Este empeño está <strong>vencido</strong> (venció el{" "}
             {formatFecha(empeno.fechaVencimiento)}). Pasados los días de gracia puede
             pasar a remate.
+            </p>
           </div>
         )}
 
         {activo && <LineaTiempo inicio={empeno.fechaInicio} fin={empeno.fechaVencimiento} />}
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3">
           {/* Liquidación */}
-          <Card className="md:col-span-2">
+          <Card className="min-w-0 lg:col-span-2">
             <CardHeader
               title="Liquidación al día de hoy"
               subtitle={`${calc.periodosTranscurridos} periodo(s) · ${calc.diasTranscurridos} días transcurridos`}
@@ -117,7 +126,7 @@ export default async function EmpenoDetalle({
             )}
 
             {activo && (
-              <div className="space-y-4 border-t border-border px-5 py-4">
+              <div className="space-y-4 border-t border-border px-4 py-4 sm:px-5">
                 {/* Refrendo / abono mensual con recibo */}
                 <RefrendoForm
                   accion={refrendar}
@@ -127,9 +136,9 @@ export default async function EmpenoDetalle({
                   vencido={calc.vencido}
                   proximoVencInhabil={proximoVencInhabil}
                 />
-                <form action={desempenar} className="rounded-xl border border-border bg-surface-2/40 p-4">
+                <form action={desempenar} className="rounded-xl border border-border bg-surface p-4">
                   <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
                     <label className="flex flex-col gap-1 text-xs text-muted">
                       Método de pago
                       <select name="metodoPago" defaultValue={empeno.metodoPago} className={campoCls}>
@@ -194,8 +203,8 @@ export default async function EmpenoDetalle({
             <CardHeader
               title="Cliente"
               action={
-                <Link href={`/clientes/${empeno.cliente.id}`} className="text-sm text-primary">
-                  Ver ficha →
+                <Link href={`/clientes/${empeno.cliente.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                  Ver ficha <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               }
             />
@@ -220,7 +229,9 @@ export default async function EmpenoDetalle({
               action={
                 empeno.prenda.categoria === "Vehículos" ? (
                   empeno.prenda.verificado ? (
-                    <Badge tono="success">✓ Verificado REPUVE</Badge>
+                    <Badge tono="success">
+                      <ShieldCheck className="mr-1 h-3.5 w-3.5" aria-hidden /> Verificado REPUVE
+                    </Badge>
                   ) : (
                     <Badge tono="danger">Sin verificar</Badge>
                   )
@@ -247,7 +258,7 @@ export default async function EmpenoDetalle({
                 <FotoLavado empenoId={empeno.id} />
                 <form action={enviarFotoVehiculo.bind(null, empeno.id)}>
                   <ConfirmSubmit variante="secondary" confirmacion="¿Enviar la última foto guardada del vehículo al propietario por WhatsApp?">
-                    📷 Enviar última foto guardada
+                    <Camera className="h-4 w-4" aria-hidden /> Enviar última foto guardada
                   </ConfirmSubmit>
                 </form>
               </div>
@@ -291,7 +302,7 @@ export default async function EmpenoDetalle({
                   variante="danger"
                   confirmacion={`¿Eliminar PERMANENTEMENTE el contrato ${empeno.folio} de ${empeno.cliente.nombre} ${empeno.cliente.apellidoPaterno}? Esto borra el contrato, su prenda y sus pagos. No se puede deshacer.`}
                 >
-                  🗑️ Eliminar contrato permanentemente
+                  <Trash2 className="h-4 w-4" aria-hidden /> Eliminar contrato permanentemente
                 </ConfirmSubmit>
               </form>
             </div>
@@ -306,7 +317,7 @@ export default async function EmpenoDetalle({
 }
 
 const campoCls =
-  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
+  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 function CampoNum({ name, label, defaultValue, nota }: { name: string; label: string; defaultValue?: number; nota?: string }) {
   return (
@@ -322,6 +333,7 @@ function LineaTiempo({ inicio, fin }: { inicio: string; fin: string }) {
   const msDia = 86400000;
   const t0 = new Date(inicio + "T00:00:00").getTime();
   const t1 = new Date(fin + "T00:00:00").getTime();
+  // eslint-disable-next-line react-hooks/purity -- Server Component: se evalúa una sola vez por request.
   const ahora = Date.now();
   const total = Math.max(1, Math.round((t1 - t0) / msDia));
   const trans = Math.round((ahora - t0) / msDia);
@@ -329,14 +341,14 @@ function LineaTiempo({ inicio, fin }: { inicio: string; fin: string }) {
   const vencido = ahora > t1;
   return (
     <Card className="mb-6 p-5">
-      <div className="mb-2 flex items-center justify-between text-xs">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
         <span className="font-medium text-foreground">Inicio · {formatFecha(inicio)}</span>
         <span className="text-muted">{Math.max(0, total - trans)} días restantes</span>
         <span className="font-medium text-foreground">Vence · {formatFecha(fin)}</span>
       </div>
       <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-surface-2">
         <div
-          className={`h-full rounded-full ${vencido ? "bg-danger" : "bg-gold-gradient"}`}
+          className={`h-full rounded-full ${vencido ? "bg-danger" : "bg-primary"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -354,10 +366,10 @@ function Celda({
   destacado?: boolean;
 }) {
   return (
-    <div className="bg-surface px-5 py-4">
+    <div className="min-w-0 bg-surface px-4 py-4 sm:px-5">
       <p className="text-xs text-muted">{etiqueta}</p>
       <p
-        className={`mt-1 font-bold ${destacado ? "text-xl text-primary" : "text-base text-foreground"}`}
+        className={`mt-1 break-words font-bold tabular-nums ${destacado ? "text-xl text-primary" : "text-base text-foreground"}`}
       >
         {valor}
       </p>
@@ -368,8 +380,8 @@ function Celda({
 function Linea({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <dt className="text-muted">{etiqueta}</dt>
-      <dd className="text-right font-medium text-foreground">{valor}</dd>
+      <dt className="shrink-0 text-muted">{etiqueta}</dt>
+      <dd className="min-w-0 break-words text-right font-medium text-foreground">{valor}</dd>
     </div>
   );
 }

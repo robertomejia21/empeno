@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { guardarChecklistVehicular } from "@/lib/actions";
+import { Check, CircleCheck } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui";
 import type { Prenda, FilaChecklistVehiculo } from "@/lib/types";
 
@@ -67,7 +68,8 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
   if (guardado) {
     return (
       <Card className="border-success/30 bg-success-soft p-6 text-center">
-        <p className="font-medium text-success">✅ Checklist guardado — {vehiculos.length} vehículo(s) revisados.</p>
+        <p className="inline-flex flex-wrap items-center justify-center gap-1.5 font-medium text-success">
+          <CircleCheck className="h-5 w-5" aria-hidden /> Checklist guardado — {vehiculos.length} vehículo(s) revisados.</p>
       </Card>
     );
   }
@@ -75,8 +77,8 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
   return (
     <Card>
       <CardHeader title="Vehículos a revisar hoy" subtitle={`${vehiculos.length} en resguardo`} />
-      <div className="space-y-4 p-5">
-        <label className="flex flex-col gap-1.5">
+      <div className="space-y-4 p-4 sm:p-6">
+        <label className="flex max-w-xl flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">Responsable *</span>
           <input
             value={responsable}
@@ -86,10 +88,10 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
           />
         </label>
 
-        <div className="space-y-3">
+        <div className="grid gap-3 xl:grid-cols-2">
           {vehiculos.map((v) => (
-            <div key={v.id} className="rounded-xl border border-border p-4">
-              <p className="text-sm font-semibold text-foreground">
+            <div key={v.id} className="min-w-0 rounded-xl border border-border bg-surface p-4">
+              <p className="break-words text-sm font-semibold text-foreground">
                 {v.folio} · {[v.marca, v.submarca, v.modelo].filter(Boolean).join(" ") || v.descripcion}
               </p>
               <p className="text-xs text-muted">{v.placas ?? "sin placas"}</p>
@@ -101,11 +103,11 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
                       key={it.clave}
                       type="button"
                       onClick={() => toggle(v.id, it.clave)}
-                      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                         activo ? "border-success bg-success-soft text-success" : "border-border bg-surface text-muted hover:bg-surface-2"
                       }`}
                     >
-                      {activo ? "✓ " : ""}
+                      {activo && <Check className="h-3.5 w-3.5" aria-hidden />}
                       {it.label}
                     </button>
                   );
@@ -136,7 +138,7 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
           type="button"
           onClick={guardar}
           disabled={guardando || !responsable.trim()}
-          className="w-full rounded-lg bg-gold-gradient px-4 py-2.5 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105 disabled:opacity-50"
+          className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar checklist del día"}
         </button>

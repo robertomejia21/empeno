@@ -1,19 +1,28 @@
+import { Satellite, Warehouse } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { formatMXN, formatPorcentaje } from "@/lib/format";
 import type { ResumenGps } from "@/lib/gps";
 
 export function GpsModalidades({ resumen }: { resumen: ResumenGps }) {
-  const cards = [
-    { titulo: "GPS", icono: "📡", data: resumen.gps, tono: "info" as const, sub: "El cliente conserva el vehículo con GPS" },
-    { titulo: "Resguardo", icono: "🏢", data: resumen.resguardo, tono: "primary" as const, sub: "Vehículo en nuestra bóveda/patio" },
+  const cards: { titulo: string; icono: LucideIcon; data: ResumenGps["gps"]; tono: "info" | "primary"; sub: string }[] = [
+    { titulo: "GPS", icono: Satellite, data: resumen.gps, tono: "info" as const, sub: "El cliente conserva el vehículo con GPS" },
+    { titulo: "Resguardo", icono: Warehouse, data: resumen.resguardo, tono: "primary" as const, sub: "Vehículo en nuestra bóveda/patio" },
   ];
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2">
       {cards.map((c) => (
-        <div key={c.titulo} className="shadow-soft rounded-2xl border border-border bg-surface p-5">
-          <div className="flex items-start justify-between">
-            <div>
+        <div key={c.titulo} className="shadow-soft rounded-2xl border border-border bg-surface p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
               <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <span className="text-lg">{c.icono}</span> Modalidad {c.titulo}
+                <span
+                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                    c.tono === "info" ? "bg-info-soft text-info" : "bg-primary-soft text-primary"
+                  }`}
+                >
+                  <c.icono className="h-4 w-4" aria-hidden />
+                </span>
+                Modalidad {c.titulo}
               </p>
               <p className="mt-0.5 text-xs text-muted">{c.sub}</p>
             </div>
@@ -25,7 +34,7 @@ export function GpsModalidades({ resumen }: { resumen: ResumenGps }) {
               {formatPorcentaje(c.data.pct)} del total
             </span>
           </div>
-          <div className="mt-4 flex items-end justify-between">
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[32px] font-bold leading-none tracking-tight text-foreground">{c.data.cantidad}</p>
               <p className="mt-1 text-xs text-muted">contratos activos</p>

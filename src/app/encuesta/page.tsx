@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function EncuestaPage() {
   return (
-    <div className="min-h-screen bg-surface-2 px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10">
       <div className="mx-auto max-w-lg">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{SUCURSAL.nombre}</h1>

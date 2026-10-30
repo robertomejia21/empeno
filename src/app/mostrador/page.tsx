@@ -3,16 +3,17 @@ import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
-import { Card, CardHeader, PageHeader, SearchForm, EmptyState, Badge } from "@/components/ui";
+import { Card, CardHeader, PageHeader, SearchForm, EmptyState } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import type { EmpenoConDetalle, CalculoLiquidacion } from "@/lib/types";
+import { Archive, ArrowLeft, ArrowRight, MapPin, Package, Phone, Printer, User } from "lucide-react";
 
 export const metadata = { title: "Mostrador" };
 
 const campoCls =
-  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
+  "w-full min-w-0 rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
 
 export default async function MostradorPage({
   searchParams,
@@ -42,7 +43,7 @@ export default async function MostradorPage({
       })
     : [];
 
-  // Selección: por id explícito → por contrato exacto único → por única coincidencia.
+  // Selección: por id explícito -> por contrato exacto único -> por única coincidencia.
   const seleccion =
     (id ? empenos.find((e) => e.id === id) : undefined) ??
     (exactos.length === 1 ? exactos[0] : undefined) ??
@@ -82,10 +83,10 @@ export default async function MostradorPage({
                 <li key={e.id}>
                   <Link
                     href={`/mostrador?q=${encodeURIComponent(t)}&id=${e.id}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-surface-2"
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 transition hover:bg-surface-2 sm:flex-nowrap sm:px-5"
                   >
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">
+                      <span className="block truncate text-sm font-medium text-foreground">
                         <span className="font-mono text-xs text-muted">{e.folio}</span> ·{" "}
                         {e.cliente.nombre} {e.cliente.apellidoPaterno} {e.cliente.apellidoMaterno}
                       </span>
@@ -94,7 +95,7 @@ export default async function MostradorPage({
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-3">
-                      <span className="text-sm font-semibold text-foreground">{formatMXN(c.totalDesempeno)}</span>
+                      <span className="text-sm font-semibold tabular-nums text-foreground">{formatMXN(c.totalDesempeno)}</span>
                       {estadoEmpenoBadge(c.vencido && (e.estado === "activo" || e.estado === "refrendado") ? "vencido" : e.estado)}
                     </span>
                   </Link>
@@ -118,18 +119,18 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
     <div className="space-y-6">
       {/* Cabecera del contrato */}
       <Card>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="font-mono text-sm text-muted">Contrato</span>
             <span className="text-xl font-bold tracking-tight text-foreground">{e.folio}</span>
             {estadoEmpenoBadge(calc.vencido && activo ? "vencido" : e.estado)}
           </div>
-          <Link href={`/mostrador?q=${encodeURIComponent(q)}`} className="text-sm font-medium text-muted hover:text-foreground">
-            ← Otra búsqueda
+          <Link href={`/mostrador?q=${encodeURIComponent(q)}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" aria-hidden /> Otra búsqueda
           </Link>
         </div>
 
-        <div className="grid gap-6 p-5 lg:grid-cols-3">
+        <div className="grid gap-6 p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
           {/* Cliente */}
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Cliente</p>
@@ -138,14 +139,24 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={cli.foto} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
               ) : (
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-xl text-muted">👤</span>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-muted">
+                  <User className="h-6 w-6" aria-hidden />
+                </span>
               )}
               <div className="min-w-0">
                 <Link href={`/clientes/${cli.id}`} className="text-sm font-semibold text-foreground hover:text-primary">
                   {nombreCompleto}
                 </Link>
-                {cli.telefono && <p className="text-xs text-muted">📞 {cli.telefono}</p>}
-                {cli.direccion && <p className="text-xs text-muted">📍 {cli.direccion}</p>}
+                {cli.telefono && (
+                  <p className="flex items-center gap-1.5 text-xs text-muted">
+                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden /> {cli.telefono}
+                  </p>
+                )}
+                {cli.direccion && (
+                  <p className="flex items-start gap-1.5 text-xs text-muted">
+                    <MapPin className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden /> <span className="min-w-0">{cli.direccion}</span>
+                  </p>
+                )}
                 {cli.numeroIdentificacion && (
                   <p className="text-xs text-muted">{cli.tipoIdentificacion}: {cli.numeroIdentificacion}</p>
                 )}
@@ -179,7 +190,9 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={e.prenda.fotos[0]} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
               ) : (
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-xl text-muted">📦</span>
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-muted">
+                  <Package className="h-6 w-6" aria-hidden />
+                </span>
               )}
               <div className="min-w-0">
                 <Link href={`/prendas/${e.prenda.id}`} className="text-sm font-semibold text-foreground hover:text-primary">
@@ -187,7 +200,11 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
                 </Link>
                 <p className="text-xs text-muted">{e.prenda.folio} · {e.prenda.categoria}</p>
                 <p className="text-xs text-muted">Avalúo {formatMXN(e.prenda.valorAvaluo)}</p>
-                {e.prenda.ubicacionResguardo && <p className="truncate text-xs text-muted">🗄️ {e.prenda.ubicacionResguardo}</p>}
+                {e.prenda.ubicacionResguardo && (
+                  <p className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+                    <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden /> <span className="truncate">{e.prenda.ubicacionResguardo}</span>
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -202,21 +219,23 @@ function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
         </div>
       ) : (
         <Card>
-          <div className="flex items-center justify-between gap-3 px-5 py-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-6">
             <p className="text-sm text-muted">
               Este contrato está <strong className="text-foreground">{e.estado}</strong>; no admite más cobros.
             </p>
-            <Link href={`/empenos/${e.id}`} className="text-sm font-medium text-primary">Ver historial →</Link>
+            <Link href={`/empenos/${e.id}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+              Ver historial <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
           </div>
         </Card>
       )}
 
       <div className="flex flex-wrap gap-3">
-        <Link href={`/empenos/${e.id}`} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
+        <Link href={`/empenos/${e.id}`} className="shadow-soft rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
           Ver contrato completo
         </Link>
-        <a href={`/api/estado/${e.id}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
-          🖨️ Estado de cuenta (PDF)
+        <a href={`/api/estado/${e.id}`} target="_blank" rel="noopener noreferrer" className="shadow-soft inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
+          <Printer className="h-4 w-4" aria-hidden /> Estado de cuenta (PDF)
         </a>
       </div>
     </div>
@@ -228,11 +247,11 @@ function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidaci
   return (
     <Card>
       <CardHeader title="Refrendo (pago del periodo)" subtitle="Renueva el contrato otro periodo" />
-      <div className="px-5 pb-2">
-        <p className="text-3xl font-bold tracking-tight text-primary">{formatMXN(calc.totalRefrendo)}</p>
+      <div className="px-4 pb-2 pt-4 sm:px-5">
+        <p className="text-2xl font-bold tracking-tight tabular-nums text-primary sm:text-3xl">{formatMXN(calc.totalRefrendo)}</p>
         <p className="mt-1 text-xs text-muted">Interés + almacenaje + IVA del periodo</p>
       </div>
-      <form action={refrendarEmpeno.bind(null, e.id)} className="space-y-3 p-5 pt-3">
+      <form action={refrendarEmpeno.bind(null, e.id)} className="space-y-3 p-4 pt-3 sm:p-5 sm:pt-3">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-xs text-muted">
             Método de pago
@@ -261,11 +280,11 @@ function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidac
   return (
     <Card>
       <CardHeader title="Desempeño (liquidación)" subtitle="El cliente recupera su prenda" />
-      <div className="px-5 pb-2">
-        <p className="text-3xl font-bold tracking-tight text-foreground">{formatMXN(calc.totalDesempeno)}</p>
+      <div className="px-4 pb-2 pt-4 sm:px-5">
+        <p className="text-2xl font-bold tracking-tight tabular-nums text-foreground sm:text-3xl">{formatMXN(calc.totalDesempeno)}</p>
         <p className="mt-1 text-xs text-muted">Capital {formatMXN(calc.capital)} + interés + almacenaje + IVA</p>
       </div>
-      <form action={desempenarEmpeno.bind(null, e.id)} className="space-y-3 p-5 pt-3">
+      <form action={desempenarEmpeno.bind(null, e.id)} className="space-y-3 p-4 pt-3 sm:p-5 sm:pt-3">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-xs text-muted">
             Método de pago
@@ -301,8 +320,8 @@ function Num({ name, label, defaultValue, nota }: { name: string; label: string;
 function Dato({ k, v, tono }: { k: string; v: string; tono?: "danger" }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <dt className="text-muted">{k}</dt>
-      <dd className={`font-medium ${tono === "danger" ? "text-danger" : "text-foreground"}`}>{v}</dd>
+      <dt className="shrink-0 text-muted">{k}</dt>
+      <dd className={`min-w-0 text-right font-medium ${tono === "danger" ? "text-danger" : "text-foreground"}`}>{v}</dd>
     </div>
   );
 }

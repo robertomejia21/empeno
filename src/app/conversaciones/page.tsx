@@ -2,6 +2,7 @@ import { listarBitacora } from "@/lib/db/repo";
 import { estadoInstancia, whatsappHabilitado } from "@/lib/whatsapp";
 import { formatFechaHora } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, EmptyState } from "@/components/ui";
+import { Hourglass } from "lucide-react";
 
 export const metadata = { title: "Conversaciones WhatsApp" };
 
@@ -32,10 +33,13 @@ export default async function ConversacionesPage() {
       />
 
       {!conectado && (
-        <div className="mb-6 rounded-xl border border-warning/30 bg-warning-soft px-5 py-4 text-sm text-warning">
-          ⏳ <strong>WhatsApp aún no está vinculado.</strong> Para activar el chat en vivo y el envío automático
-          (recordatorios y fotos de vehículos), escanea el código QR con el WhatsApp de la casa de empeño.
-          Pídele al administrador que genere el QR.
+        <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warning/20 bg-warning-soft px-4 py-4 text-sm text-warning sm:px-5">
+          <Hourglass className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="min-w-0">
+            <strong>WhatsApp aún no está vinculado.</strong> Para activar el chat en vivo y el envío automático
+            (recordatorios y fotos de vehículos), escanea el código QR con el WhatsApp de la casa de empeño.
+            Pídele al administrador que genere el QR.
+          </p>
         </div>
       )}
 
@@ -49,8 +53,8 @@ export default async function ConversacionesPage() {
         ) : (
           <ul className="divide-y divide-border">
             {eventos.map((e) => (
-              <li key={e.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div className="min-w-0">
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 sm:flex-nowrap sm:px-5">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{e.accion}</p>
                   <p className="truncate text-xs text-muted">{e.detalle}{e.referencia ? ` · ${e.referencia}` : ""}</p>
                 </div>

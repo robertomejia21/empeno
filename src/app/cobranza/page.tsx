@@ -6,6 +6,7 @@ import { whatsappHabilitado } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, EmptyState, Badge, ResumenChips } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { CircleCheck, MessageCircle } from "lucide-react";
 
 export default async function CobranzaPage() {
   const empenos = await listarEmpenos();
@@ -35,8 +36,9 @@ export default async function CobranzaPage() {
       />
 
       {waOn && (
-        <div className="mb-5 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success">
-          ✅ WhatsApp conectado: cobra y recuerda directamente desde aquí.
+        <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-success/20 bg-success-soft px-4 py-3 text-sm text-success sm:px-5">
+          <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>WhatsApp conectado: cobra y recuerda directamente desde aquí.</span>
         </div>
       )}
 
@@ -46,7 +48,7 @@ export default async function CobranzaPage() {
           <EmptyState titulo="Sin cuentas por cobrar" descripcion="No hay empeños activos pendientes de pago." />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-180 text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Folio</th>
@@ -68,8 +70,8 @@ export default async function CobranzaPage() {
                           {e.folio}
                         </Link>
                       </td>
-                      <td className="px-5 py-3 text-foreground">{e.cliente.nombre} {e.cliente.apellidoPaterno}</td>
-                      <td className="px-5 py-3 text-muted">{formatFecha(e.fechaVencimiento)}</td>
+                      <td className="whitespace-nowrap px-5 py-3 text-foreground">{e.cliente.nombre} {e.cliente.apellidoPaterno}</td>
+                      <td className="whitespace-nowrap px-5 py-3 text-muted">{formatFecha(e.fechaVencimiento)}</td>
                       <td className="px-5 py-3">
                         {calc.vencido ? (
                           <Badge tono="danger">{Math.abs(calc.diasParaVencer)} d. atraso</Badge>
@@ -79,14 +81,15 @@ export default async function CobranzaPage() {
                           </Badge>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-right text-muted">{formatMXN(calc.totalRefrendo)}</td>
-                      <td className="px-5 py-3 text-right font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</td>
+                      <td className="px-5 py-3 text-right tabular-nums text-muted">{formatMXN(calc.totalRefrendo)}</td>
+                      <td className="px-5 py-3 text-right font-semibold tabular-nums text-foreground">{formatMXN(calc.totalDesempeno)}</td>
                       <td className="px-5 py-3 text-right">
                         {!e.cliente.telefono ? (
                           <span className="text-xs text-muted">sin tel.</span>
                         ) : waOn ? (
                           <form action={enviarRecordatorioWhatsApp.bind(null, e.id)} className="inline">
                             <ConfirmSubmit confirmacion={`¿Enviar aviso de cobranza por WhatsApp a ${e.cliente.nombre}?`}>
+                              <MessageCircle className="h-4 w-4" aria-hidden />
                               WhatsApp
                             </ConfirmSubmit>
                           </form>
@@ -95,8 +98,9 @@ export default async function CobranzaPage() {
                             href={`https://wa.me/52${tel}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                           >
+                            <MessageCircle className="h-3.5 w-3.5" aria-hidden />
                             WhatsApp
                           </a>
                         )}

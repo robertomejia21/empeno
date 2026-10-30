@@ -1,6 +1,7 @@
 import { Card, CardHeader } from "@/components/ui";
 import { formatMXN, formatFecha } from "@/lib/format";
 import type { ReporteSemanal } from "@/lib/reporteSemanal";
+import { Download } from "lucide-react";
 
 export function ReporteSemanalCard({
   reporte,
@@ -28,12 +29,16 @@ export function ReporteSemanalCard({
         title={titulo}
         subtitle={`Del ${formatFecha(reporte.desde)} al ${formatFecha(reporte.hasta)}`}
         action={
-          <a href={descarga} className="text-sm font-medium text-primary">
-            ⬇️ Descargar Excel
+          <a
+            href={descarga}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Descargar Excel
           </a>
         }
       />
-      <div className="overflow-x-auto px-5 pb-5">
+      <div className="overflow-x-auto px-4 pb-5 sm:px-5">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
@@ -45,8 +50,8 @@ export function ReporteSemanalCard({
           <tbody>
             {filas.map((f, i) =>
               f.seccion ? (
-                <tr key={i} className="bg-warning-soft">
-                  <td colSpan={3} className="py-1.5 text-center text-xs font-bold uppercase tracking-wide text-warning">
+                <tr key={i} className="bg-primary-soft">
+                  <td colSpan={3} className="rounded-lg py-1.5 text-center text-xs font-bold uppercase tracking-wide text-primary">
                     {f.desc}
                   </td>
                 </tr>

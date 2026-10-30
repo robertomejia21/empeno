@@ -7,6 +7,7 @@ import { PrintButton } from "@/components/actions-ui";
 import { rangoMesActual, calcularReporteSemanal } from "@/lib/reporteSemanal";
 import { ReporteSemanalCard } from "@/components/ReportePorModalidad";
 import { normalizarBusqueda } from "@/lib/buscar";
+import { Download, Filter, Printer } from "lucide-react";
 
 const EXPORTS = [
   { tipo: "empenos", label: "Empeños" },
@@ -108,10 +109,10 @@ export default async function ReportesPage({
   }
 
   const donaCartera = [
-    { etiqueta: "Activos", valor: activos.filter((e) => !calcularLiquidacion(e).vencido).length, color: "#15803d" },
-    { etiqueta: "Vencidos", valor: activos.filter((e) => calcularLiquidacion(e).vencido).length, color: "#b91c1c" },
-    { etiqueta: "Desempeñados", valor: desempenados, color: "#78716c" },
-    { etiqueta: "Rematados", valor: rematados, color: "#a16207" },
+    { etiqueta: "Activos", valor: activos.filter((e) => !calcularLiquidacion(e).vencido).length, color: "var(--success)" },
+    { etiqueta: "Vencidos", valor: activos.filter((e) => calcularLiquidacion(e).vencido).length, color: "var(--danger)" },
+    { etiqueta: "Desempeñados", valor: desempenados, color: "var(--muted)" },
+    { etiqueta: "Rematados", valor: rematados, color: "var(--warning)" },
   ];
 
   const etiquetaEstado: Record<string, string> = {
@@ -128,30 +129,36 @@ export default async function ReportesPage({
       <PageHeader
         title="Reportes"
         subtitle="Indicadores clave de la operación"
-        action={<PrintButton>🖨️ Imprimir / PDF</PrintButton>}
+        action={(
+          <PrintButton>
+            <Printer className="h-4 w-4" aria-hidden />
+            Imprimir / PDF
+          </PrintButton>
+        )}
       />
 
-      <div className="no-print mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+      <div className="no-print mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3">
         <span className="text-sm font-medium text-muted">Descargar Excel/CSV:</span>
         {EXPORTS.map((x) => (
           <a
             key={x.tipo}
             href={`/api/export/${x.tipo}`}
-            className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium hover:bg-surface"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium transition hover:border-primary/40 hover:bg-primary-soft hover:text-primary"
           >
-            ⬇️ {x.label}
+            <Download className="h-3.5 w-3.5" aria-hidden />
+            {x.label}
           </a>
         ))}
       </div>
 
-      <form className="no-print mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+      <form className="no-print mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted">Desde</span>
           <input
             type="date"
             name="desde"
             defaultValue={desde}
-            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm"
+            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -160,19 +167,20 @@ export default async function ReportesPage({
             type="date"
             name="hasta"
             defaultValue={hasta}
-            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm"
+            className="rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <button
           type="submit"
-          className="rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium hover:bg-surface"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-fg transition hover:brightness-105"
         >
+          <Filter className="h-4 w-4" aria-hidden />
           Filtrar
         </button>
         <span className="text-xs text-muted">Aplica al flujo y al desglose por vehículos/artículos de abajo.</span>
       </form>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Kpi label="Cartera activa" valor={formatMXN(carteraActiva)} hint="capital prestado vigente" />
         <Kpi label="Interés devengado" valor={formatMXN(interesDevengado)} hint="sobre empeños activos" />
         <Kpi label="Tasa de recuperación" valor={formatPorcentaje(tasaRecuperacion)} hint={`${desempenados} de ${cerrados} cerrados`} />
@@ -194,19 +202,19 @@ export default async function ReportesPage({
         </Card>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 2xl:grid-cols-3">
         <Card>
           <CardHeader title="Empeños por estado" />
           <div className="space-y-3 p-5">
             {porEstado.map(({ est, n, monto }) => (
               <div key={est}>
-                <div className="mb-1 flex justify-between text-sm">
+                <div className="mb-1 flex flex-wrap justify-between gap-x-3 text-sm">
                   <span className="text-muted">{etiquetaEstado[est]}</span>
                   <span className="font-medium text-foreground">{n} · {formatMXN(monto)}</span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
                   <div
-                    className="bg-gold-gradient h-full rounded-full"
+                    className="h-full rounded-full bg-primary"
                     style={{ width: `${(n / maxEstado) * 100}%` }}
                   />
                 </div>
@@ -279,9 +287,9 @@ export default async function ReportesPage({
 
 function Kpi({ label, valor, hint }: { label: string; valor: string; hint: string }) {
   return (
-    <Card className="p-5">
+    <Card className="min-w-0 p-4 sm:p-5">
       <p className="text-[13px] font-medium text-muted">{label}</p>
-      <p className="mt-2 text-[22px] font-bold tracking-tight text-foreground">{valor}</p>
+      <p className="mt-2 truncate text-lg font-bold tracking-tight tabular-nums text-foreground sm:text-[22px]">{valor}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>
     </Card>
   );
@@ -301,8 +309,8 @@ function Linea({
   const color = tono === "success" ? "text-success" : tono === "danger" ? "text-danger" : "text-foreground";
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-muted">{etiqueta}</span>
-      <span className={`${color} ${fuerte ? "text-base font-bold" : "font-medium"}`}>{valor}</span>
+      <span className="min-w-0 text-muted">{etiqueta}</span>
+      <span className={`shrink-0 tabular-nums ${color} ${fuerte ? "text-base font-bold" : "font-medium"}`}>{valor}</span>
     </div>
   );
 }

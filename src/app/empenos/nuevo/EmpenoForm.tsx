@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { CalendarDays, Plus, TriangleAlert } from "lucide-react";
 import { crearEmpeno } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, IVA_FIJO } from "@/lib/interes";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
@@ -33,7 +34,7 @@ export function EmpenoForm({
 }) {
   const [clienteId, setClienteId] = useState(clienteInicial ?? "");
   const [prendaId, setPrendaId] = useState("");
-  const [periodo, setPeriodo] = useState("mensual");
+  const [periodo] = useState("mensual");
   const [plazo, setPlazo] = useState(1);
   const [fechaInicio, setFechaInicio] = useState(hoyISO());
 
@@ -86,7 +87,7 @@ export function EmpenoForm({
     <form action={crearEmpeno}>
       <Card>
         <CardHeader title="1. Cliente" subtitle="Selecciona el cliente del empeño" />
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Cliente <span className="text-danger">*</span>
@@ -96,7 +97,7 @@ export function EmpenoForm({
               value={clienteId}
               onChange={(e) => onCliente(e.target.value)}
               required
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             >
               <option value="">— Selecciona —</option>
               {clientes.map((c) => (
@@ -105,13 +106,13 @@ export function EmpenoForm({
                 </option>
               ))}
             </select>
-            <Link href="/clientes/nuevo" className="text-xs text-primary">
-              + Registrar nuevo cliente
+            <Link href="/clientes/nuevo" className="inline-flex items-center gap-1 self-start text-xs font-medium text-primary hover:underline">
+              <Plus className="h-3.5 w-3.5" aria-hidden /> Registrar nuevo cliente
             </Link>
           </label>
 
           {cliente && (
-            <div className="rounded-lg bg-surface-2 p-3 text-sm">
+            <div className="rounded-xl border border-border bg-surface-2 p-3 text-sm">
               <p className="text-xs text-muted">Nivel del cliente</p>
               <p className="font-medium text-foreground">{historial.nivel}</p>
               <p className="mt-1 text-xs text-muted">
@@ -125,7 +126,7 @@ export function EmpenoForm({
 
       <Card className="mt-6">
         <CardHeader title="2. Prenda en garantía" subtitle="Bien que respalda el préstamo" />
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           {sinPrendas ? (
             <p className="text-sm text-muted">
               No hay prendas disponibles.{" "}
@@ -144,7 +145,7 @@ export function EmpenoForm({
                 value={prendaId}
                 onChange={(e) => onPrenda(e.target.value)}
                 required
-                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 <option value="">— Selecciona —</option>
                 {prendas.map((p) => (
@@ -160,7 +161,7 @@ export function EmpenoForm({
 
       <Card className="mt-6">
         <CardHeader title="3. Condiciones del préstamo" />
-        <div className="grid gap-4 p-5 sm:grid-cols-2">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Monto a prestar (MXN) <span className="text-danger">*</span>
@@ -172,7 +173,7 @@ export function EmpenoForm({
               required
               value={monto || ""}
               onChange={(e) => setMonto(parseFloat(e.target.value) || 0)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
             {prenda && (
               <span className="text-xs text-muted">
@@ -192,7 +193,7 @@ export function EmpenoForm({
               required
               value={tasa}
               onChange={(e) => setTasa(parseFloat(e.target.value) || 0)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -220,7 +221,7 @@ export function EmpenoForm({
               min={1}
               value={plazo}
               onChange={(e) => setPlazo(parseInt(e.target.value) || 1)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -231,7 +232,7 @@ export function EmpenoForm({
               type="date"
               value={fechaInicio}
               onChange={(e) => setFechaInicio(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <Field label="Días de gracia" name="diasGracia" type="number" defaultValue={7} />
@@ -245,24 +246,26 @@ export function EmpenoForm({
       {/* Cotización: Préstamo/Avalúo uno junto al otro, Refrendo/Desempeño con
           la fórmula real — mismos números que se van a cobrar después. */}
       <Card className="mt-6 overflow-hidden border-primary/30">
-        <div className="grid grid-cols-2 divide-x divide-border bg-primary-soft/30 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
           <Resumen etiqueta="Préstamo" valor={formatMXN(monto)} />
           <Resumen etiqueta="Avalúo" valor={formatMXN(prenda?.valorAvaluo ?? 0)} />
           <Resumen etiqueta="Refrendo (periodo)" valor={formatMXN(previewCalc?.totalRefrendo ?? 0)} />
           <Resumen etiqueta="Desempeño (total)" valor={formatMXN(previewCalc?.totalDesempeno ?? 0)} />
         </div>
         {prenda && monto > prenda.valorAvaluo && (
-          <p className="border-t border-border bg-warning-soft px-5 py-2 text-xs font-medium text-warning">
-            ⚠️ El préstamo supera el avalúo — verifica el monto.
+          <p className="flex items-center gap-1.5 border-t border-border bg-warning-soft px-5 py-2 text-xs font-medium text-warning">
+            <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden /> El préstamo supera el avalúo — verifica el monto.
           </p>
         )}
-        <p className="border-t border-border px-5 py-2 text-xs text-muted">Vence: {formatFecha(vencimiento)}</p>
+        <p className="flex items-center gap-1.5 border-t border-border px-5 py-2 text-xs text-muted">
+          <CalendarDays className="h-3.5 w-3.5" aria-hidden /> Vence: {formatFecha(vencimiento)}
+        </p>
       </Card>
 
-      <div className="mt-6 flex justify-end gap-3">
+      <div className="mt-6 flex flex-wrap justify-end gap-3">
         <Link
           href="/empenos"
-          className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+          className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"
         >
           Cancelar
         </Link>
@@ -276,9 +279,9 @@ export function EmpenoForm({
 
 function Resumen({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
-    <div className="p-4">
-      <p className="text-xs uppercase tracking-wide text-muted">{etiqueta}</p>
-      <p className="mt-0.5 text-lg font-bold text-foreground">{valor}</p>
+    <div className="min-w-0 bg-surface p-4">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{etiqueta}</p>
+      <p className="mt-0.5 truncate text-lg font-bold tabular-nums text-foreground">{valor}</p>
     </div>
   );
 }

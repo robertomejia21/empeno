@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Package, Plus } from "lucide-react";
 import { listarPrendas } from "@/lib/db/repo";
 import { formatMXN } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, Badge, SearchForm, ResumenChips } from "@/components/ui";
@@ -22,7 +23,11 @@ export default async function PrendasPage({
       <PageHeader
         title="Comprar"
         subtitle={t ? `${prendas.length} resultado(s) para "${q}"` : `${prendas.length} artículo(s) en inventario`}
-        action={<LinkButton href="/prendas/nueva">+ Registrar artículo</LinkButton>}
+        action={
+          <LinkButton href="/prendas/nueva">
+            <Plus className="h-4 w-4" aria-hidden /> Registrar artículo
+          </LinkButton>
+        }
       />
       <ResumenChips
         items={[
@@ -45,9 +50,9 @@ export default async function PrendasPage({
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                <tr className="border-b border-border bg-surface-2/60 text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Folio</th>
                   <th className="px-5 py-3 font-medium">Descripción</th>
                   <th className="px-5 py-3 font-medium">Departamento</th>
@@ -59,7 +64,7 @@ export default async function PrendasPage({
               </thead>
               <tbody className="divide-y divide-border">
                 {prendas.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-2">
+                  <tr key={p.id} className="transition hover:bg-surface-2/60">
                     <td className="px-5 py-3 font-mono text-xs text-muted">
                       <Link href={`/prendas/${p.id}`} className="hover:text-primary">{p.folio}</Link>
                     </td>
@@ -69,8 +74,8 @@ export default async function PrendasPage({
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img src={p.fotos[0]} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                         ) : (
-                          <span className="bg-surface-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base text-muted">
-                            📦
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted">
+                            <Package className="h-5 w-5" aria-hidden />
                           </span>
                         )}
                         <span className="min-w-0">
@@ -86,12 +91,14 @@ export default async function PrendasPage({
                     <td className="px-5 py-3">
                       <Badge tono="muted">{p.categoria}</Badge>
                     </td>
-                    <td className="px-5 py-3 text-foreground">{formatMXN(p.valorAvaluo)}</td>
-                    <td className="px-5 py-3 text-muted">
+                    <td className="whitespace-nowrap px-5 py-3 tabular-nums text-foreground">{formatMXN(p.valorAvaluo)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 tabular-nums text-muted">
                       {formatMXN(p.montoPrestamoSugerido)}
                     </td>
-                    <td className="px-5 py-3 text-xs text-muted">
-                      {p.ubicacionResguardo ?? "—"}
+                    <td className="max-w-[14rem] px-5 py-3 text-xs text-muted">
+                      <span className="block truncate" title={p.ubicacionResguardo ?? undefined}>
+                        {p.ubicacionResguardo ?? "—"}
+                      </span>
                     </td>
                     <td className="px-5 py-3">{estadoPrendaBadge(p.estado)}</td>
                   </tr>

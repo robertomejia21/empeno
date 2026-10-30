@@ -6,6 +6,7 @@ import { whatsappHabilitado } from "@/lib/whatsapp";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, EmptyState } from "@/components/ui";
 import { ConfirmSubmit } from "@/components/actions-ui";
+import { CircleCheck, Hourglass, MessageCircle, Phone, Send } from "lucide-react";
 
 export default async function RecordatoriosPage() {
   const empenos = await listarEmpenos();
@@ -32,18 +33,25 @@ export default async function RecordatoriosPage() {
           waOn ? (
             <form action={enviarRecordatoriosHoy}>
               <ConfirmSubmit confirmacion="¿Enviar por WhatsApp un recordatorio a todos los vencidos y por vencer (≤3 días)?">
-                📨 Enviar recordatorios de hoy
+                <Send className="h-4 w-4" aria-hidden />
+                Enviar recordatorios de hoy
               </ConfirmSubmit>
             </form>
           ) : undefined
         }
       />
 
-      <div className="mb-6 rounded-xl border border-info/20 bg-info-soft px-5 py-3 text-sm text-info">
+      <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-info/20 bg-info-soft px-4 py-3 text-sm text-info sm:px-5">
         {waOn ? (
-          <>✅ WhatsApp conectado. Además, cada día a las 10:00 se envían los recordatorios automáticamente.</>
+          <>
+            <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>WhatsApp conectado. Además, cada día a las 10:00 se envían los recordatorios automáticamente.</span>
+          </>
         ) : (
-          <>⏳ WhatsApp aún no está vinculado: los botones abren WhatsApp Web. Escanea el QR para activar el envío automático diario (10:00 a.m.).</>
+          <>
+            <Hourglass className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>WhatsApp aún no está vinculado: los botones abren WhatsApp Web. Escanea el QR para activar el envío automático diario (10:00 a.m.).</span>
+          </>
         )}
       </div>
 
@@ -85,9 +93,9 @@ function Grupo({
           {items.map(({ e, calc }) => {
             const tel = e.cliente.telefono?.replace(/\D/g, "");
             return (
-              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                <div className="min-w-0">
-                  <Link href={`/empenos/${e.id}`} className="text-sm font-medium text-foreground hover:text-primary">
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+                <div className="min-w-0 flex-1 basis-56">
+                  <Link href={`/empenos/${e.id}`} className="wrap-break-word text-sm font-medium text-foreground hover:text-primary">
                     {e.folio} · {e.cliente.nombre} {e.cliente.apellidoPaterno}
                   </Link>
                   <p className="text-xs text-muted">
@@ -95,15 +103,16 @@ function Grupo({
                     {Math.abs(calc.diasParaVencer)} días {vencido ? "atrás" : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-foreground">{formatMXN(calc.totalDesempeno)}</span>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-sm font-semibold tabular-nums text-foreground">{formatMXN(calc.totalDesempeno)}</span>
                   {e.cliente.telefono ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <a
                         href={`tel:${tel}`}
-                        className="rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-surface-2"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium transition hover:bg-surface-2"
                       >
-                        📞 Llamar
+                        <Phone className="h-3.5 w-3.5" aria-hidden />
+                        Llamar
                       </a>
                       {waOn ? (
                         <form action={enviarRecordatorioWhatsApp.bind(null, e.id)}>
@@ -116,8 +125,9 @@ function Grupo({
                           href={`https://wa.me/52${tel}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-success px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90"
                         >
+                          <MessageCircle className="h-3.5 w-3.5" aria-hidden />
                           WhatsApp
                         </a>
                       )}

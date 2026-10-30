@@ -10,6 +10,7 @@ import {
 } from "@/lib/compliance";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
+import { CircleCheck } from "lucide-react";
 
 export default async function CumplimientoPage() {
   const [empenos, clientes, ventas] = await Promise.all([
@@ -50,9 +51,9 @@ export default async function CumplimientoPage() {
       />
 
       {/* Umbrales */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 2xl:max-w-5xl">
         <Card className="p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">Umbral de identificación</p>
             <Badge tono="warning">{UMBRAL_IDENTIFICACION_UMA} UMA</Badge>
           </div>
@@ -60,7 +61,7 @@ export default async function CumplimientoPage() {
           <p className="mt-1 text-xs text-muted">A partir de este monto se integra expediente KYC del cliente.</p>
         </Card>
         <Card className="p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">Umbral de aviso (SAT/UIF)</p>
             <Badge tono="danger">{UMBRAL_AVISO_UMA} UMA</Badge>
           </div>
@@ -75,14 +76,15 @@ export default async function CumplimientoPage() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         {/* Operaciones reportables */}
-        <Card className="lg:col-span-2">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader
             title="Operaciones que requieren atención"
             subtitle={`${reportables.length} sobre umbral · ${ops.length} operaciones totales`}
           />
           {reportables.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-muted">
-              Ninguna operación supera los umbrales LFPIORPI. ✅
+            <p className="flex items-center justify-center gap-2 px-5 py-8 text-center text-sm text-muted">
+              <CircleCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
+              Ninguna operación supera los umbrales LFPIORPI.
             </p>
           ) : (
             <div className="divide-y divide-border">
@@ -92,15 +94,17 @@ export default async function CumplimientoPage() {
                   <Link
                     key={o.folio}
                     href={o.href}
-                    className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-surface-2"
+                    className="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-surface-2"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
                         {o.tipo} {o.folio}
                       </p>
                       <p className="text-xs text-muted">{formatFecha(o.fecha)} · {formatMXN(o.monto)}</p>
                     </div>
-                    <Badge tono={ev.nivel === "aviso" ? "danger" : "warning"}>{ev.etiqueta}</Badge>
+                    <span className="shrink-0">
+                      <Badge tono={ev.nivel === "aviso" ? "danger" : "warning"}>{ev.etiqueta}</Badge>
+                    </span>
                   </Link>
                 );
               })}
@@ -132,7 +136,10 @@ export default async function CumplimientoPage() {
                 </ul>
               </>
             ) : (
-              <p className="mt-3 text-sm text-success">Todos los expedientes están completos. ✅</p>
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-success">
+                <CircleCheck className="h-4 w-4 shrink-0" aria-hidden />
+                Todos los expedientes están completos.
+              </p>
             )}
           </div>
         </Card>

@@ -2,6 +2,36 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Camera,
+  Car,
+  CircleAlert,
+  CircleCheck,
+  CircleCheckBig,
+  ExternalLink,
+  FileText,
+  Gem,
+  Guitar,
+  IdCard,
+  Info,
+  Laptop,
+  Loader2,
+  Lock,
+  Package,
+  Paperclip,
+  Plug,
+  ReceiptText,
+  Satellite,
+  Search,
+  ShieldCheck,
+  TriangleAlert,
+  Watch,
+  Wrench,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugerido, requiereAutorizacionTasa, IVA_FIJO } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
@@ -23,7 +53,7 @@ interface ClienteOpt {
 }
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const categorias: CategoriaPrenda[] = [
   "Vehículos", "Electrónica", "Herramientas", "Joyería",
@@ -86,7 +116,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
       setIneMsg(
         leidos === 0
           ? { ok: false, texto: "No se distinguió ningún dato. Toma la foto de frente y con buena luz." }
-          : { ok: true, texto: `✓ ${leidos} campo(s) autollenados desde la INE. Revísalos antes de continuar.` }
+          : { ok: true, texto: `${leidos} campo(s) autollenados desde la INE. Revísalos antes de continuar.` }
       );
     } catch {
       setIneMsg({ ok: false, texto: "Error al procesar la INE. Intenta con otra foto." });
@@ -138,7 +168,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
       setDocMsg(
         leidos === 0
           ? { ok: false, texto: "No se distinguió ningún dato. Toma la foto de frente y con buena luz." }
-          : { ok: true, texto: `✓ ${leidos} campo(s) autollenados del documento. Revísalos antes de continuar.` }
+          : { ok: true, texto: `${leidos} campo(s) autollenados del documento. Revísalos antes de continuar.` }
       );
     } catch {
       setDocMsg({ ok: false, texto: "Error al procesar el documento. Intenta con otra foto." });
@@ -398,12 +428,12 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
     <div>
       {paso < 9 && <Stepper actual={paso} />}
 
-      <Card className="p-6">
+      <Card className="p-4 sm:p-6">
         {/* ---------- PASO 1: Inicio ---------- */}
         {paso === 1 && (
           <div className="py-4 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-3xl">
-              🧾
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-soft text-primary">
+              <ReceiptText className="h-8 w-8" aria-hidden />
             </div>
             <h3 className="text-lg font-semibold text-foreground">
               Inicio de operación
@@ -414,13 +444,16 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               registro del cliente, captura del artículo, asignación del préstamo e
               intereses, generación del contrato y resguardo.
             </p>
-            <div className="mx-auto mt-6 grid max-w-lg grid-cols-3 gap-2 text-left text-xs text-muted">
-              {PASOS.slice(1).map((p) => (
-                <div key={p.n} className="flex items-center gap-1.5">
-                  <span style={{ color: p.color }}>●</span>
-                  {p.titulo}
-                </div>
-              ))}
+            <div className="mx-auto mt-6 grid max-w-2xl grid-cols-1 gap-2 text-left text-xs text-muted min-[400px]:grid-cols-2 sm:grid-cols-4">
+              {PASOS.slice(1).map((p) => {
+                const Icono = p.icono;
+                return (
+                  <div key={p.n} className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface-2/60 px-2.5 py-2">
+                    <Icono className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                    <span className="min-w-0">{p.titulo}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -428,7 +461,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
         {/* ---------- PASO 2: Cliente ---------- */}
         {paso === 2 && (
           <div className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Toggle
                 activo={modoCliente === "existente"}
                 onClick={() => setModoCliente("existente")}
@@ -472,19 +505,35 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                     ))
                   )}
                 </div>
-                {clienteSel && <p className="mt-2 text-xs text-success">✓ Seleccionado: {clienteSel.nombre}</p>}
+                {clienteSel && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-success">
+                    <CircleCheck className="h-3.5 w-3.5 shrink-0" aria-hidden /> Seleccionado: {clienteSel.nombre}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 {/* Escaneo de INE + foto del cliente */}
                 <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
-                  <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:opacity-90">
-                    {escaneando ? "Leyendo INE…" : "🪪 Escanear INE"}
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105">
+                    {escaneando ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <IdCard className="h-4 w-4" aria-hidden />
+                    )}
+                    {escaneando ? "Leyendo INE…" : "Escanear INE"}
                     <input type="file" accept="image/*" capture="environment" className="hidden" disabled={escaneando}
                       onChange={(e) => onEscanearINE(e.target.files?.[0])} />
                   </label>
-                  <label className="cursor-pointer rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
-                    {subiendoFoto ? "Subiendo…" : fotoCliente ? "✓ Foto tomada" : "📸 Foto del cliente"}
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2">
+                    {subiendoFoto ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : fotoCliente ? (
+                      <CircleCheck className="h-4 w-4 text-success" aria-hidden />
+                    ) : (
+                      <Camera className="h-4 w-4" aria-hidden />
+                    )}
+                    {subiendoFoto ? "Subiendo…" : fotoCliente ? "Foto tomada" : "Foto del cliente"}
                     <input type="file" accept="image/*" capture="user" className="hidden" disabled={subiendoFoto}
                       onChange={(e) => onFotoCliente(e.target.files?.[0])} />
                   </label>
@@ -493,7 +542,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                     <img src={fotoCliente} alt="Cliente" className="h-12 w-12 rounded-full object-cover" />
                   )}
                   {ineMsg ? (
-                    <p className={`w-full text-xs ${ineMsg.ok ? "text-success" : "text-danger"}`}>{ineMsg.texto}</p>
+                    <Aviso ok={ineMsg.ok} texto={ineMsg.texto} />
                   ) : (
                     <p className="w-full text-xs text-muted">La INE autollena los campos con IA; la foto identifica al cliente cuando llegue.</p>
                   )}
@@ -536,21 +585,24 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
         {/* ---------- PASO 3: Departamento ---------- */}
         {paso === 3 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {categorias.map((c) => (
+            {categorias.map((c) => {
+              const Icono = iconoCat(c);
+              return (
               <button
                 key={c}
                 type="button"
                 onClick={() => setCategoria(c)}
-                className={`rounded-xl border-2 p-4 text-center text-sm font-medium transition ${
+                className={`flex min-w-0 flex-col items-center gap-2 rounded-xl border p-4 text-center text-sm font-medium transition ${
                   categoria === c
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-border bg-surface text-foreground hover:bg-surface-2"
+                    ? "border-primary bg-primary-soft text-primary ring-2 ring-primary/20"
+                    : "border-border bg-surface text-foreground hover:border-primary/40 hover:bg-surface-2"
                 }`}
               >
-                <span className="block text-2xl">{iconoCat(c)}</span>
-                <span className="mt-1 block">{c}</span>
+                <Icono className={`h-6 w-6 ${categoria === c ? "text-primary" : "text-muted"}`} aria-hidden />
+                <span className="block max-w-full truncate">{c}</span>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -564,13 +616,18 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               <>
                 {/* Escaneo del documento del vehículo (tarjeta de circulación / factura) */}
                 <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
-                  <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:opacity-90">
-                    {leyendoDoc ? "Leyendo documento…" : "📄 Escanear tarjeta / factura"}
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105">
+                    {leyendoDoc ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <FileText className="h-4 w-4" aria-hidden />
+                    )}
+                    {leyendoDoc ? "Leyendo documento…" : "Escanear tarjeta / factura"}
                     <input type="file" accept="image/*" capture="environment" className="hidden" disabled={leyendoDoc}
                       onChange={(e) => onEscanearVehiculo(e.target.files?.[0])} />
                   </label>
                   {docMsg ? (
-                    <p className={`w-full text-xs ${docMsg.ok ? "text-success" : "text-danger"}`}>{docMsg.texto}</p>
+                    <Aviso ok={docMsg.ok} texto={docMsg.texto} />
                   ) : (
                     <p className="w-full text-xs text-muted">Sube la tarjeta de circulación o la factura y la IA llena marca, modelo, NIV, placas y motor.</p>
                   )}
@@ -582,29 +639,35 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => navigator.clipboard?.writeText(bien.serie).catch(() => {})}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info hover:opacity-90"
+                    className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info transition hover:brightness-105"
                   >
-                    🔎 Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante →
+                    <Search className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span className="min-w-0">Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante</span>
+                    <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   </a>
                 )}
 
-                <div className="rounded-lg border border-border bg-surface-2/50 p-4">
+                <div className="rounded-xl border border-border bg-surface-2/50 p-4">
                   <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>
-                  <div className="flex gap-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     <button
                       type="button"
                       onClick={() => setModalidad("resguardo")}
-                      className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "resguardo" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+                      className={`rounded-xl border p-3 text-left text-sm font-medium transition ${modalidad === "resguardo" ? "border-primary bg-primary-soft text-primary ring-2 ring-primary/20" : "border-border bg-surface text-foreground hover:bg-surface-2"}`}
                     >
-                      🏢 Resguardo
+                      <span className="inline-flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4" aria-hidden /> Resguardo
+                      </span>
                       <span className="block text-[11px] font-normal text-muted">Queda en nuestra bóveda/patio</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setModalidad("gps")}
-                      className={`flex-1 rounded-lg border-2 p-3 text-sm font-medium transition ${modalidad === "gps" ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"}`}
+                      className={`rounded-xl border p-3 text-left text-sm font-medium transition ${modalidad === "gps" ? "border-primary bg-primary-soft text-primary ring-2 ring-primary/20" : "border-border bg-surface text-foreground hover:bg-surface-2"}`}
                     >
-                      📡 GPS
+                      <span className="inline-flex items-center gap-1.5">
+                        <Satellite className="h-4 w-4" aria-hidden /> GPS
+                      </span>
                       <span className="block text-[11px] font-normal text-muted">El cliente lo conserva con GPS</span>
                     </button>
                   </div>
@@ -626,8 +689,10 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   <Campo label="Nivel de gasolina" value={veh.nivelGasolina} onChange={(v) => setVeh({ ...veh, nivelGasolina: v })} placeholder="1/2 tanque" />
                 </div>
 
-                <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
-                  <p className="text-sm font-semibold text-foreground">🧾 Factura</p>
+                <div className="space-y-3 rounded-xl border border-border bg-surface-2/50 p-4">
+                  <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <ReceiptText className="h-4 w-4 text-muted" aria-hidden /> Factura
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Campo label="No. de factura" value={veh.numeroFactura} onChange={(v) => setVeh({ ...veh, numeroFactura: v })} />
                     <Campo label="Emisor de la factura" value={veh.emisorFactura} onChange={(v) => setVeh({ ...veh, emisorFactura: v })} />
@@ -639,8 +704,10 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-lg border border-border bg-surface-2/50 p-4">
-                  <p className="text-sm font-semibold text-foreground">🛡️ Seguro, pensión y GPS</p>
+                <div className="space-y-3 rounded-xl border border-border bg-surface-2/50 p-4">
+                  <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                    <ShieldCheck className="h-4 w-4 text-muted" aria-hidden /> Seguro, pensión y GPS
+                  </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Campo label="Aseguradora" value={veh.aseguradora} onChange={(v) => setVeh({ ...veh, aseguradora: v })} />
                     <Campo label="Póliza" value={veh.poliza} onChange={(v) => setVeh({ ...veh, poliza: v })} />
@@ -696,13 +763,17 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
         {paso === 5 && (
           <div className="space-y-4">
             <Campo label="Monto autorizado del préstamo (MXN)" req type="number" value={monto} onChange={(v) => { setMonto(v); setMontoTocado(true); }} />
-            <div className="rounded-lg bg-info-soft px-4 py-3 text-sm text-info">
-              💵 Al finalizar se registrará automáticamente la <strong>salida de efectivo</strong> de{" "}
+            <div className="flex items-start gap-2.5 rounded-xl border border-info/20 bg-info-soft px-4 py-3 text-sm text-info">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <p>
+              Al finalizar se registrará automáticamente la <strong>salida de efectivo</strong> de{" "}
               {formatMXN(montoNum)} en el módulo de Caja (apartado de aportación y retiro).
+              </p>
             </div>
             {avaluoNum > 0 && montoNum > avaluoNum && (
-              <div className="rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning">
-                ⚠️ El monto supera el valor de avalúo ({formatMXN(avaluoNum)}). Verifica el préstamo.
+              <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <span>El monto supera el valor de avalúo ({formatMXN(avaluoNum)}). Verifica el préstamo.</span>
               </div>
             )}
           </div>
@@ -718,16 +789,16 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               <div className="grid grid-cols-2 divide-x divide-border bg-surface-2">
                 <div className="p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">Préstamo</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{formatMXN(montoNum)}</p>
+                  <p className="mt-1 truncate text-xl font-bold tabular-nums text-foreground sm:text-2xl">{formatMXN(montoNum)}</p>
                 </div>
                 <div className="p-4">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted">Avalúo</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{formatMXN(avaluoNum)}</p>
+                  <p className="mt-1 truncate text-xl font-bold tabular-nums text-foreground sm:text-2xl">{formatMXN(avaluoNum)}</p>
                 </div>
               </div>
               {avaluoNum > 0 && montoNum > avaluoNum && (
-                <p className="bg-warning-soft px-4 py-2 text-xs font-medium text-warning">
-                  ⚠️ El préstamo supera el avalúo — verifica el monto.
+                <p className="flex items-center gap-1.5 bg-warning-soft px-4 py-2 text-xs font-medium text-warning">
+                  <TriangleAlert className="h-4 w-4 shrink-0" aria-hidden /> El préstamo supera el avalúo — verifica el monto.
                 </p>
               )}
               {previewCalc && (
@@ -744,10 +815,11 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               )}
             </div>
 
-            <div className="rounded-lg bg-surface-2 p-4">
+            <div className="rounded-xl border border-border bg-surface-2 p-4">
               <p className="text-sm text-muted">Cliente: <strong className="text-foreground">{nombreCliente}</strong> · {previos} empeños previos</p>
               <p className="mt-1 text-sm">
-                Nivel: <strong>{historial.nivel}</strong> → tasa sugerida{" "}
+                Nivel: <strong>{historial.nivel}</strong>{" "}
+                <ArrowRight className="inline h-3.5 w-3.5 align-[-2px] text-muted" aria-hidden /> tasa sugerida{" "}
                 <strong className="text-primary">{historial.tasa}%</strong>
                 {historial.requiereAutorizacion && (
                   <span className="text-warning"> (requiere autorización de Gerencia)</span>
@@ -776,7 +848,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                             setAlmacenajePct(productoEsVehiculo ? 0 : p.tasa);
                           }}
                           className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
-                            activo ? "border-primary bg-primary-soft text-primary" : "border-border hover:bg-surface"
+                            activo ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface text-foreground hover:border-primary/40"
                           }`}
                         >
                           <span className="block font-medium">{p.nombre}{p.modalidad ? ` · ${p.modalidad}` : ""}</span>
@@ -790,10 +862,13 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
             </div>
 
             {tasaEspecial && (
-              <div className="rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm text-warning">
-                🔒 <strong>Tasa especial ({tasa}%)</strong> — requiere autorización de Dirección General. Al finalizar, el
+              <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <p>
+                <strong>Tasa especial ({tasa}%)</strong> — requiere autorización de Dirección General. Al finalizar, el
                 empeño quedará en <strong>borrador</strong> y se enviará la solicitud al supervisor por WhatsApp; se
                 activará cuando la autoricen.
+                </p>
               </div>
             )}
 
@@ -803,9 +878,12 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               const esVeh = p.nombre === "VEHÍCULOS" || p.modalidad === "gps";
               if (esVeh) return null;
               return (
-                <p className="-mt-2 mb-3 text-xs text-info">
-                  ℹ️ En {p.nombre.toLowerCase()} el almacenaje se cobra igual al interés — por eso {p.tasa}% (interés) +{" "}
+                <p className="-mt-2 mb-3 flex items-start gap-1.5 text-xs text-info">
+                  <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <span>
+                  En {p.nombre.toLowerCase()} el almacenaje se cobra igual al interés — por eso {p.tasa}% (interés) +{" "}
                   {p.tasa}% (almacenaje) = {p.tasa * 2}% en el catálogo.
+                  </span>
                 </p>
               );
             })()}
@@ -852,7 +930,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               Revisa las condiciones. Al finalizar, el sistema generará el contrato
               prendario que podrás imprimir y entregar al cliente.
             </p>
-            <div className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
+            <div className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2">
               <Rev k="Cliente" v={nombreCliente} />
               <Rev k="Departamento" v={categoria || "—"} />
               <Rev k="Bien" v={bien.descripcion} />
@@ -885,8 +963,8 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               {fotos.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {fotos.map((u, i) => (
-                    <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-info hover:bg-surface">
-                      📎 archivo {i + 1}
+                    <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-info transition hover:bg-surface">
+                      <Paperclip className="h-3.5 w-3.5" aria-hidden /> archivo {i + 1}
                     </a>
                   ))}
                 </div>
@@ -901,20 +979,23 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={3} className={inputCls} />
             </div>
             {esVehiculo && (
-              <div className="space-y-3 rounded-lg border border-warning/30 bg-warning-soft p-4">
-                <p className="text-sm font-semibold text-warning">🚗 Verificación obligatoria del vehículo</p>
+              <div className="space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
+                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-warning">
+                  <Car className="h-4 w-4" aria-hidden /> Verificación obligatoria del vehículo
+                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <a
                     href="https://www2.repuve.gob.mx:8443/ciudadania/"
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => { if (bien.serie) navigator.clipboard?.writeText(bien.serie).catch(() => {}); }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-info px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-info px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:brightness-105"
                   >
-                    🔎 Abrir REPUVE {bien.serie ? "(NIV copiado)" : ""} →
+                    <Search className="h-4 w-4" aria-hidden /> Abrir REPUVE {bien.serie ? "(NIV copiado)" : ""}
+                    <ExternalLink className="h-4 w-4" aria-hidden />
                   </a>
                   {bien.serie && (
-                    <span className="text-xs text-muted">NIV: <span className="font-mono">{bien.serie}</span></span>
+                    <span className="min-w-0 break-all text-xs text-muted">NIV: <span className="font-mono">{bien.serie}</span></span>
                   )}
                 </div>
                 <p className="text-xs text-muted">
@@ -923,27 +1004,31 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                 </p>
                 <Campo label="Folio de consulta REPUVE" value={repuveFolio} onChange={setRepuveFolio} placeholder="Folio o referencia de la consulta" />
                 <div className="space-y-2 border-t border-warning/20 pt-2">
-                  <Check label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />
-                  <Check label="Factura original verificada" checked={docFactura} onChange={setDocFactura} />
-                  <Check label="Tarjeta de circulación vigente" checked={docTarjeta} onChange={setDocTarjeta} />
-                  <Check label="Identificación del propietario coincide" checked={docIdent} onChange={setDocIdent} />
-                  <Check label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
-                  <Check label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
+                  <Casilla label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />
+                  <Casilla label="Factura original verificada" checked={docFactura} onChange={setDocFactura} />
+                  <Casilla label="Tarjeta de circulación vigente" checked={docTarjeta} onChange={setDocTarjeta} />
+                  <Casilla label="Identificación del propietario coincide" checked={docIdent} onChange={setDocIdent} />
+                  <Casilla label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
+                  <Casilla label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
                 </div>
                 {!autoVerificado && (
                   <p className="text-xs text-warning">Marca REPUVE sin robo + factura + tarjeta + identificación para poder registrar.</p>
                 )}
               </div>
             )}
-            {error && <p className="text-sm text-danger">⚠️ {error}</p>}
+            {error && (
+              <p className="flex items-start gap-1.5 text-sm text-danger">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {error}
+              </p>
+            )}
           </div>
         )}
 
         {/* ---------- PASO 9: Vigencia / éxito ---------- */}
         {paso === 9 && resultado && (
           <div className="py-4 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-success-soft text-3xl">
-              ✅
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-success-soft text-success">
+              <CircleCheckBig className="h-8 w-8" aria-hidden />
             </div>
             <h3 className="text-lg font-semibold text-foreground">
               Empeño {resultado.folio} registrado
@@ -956,13 +1041,13 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link
                 href={`/empenos/${resultado.empenoId}`}
-                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-fg hover:opacity-90"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-fg shadow-soft transition hover:brightness-105"
               >
-                Ver empeño e imprimir contrato →
+                Ver empeño e imprimir contrato <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
               <Link
                 href="/empenos/asistente"
-                className="rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium hover:bg-surface-2"
+                className="inline-flex items-center rounded-lg border border-border bg-surface px-5 py-2.5 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"
               >
                 Registrar otro empeño
               </Link>
@@ -972,19 +1057,19 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
 
         {/* ---------- Navegación ---------- */}
         {paso < 9 && (
-          <div className="mt-8 flex items-center justify-between border-t border-border pt-5">
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
             {paso > 1 ? (
               <button
                 type="button"
                 onClick={() => setPaso(paso - 1)}
-                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-2"
               >
-                ← Atrás
+                <ArrowLeft className="h-4 w-4" aria-hidden /> Atrás
               </button>
             ) : (
               <Link
                 href="/empenos"
-                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"
+                className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-2"
               >
                 Cancelar
               </Link>
@@ -995,16 +1080,16 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
                 type="button"
                 disabled={!puedeAvanzar()}
                 onClick={() => irAPaso(paso + 1)}
-                className="rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-fg hover:opacity-90 disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-fg shadow-soft transition hover:brightness-105 disabled:opacity-40"
               >
-                Siguiente →
+                Siguiente <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
             ) : (
               <button
                 type="button"
                 disabled={guardando}
                 onClick={finalizar}
-                className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-success px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:brightness-105 disabled:opacity-50"
               >
                 {guardando ? "Generando contrato…" : "Finalizar y generar contrato"}
               </button>
@@ -1072,7 +1157,7 @@ function Toggle({
   );
 }
 
-function Check({
+function Casilla({
   label, checked, onChange,
 }: {
   label: string;
@@ -1080,8 +1165,8 @@ function Check({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 text-sm text-foreground">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 accent-primary" />
+    <label className="flex items-start gap-2 text-sm text-foreground">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
       {label}
     </label>
   );
@@ -1091,15 +1176,25 @@ function Rev({ k, v }: { k: string; v: string }) {
   return (
     <div className="bg-surface px-4 py-2.5">
       <p className="text-xs text-muted">{k}</p>
-      <p className="text-sm font-medium text-foreground">{v}</p>
+      <p className="break-words text-sm font-medium text-foreground">{v}</p>
     </div>
   );
 }
 
-function iconoCat(c: CategoriaPrenda): string {
-  const m: Record<CategoriaPrenda, string> = {
-    Vehículos: "🚗", Electrónica: "💻", Herramientas: "🔧", Joyería: "💍",
-    Relojes: "⌚", Instrumentos: "🎸", Electrodomésticos: "🔌", Otro: "📦",
+function Aviso({ ok, texto }: { ok: boolean; texto: string }) {
+  const Icono = ok ? CircleCheck : CircleAlert;
+  return (
+    <p className={`flex w-full items-start gap-1.5 text-xs ${ok ? "text-success" : "text-danger"}`}>
+      <Icono className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span className="min-w-0">{texto}</span>
+    </p>
+  );
+}
+
+function iconoCat(c: CategoriaPrenda): LucideIcon {
+  const m: Record<CategoriaPrenda, LucideIcon> = {
+    Vehículos: Car, Electrónica: Laptop, Herramientas: Wrench, Joyería: Gem,
+    Relojes: Watch, Instrumentos: Guitar, Electrodomésticos: Plug, Otro: Package,
   };
   return m[c];
 }

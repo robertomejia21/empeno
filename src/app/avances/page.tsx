@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SUCURSAL } from "@/lib/negocio";
 import { Card, Badge } from "@/components/ui";
+import { CircleCheck, Clock, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Avances del sistema — Turbo Presta El Dorado",
@@ -234,10 +235,12 @@ export default function AvancesPage() {
   const nuevos = ITEMS.filter((i) => i.nuevo).length;
 
   return (
-    <div className="min-h-screen bg-surface-2">
-      <div className="mx-auto max-w-3xl px-4 py-10 md:px-8">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:py-10 md:px-8 xl:max-w-4xl">
         {/* Header */}
-        <div className="mb-8 overflow-hidden rounded-2xl bg-gold-gradient px-6 py-8 text-primary-fg shadow-soft md:px-10 md:py-10">
+        <div className="shadow-card relative mb-8 overflow-hidden rounded-2xl bg-primary px-5 py-7 text-primary-fg sm:px-6 sm:py-8 md:px-10 md:py-10">
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+          <div className="relative">
           <p className="text-xs font-medium uppercase tracking-wide text-primary-fg/80">
             {SUCURSAL.nombre} — reporte de avances
           </p>
@@ -248,12 +251,21 @@ export default function AvancesPage() {
             Resumen en español sencillo de los cambios más recientes — con capturas de
             pantalla reales del sistema, no un mockup.
           </p>
+          </div>
         </div>
 
         {/* Resumen */}
         <div className="mb-8 flex flex-wrap items-center gap-3">
-          <Badge tono="success">{listos} cambios ya en producción</Badge>
-          {nuevos > 0 && <Badge tono="info">🆕 {nuevos} nuevos desde la última actualización</Badge>}
+          <Badge tono="success">
+            <CircleCheck className="mr-1 h-3.5 w-3.5" aria-hidden />
+            {listos} cambios ya en producción
+          </Badge>
+          {nuevos > 0 && (
+            <Badge tono="primary">
+              <Sparkles className="mr-1 h-3.5 w-3.5" aria-hidden />
+              {nuevos} nuevos desde la última actualización
+            </Badge>
+          )}
           {ITEMS.some((i) => i.estado === "camino") && (
             <Badge tono="warning">{ITEMS.filter((i) => i.estado === "camino").length} en camino</Badge>
           )}
@@ -274,23 +286,38 @@ export default function AvancesPage() {
                 </h2>
               )}
               <Card className="overflow-hidden">
-              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-6">
+                <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-semibold tracking-tight text-foreground">{item.titulo}</h3>
-                    {item.nuevo && <Badge tono="info">🆕 Nuevo</Badge>}
+                    {item.nuevo && (
+                      <Badge tono="primary">
+                        <Sparkles className="mr-1 h-3.5 w-3.5" aria-hidden />
+                        Nuevo
+                      </Badge>
+                    )}
                   </div>
                   <p className="mt-1 text-sm text-muted">{item.resumen}</p>
                 </div>
                 <Badge tono={item.estado === "listo" ? "success" : "warning"}>
-                  {item.estado === "listo" ? "✅ Listo" : "🔜 En camino"}
+                  {item.estado === "listo" ? (
+                    <>
+                      <CircleCheck className="mr-1 h-3.5 w-3.5" aria-hidden />
+                      Listo
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="mr-1 h-3.5 w-3.5" aria-hidden />
+                      En camino
+                    </>
+                  )}
                 </Badge>
               </div>
-              <div className="px-6 py-4">
+              <div className="px-4 py-4 sm:px-6">
                 <p className="text-sm text-foreground">{item.detalle}</p>
               </div>
               {item.imagen && (
-                <div className="border-t border-border bg-surface-2 p-4">
+                <div className="border-t border-border bg-surface-2 p-3 sm:p-4">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={item.imagen}

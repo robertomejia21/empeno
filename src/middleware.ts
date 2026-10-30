@@ -10,13 +10,16 @@ function conPathname(req: NextRequest) {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // La landing se retiró: cualquier enlace viejo a /inicio cae en el login.
+  if (pathname === "/inicio") return NextResponse.redirect(new URL("/login", req.url));
+
   // Sin AUTH_SECRET la app queda en modo demo abierto SÓLO en desarrollo.
   // En producción es fail-closed: solo las rutas públicas responden.
   if (!authHabilitada()) {
     if (process.env.NODE_ENV === "production") {
       const publica =
-        pathname === "/inicio" || pathname === "/login" || pathname === "/tienda" || pathname.startsWith("/tienda/");
-      if (!publica) return NextResponse.redirect(new URL("/inicio", req.url));
+        pathname === "/login" || pathname === "/tienda" || pathname.startsWith("/tienda/");
+      if (!publica) return NextResponse.redirect(new URL("/login", req.url));
     }
     return conPathname(req);
   }
@@ -25,7 +28,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/cron")) return conPathname(req);
 
   // Rutas públicas
-  if (pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps" || pathname === "/cotiza-vehiculo" || pathname === "/avances" || pathname === "/encuesta" || pathname.startsWith("/firmar/")) return conPathname(req);
+  if (pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps" || pathname === "/cotiza-vehiculo" || pathname === "/avances" || pathname === "/encuesta" || pathname.startsWith("/firmar/")) return conPathname(req);
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const sesion = await verificarSesion(token);
@@ -37,8 +40,7 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!sesion) {
-    // Visitantes a la raíz ven la landing; el resto, el login.
-    const url = new URL(pathname === "/" ? "/inicio" : "/login", req.url);
+    const url = new URL("/login", req.url);
     if (pathname !== "/") url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }

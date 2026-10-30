@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { guardarEncuesta } from "@/lib/actions";
 import type { EncuestaInput } from "@/lib/types";
+import { HandHeart } from "lucide-react";
 
 type BoolKey =
   | "amable" | "tiempoAdecuado" | "resolvioDudas" | "ofrecioAlternativas"
@@ -64,7 +65,9 @@ export function EncuestaForm() {
   if (listo) {
     return (
       <div className="rounded-2xl border border-border bg-surface p-6 text-center shadow-card">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-2xl">🙏</div>
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success-soft text-success">
+          <HandHeart className="h-7 w-7" aria-hidden />
+        </div>
         <h2 className="text-lg font-semibold text-foreground">¡Gracias por tu opinión!</h2>
         <p className="mt-2 text-sm text-muted">Tu respuesta nos ayuda a mejorar nuestro servicio.</p>
       </div>
@@ -85,13 +88,13 @@ export function EncuestaForm() {
       ))}
 
       <Pregunta n={SI_NO.length + ESCALA.length + 1} texto="¿Cómo calificaría la atención que recibió por parte de nuestro personal? (1 = muy malo, 5 = excelente)">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map((v) => (
             <button
               key={v}
               type="button"
               onClick={() => setR((s) => ({ ...s, calificacion: v }))}
-              className={`h-11 w-11 rounded-lg border-2 text-sm font-bold transition ${
+              className={`h-11 w-11 rounded-xl border-2 text-sm font-bold transition ${
                 r.calificacion === v ? "border-primary bg-primary text-primary-fg" : "border-border bg-surface text-foreground hover:bg-surface-2"
               }`}
             >
@@ -104,7 +107,7 @@ export function EncuestaForm() {
       <div>
         <p className="mb-1.5 text-sm font-medium text-foreground">Comentarios (opcional)</p>
         <textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={3}
-          className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary" />
+          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" />
       </div>
 
       <input
@@ -120,7 +123,7 @@ export function EncuestaForm() {
 
       {msg && <p className="text-sm text-danger">{msg}</p>}
       <button type="button" onClick={enviar} disabled={enviando}
-        className="w-full rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg hover:opacity-90 disabled:opacity-50">
+        className="shadow-soft w-full rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-fg transition hover:brightness-105 disabled:opacity-50">
         {enviando ? "Enviando…" : "Enviar encuesta"}
       </button>
     </div>
@@ -129,7 +132,7 @@ export function EncuestaForm() {
 
 function Pregunta({ n, texto, children }: { n: number; texto: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="shadow-soft rounded-xl border border-border bg-surface p-4">
       <p className="mb-2.5 text-sm font-medium text-foreground">
         {n}. {texto} <span className="text-danger">*</span>
       </p>
@@ -150,11 +153,11 @@ function Opciones({
   return (
     <div className="flex gap-2">
       <button type="button" onClick={onSi}
-        className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition ${valor === true ? "border-success bg-success-soft text-success" : "border-border bg-surface hover:bg-surface-2"}`}>
+        className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition ${valor === true ? "border-success bg-success-soft text-success" : "border-border bg-surface hover:bg-surface-2"}`}>
         {siLabel}
       </button>
       <button type="button" onClick={onNo}
-        className={`flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition ${valor === false ? "border-danger bg-danger-soft text-danger" : "border-border bg-surface hover:bg-surface-2"}`}>
+        className={`min-w-0 flex-1 rounded-lg border-2 px-3 py-2 text-sm font-medium transition ${valor === false ? "border-danger bg-danger-soft text-danger" : "border-border bg-surface hover:bg-surface-2"}`}>
         {noLabel}
       </button>
     </div>

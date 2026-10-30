@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import { PRECIO_ORO_24K_GRAMO, PRECIO_PLATA_GRAMO } from "@/lib/compliance";
+import { Coins } from "lucide-react";
 
 const mxn = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" });
 const f = (n: number) => mxn.format(isFinite(n) ? n : 0);
@@ -33,7 +34,7 @@ export default function AvaluoPage() {
   const prestamoSugerido = valorMetal * (porcentaje / 100);
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-4xl">
       <PageHeader title="Avalúo de metales" subtitle="Calculadora de oro y plata por gramaje" />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -46,11 +47,14 @@ export default function AvaluoPage() {
                   key={m}
                   type="button"
                   onClick={() => setMetal(m)}
-                  className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium capitalize transition ${
-                    metal === m ? "bg-primary text-primary-fg" : "border border-border bg-surface hover:bg-surface-2"
+                  className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium capitalize transition ${
+                    metal === m
+                      ? "bg-primary text-primary-fg shadow-soft"
+                      : "border border-border bg-surface text-foreground hover:bg-surface-2"
                   }`}
                 >
-                  {m === "oro" ? "🥇 Oro" : "🥈 Plata"}
+                  <Coins className="h-4 w-4" aria-hidden />
+                  {m === "oro" ? "Oro" : "Plata"}
                 </button>
               ))}
             </div>
@@ -103,30 +107,30 @@ export default function AvaluoPage() {
           </div>
         </Card>
 
-        <Card className="bg-gold-gradient text-white">
-          <div className="border-b border-white/20 px-5 py-4">
+        <div className="shadow-card self-start overflow-hidden rounded-2xl border border-primary bg-primary text-primary-fg">
+          <div className="border-b border-primary-fg/20 px-5 py-4">
             <h2 className="text-[15px] font-semibold">Resultado del avalúo</h2>
           </div>
           <div className="space-y-5 p-5">
             <div>
-              <p className="text-xs uppercase tracking-wide text-white/70">Contenido de metal fino</p>
-              <p className="text-lg font-semibold">
+              <p className="text-xs uppercase tracking-wide text-primary-fg/75">Contenido de metal fino</p>
+              <p className="wrap-break-word text-lg font-semibold">
                 {metal === "oro" ? `${(g * pureza).toFixed(2)} g de oro puro` : `${g.toFixed(2)} g de plata`}
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-white/70">Valor estimado del metal</p>
-              <p className="text-3xl font-bold">{f(valorMetal)}</p>
+              <p className="text-xs uppercase tracking-wide text-primary-fg/75">Valor estimado del metal</p>
+              <p className="wrap-break-word text-3xl font-bold tracking-tight tabular-nums">{f(valorMetal)}</p>
             </div>
-            <div className="rounded-xl bg-white/15 p-4">
-              <p className="text-xs uppercase tracking-wide text-white/80">Préstamo sugerido ({porcentaje}%)</p>
-              <p className="text-2xl font-bold">{f(prestamoSugerido)}</p>
+            <div className="rounded-xl bg-primary-fg/15 p-4">
+              <p className="text-xs uppercase tracking-wide text-primary-fg/80">Préstamo sugerido ({porcentaje}%)</p>
+              <p className="wrap-break-word text-2xl font-bold tracking-tight tabular-nums">{f(prestamoSugerido)}</p>
             </div>
-            <p className="text-xs text-white/70">
+            <p className="text-xs text-primary-fg/75">
               Valor referencial sobre el contenido de metal. No incluye valor de mano de obra, piedras ni marca.
             </p>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

@@ -8,10 +8,12 @@ import { prestamoSugerido } from "@/lib/interes";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader } from "@/components/ui";
+import { Car, Check, CircleAlert, FileScan, Hourglass, Package, Paperclip, Plus, Wallet, Wrench, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Cotizacion, ContactoCotizacion, CondicionArticulo, TipoCotizacion, CotizacionInput } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 const CONTACTOS: ContactoCotizacion[] = [
   "Sucursal", "WhatsApp", "Messenger", "Teléfono", "Llamada", "Instagram", "Facebook", "Recomendación", "Cliente", "Otro",
@@ -97,7 +99,7 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
       setDocMsg(
         leidos === 0
           ? { ok: false, texto: "No se distinguió información. Toma la foto con buena luz." }
-          : { ok: true, texto: `✓ ${leidos} dato(s) leídos del documento.` }
+          : { ok: true, texto: `${leidos} dato(s) leídos del documento.` }
       );
     } catch {
       setDocMsg({ ok: false, texto: "Error al leer el documento. Intenta otra foto." });
@@ -158,36 +160,41 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
             <button
               type="button"
               onClick={() => setAbierto((v) => !v)}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg shadow-soft transition hover:brightness-105"
             >
-              {abierto ? "Cerrar" : "+ Cotizar"}
+              {abierto ? <X className="h-4 w-4" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />}
+              {abierto ? "Cerrar" : "Cotizar"}
             </button>
           }
         />
         {abierto && (
-          <div className="space-y-4 border-t border-border p-5">
+          <div className="space-y-5 p-4 sm:p-6">
             <div className="flex flex-wrap gap-2">
-              <Tab activo={esVehiculo} onClick={() => set("tipo", "vehiculo")}>🚗 Vehículo</Tab>
-              <Tab activo={!esVehiculo} onClick={() => set("tipo", "articulo")}>📦 Artículo</Tab>
+              <Tab activo={esVehiculo} onClick={() => set("tipo", "vehiculo")}><Car className="h-4 w-4" aria-hidden /> Vehículo</Tab>
+              <Tab activo={!esVehiculo} onClick={() => set("tipo", "articulo")}><Package className="h-4 w-4" aria-hidden /> Artículo</Tab>
             </div>
 
             {esVehiculo && (
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
-                <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg hover:opacity-90">
-                  {leyendo ? "Leyendo…" : "📄 Escanear tarjeta / factura"}
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/50 p-3 sm:p-4">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105">
+                  {!leyendo && <FileScan className="h-4 w-4" aria-hidden />}
+                  {leyendo ? "Leyendo…" : "Escanear tarjeta / factura"}
                   <input type="file" accept="image/*" capture="environment" className="hidden" disabled={leyendo}
                     onChange={(e) => onEscanear(e.target.files?.[0])} />
                 </label>
                 {docMsg ? (
-                  <p className={`w-full text-xs ${docMsg.ok ? "text-success" : "text-danger"}`}>{docMsg.texto}</p>
+                  <p className={`flex w-full items-start gap-1.5 text-xs ${docMsg.ok ? "text-success" : "text-danger"}`}>
+                    {docMsg.ok ? <Check className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden /> : <CircleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />}
+                    <span>{docMsg.texto}</span>
+                  </p>
                 ) : (
                   <p className="w-full text-xs text-muted">La IA lee marca, modelo, año, NIV y placas del documento.</p>
                 )}
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="sm:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="sm:col-span-2 xl:col-span-3">
                 <Campo label="Descripción del bien" req value={f.descripcion} onChange={(v) => set("descripcion", v)}
                   placeholder={esVehiculo ? "Ej. Nissan Versa 2020" : "Ej. iPhone 13, Taladro Bosch…"} />
               </div>
@@ -223,14 +230,14 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
               <Campo label="Teléfono" value={f.prospectoTelefono} onChange={(v) => set("prospectoTelefono", v)} />
             </div>
 
-            <div className="grid gap-4 rounded-lg border border-border bg-surface-2/50 p-4 sm:grid-cols-2">
-              <p className="sm:col-span-2 text-sm font-semibold text-foreground">💰 Valuación</p>
+            <div className="grid gap-4 rounded-xl border border-border bg-surface-2/60 p-4 sm:grid-cols-2 xl:grid-cols-4">
+              <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground sm:col-span-2 xl:col-span-4"><Wallet className="h-4 w-4 text-primary" aria-hidden /> Valuación</p>
               <Campo label="Valor comercial (MXN)" req type="number" value={f.valorMercado} onChange={(v) => set("valorMercado", v)} />
               <Campo label="Búsqueda en Facebook (MXN)" type="number" value={f.busquedaFacebook} onChange={(v) => set("busquedaFacebook", v)}
                 placeholder="Precio de referencia hallado" />
               <Campo label="Monto solicitado por el cliente (MXN)" type="number" value={f.montoSolicitado} onChange={(v) => set("montoSolicitado", v)} />
               <Campo label="% del préstamo sobre el valor" type="number" value={f.porcentaje} onChange={(v) => set("porcentaje", v)} />
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 xl:col-span-4">
                 <Label>Monto a prestar (MXN)</Label>
                 <input type="number" className={inputCls}
                   value={prestamoTocado ? f.prestamoOfrecido : String(sugerido || "")}
@@ -258,7 +265,7 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
                 type="button"
                 onClick={guardar}
                 disabled={guardando || !f.descripcion.trim() || valorNum <= 0}
-                className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-lg bg-success px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:brightness-110 disabled:opacity-50 sm:w-auto"
               >
                 {guardando ? "Guardando…" : "Guardar cotización"}
               </button>
@@ -275,7 +282,7 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
         placeholder="Buscar por nombre, teléfono, folio o descripción…"
-        className={`${inputCls} max-w-sm`}
+        className={`${inputCls} sm:max-w-sm`}
       />
       <div className="flex flex-wrap gap-2">
         {([["todas", "Todas"], ["vigentes", "Vigentes"], ["noproceden", "No proceden"], ["empenadas", "Empeñadas"]] as const).map(([v, l]) => (
@@ -284,7 +291,7 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
             type="button"
             onClick={() => setFiltro(v)}
             className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-              filtro === v ? "border-primary bg-primary text-primary-fg" : "border-border bg-surface hover:bg-surface-2"
+              filtro === v ? "border-primary bg-primary text-primary-fg shadow-soft" : "border-border bg-surface text-foreground hover:bg-surface-2"
             }`}
           >
             {l}
@@ -295,13 +302,13 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
       {/* Reporte */}
       <TablaReporte
         titulo="Detalles del vehículo"
-        icono="🚗"
+        icono={Car}
         filas={visibles.filter((c) => c.tipo === "vehiculo")}
         onResultado={(id, si, motivo) => marcarResultadoCotizacion(id, si, motivo).then(() => router.refresh())}
       />
       <TablaReporte
         titulo="Detalles del artículo"
-        icono="📦"
+        icono={Package}
         filas={visibles.filter((c) => c.tipo !== "vehiculo")}
         onResultado={(id, si, motivo) => marcarResultadoCotizacion(id, si, motivo).then(() => router.refresh())}
       />
@@ -336,7 +343,7 @@ function MotivosNoEmpeno({ cotizaciones }: { cotizaciones: Cotizacion[] }) {
   return (
     <Card>
       <CardHeader title="¿Por qué no empeñaron?" subtitle={`${total} cotización(es) no concretadas`} />
-      <div className="space-y-3 p-5">
+      <div className="space-y-3 p-4 sm:p-6">
         {motivos.map((m) => (
           <div key={m.motivo}>
             <div className="mb-1 flex justify-between gap-3 text-sm">
@@ -346,7 +353,7 @@ function MotivosNoEmpeno({ cotizaciones }: { cotizaciones: Cotizacion[] }) {
               </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-              <div className="bg-gold-gradient h-full rounded-full" style={{ width: `${(m.n / max) * 100}%` }} />
+              <div className="h-full rounded-full bg-primary" style={{ width: `${(m.n / max) * 100}%` }} />
             </div>
           </div>
         ))}
@@ -356,24 +363,24 @@ function MotivosNoEmpeno({ cotizaciones }: { cotizaciones: Cotizacion[] }) {
 }
 
 function TablaReporte({
-  titulo, icono, filas, onResultado,
+  titulo, icono: Icono, filas, onResultado,
 }: {
   titulo: string;
-  icono: string;
+  icono: LucideIcon;
   filas: Cotizacion[];
   onResultado: (id: string, si: boolean, motivo: string | null) => void;
 }) {
   const totalOfrecido = useMemo(() => filas.reduce((s, c) => s + c.prestamoOfrecido, 0), [filas]);
   return (
     <Card>
-      <CardHeader title={`${icono} ${titulo}`} subtitle={`${filas.length} cotización(es) · ofrecido ${formatMXN(totalOfrecido)}`} />
+      <CardHeader title={<span className="inline-flex items-center gap-2"><Icono className="h-5 w-5 text-primary" aria-hidden /> {titulo}</span>} subtitle={`${filas.length} cotización(es) · ofrecido ${formatMXN(totalOfrecido)}`} />
       {filas.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-muted">Aún no hay cotizaciones registradas.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+              <tr className="border-b border-border bg-surface-2/60 text-left text-xs uppercase tracking-wide text-muted">
                 <th className="px-4 py-2 font-medium">Bien</th>
                 <th className="px-3 py-2 font-medium">Año</th>
                 <th className="px-3 py-2 font-medium">Fecha</th>
@@ -425,19 +432,20 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
   }
 
   return (
-    <tr className="border-b border-border/60 align-top">
+    <tr className="border-b border-border/60 align-top transition hover:bg-surface-2/40">
       <td className="px-4 py-2.5">
         <p className="font-medium text-foreground">{c.descripcion}</p>
         <p className="text-xs text-muted">{c.folio}{c.prospectoNombre ? ` · ${c.prospectoNombre}` : ""}</p>
         {c.tipo === "vehiculo" && (
           <div className="mt-1 text-xs">
             {c.avaluoEstado === "respondido" ? (
-              <span className="text-success">🔧 Mecánico: <strong>{c.avaluoMecanico != null ? formatMXN(c.avaluoMecanico) : "—"}</strong>{c.comentarioMecanico ? ` · ${c.comentarioMecanico}` : ""}</span>
+              <span className="inline-flex flex-wrap items-center gap-1 text-success"><Wrench className="h-3.5 w-3.5" aria-hidden /> Mecánico: <strong>{c.avaluoMecanico != null ? formatMXN(c.avaluoMecanico) : "—"}</strong>{c.comentarioMecanico ? ` · ${c.comentarioMecanico}` : ""}</span>
             ) : c.avaluoEstado === "solicitado" ? (
-              <span className="text-warning">⏳ Con el mecánico…</span>
+              <span className="inline-flex items-center gap-1 text-warning"><Hourglass className="h-3.5 w-3.5" aria-hidden /> Con el mecánico…</span>
             ) : (
-              <button type="button" onClick={onSolicitarMecanico} disabled={solicitando} className="font-medium text-primary hover:underline disabled:opacity-50">
-                {solicitando ? "Enviando…" : "🔧 Enviar al mecánico"}
+              <button type="button" onClick={onSolicitarMecanico} disabled={solicitando} className="inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:opacity-50">
+                {!solicitando && <Wrench className="h-3.5 w-3.5" aria-hidden />}
+                {solicitando ? "Enviando…" : "Enviar al mecánico"}
               </button>
             )}
           </div>
@@ -445,12 +453,13 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
         {c.seEmpeno === true && (
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             {c.documentos.length > 0 && (
-              <a href={c.documentos[c.documentos.length - 1]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-info hover:underline">
-                📎 {c.documentos.length} doc(s)
+              <a href={c.documentos[c.documentos.length - 1]} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-medium text-info hover:underline">
+                <Paperclip className="h-3.5 w-3.5" aria-hidden /> {c.documentos.length} doc(s)
               </a>
             )}
-            <label className="cursor-pointer text-xs font-medium text-primary hover:underline">
-              {subiendo ? "Subiendo…" : "+ Adjuntar documentación"}
+            <label className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-primary hover:underline">
+              {!subiendo && <Plus className="h-3.5 w-3.5" aria-hidden />}
+              {subiendo ? "Subiendo…" : "Adjuntar documentación"}
               <input type="file" accept="image/*" className="hidden" disabled={subiendo} onChange={(e) => onDoc(e.target.files?.[0])} />
             </label>
           </div>
@@ -466,16 +475,16 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
           motivando ? (
             <div className="flex flex-col gap-1">
               <input value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Motivo…"
-                className="w-40 rounded border border-border bg-surface px-2 py-1 text-xs outline-none" />
+                className="w-40 rounded-md border border-border bg-surface px-2 py-1 text-xs outline-none" />
               <div className="flex gap-1">
-                <button onClick={() => onResultado(c.id, false, motivo || null)} className="rounded bg-danger px-2 py-0.5 text-xs font-medium text-white">Guardar</button>
-                <button onClick={() => setMotivando(false)} className="rounded border border-border px-2 py-0.5 text-xs">Cancelar</button>
+                <button onClick={() => onResultado(c.id, false, motivo || null)} className="rounded-md bg-danger px-2 py-0.5 text-xs font-medium text-white">Guardar</button>
+                <button onClick={() => setMotivando(false)} className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-surface-2">Cancelar</button>
               </div>
             </div>
           ) : (
             <div className="flex gap-1">
-              <button onClick={() => onResultado(c.id, true, null)} className="rounded bg-success px-2 py-0.5 text-xs font-medium text-white hover:opacity-90">Sí</button>
-              <button onClick={() => setMotivando(true)} className="rounded border border-border px-2 py-0.5 text-xs hover:bg-surface-2">No</button>
+              <button onClick={() => onResultado(c.id, true, null)} className="rounded-md bg-success px-2 py-0.5 text-xs font-medium text-white hover:opacity-90">Sí</button>
+              <button onClick={() => setMotivando(true)} className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-surface-2">No</button>
             </div>
           )
         ) : c.seEmpeno ? (
@@ -510,7 +519,7 @@ function Campo({
 function Tab({ children, activo, onClick }: { children: React.ReactNode; activo: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className={`rounded-lg px-4 py-2 text-sm font-medium transition ${activo ? "bg-primary text-primary-fg" : "border border-border bg-surface text-foreground hover:bg-surface-2"}`}>
+      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition ${activo ? "bg-primary text-primary-fg shadow-soft" : "border border-border bg-surface text-foreground hover:bg-surface-2"}`}>
       {children}
     </button>
   );

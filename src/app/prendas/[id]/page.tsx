@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ArrowRight, MapPin, Pin, Printer, X } from "lucide-react";
 import { obtenerPrenda } from "@/lib/db/repo";
 import { subirFotoPrenda, eliminarFotoPrenda, actualizarResguardo } from "@/lib/actions";
 import { HistorialFotosVehiculo } from "./HistorialFotosVehiculo";
@@ -10,7 +11,7 @@ import { generarQR, urlPrenda } from "@/lib/qr";
 import { direccionResguardo } from "@/lib/resguardo";
 
 const campoCls =
-  "w-full rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm";
+  "w-full min-w-0 rounded-lg border border-border bg-surface-2 px-2.5 py-1.5 text-sm outline-none transition focus:border-primary focus:bg-surface focus:ring-2 focus:ring-primary/20";
 
 /**
  * Extrae el enlace de mapa de un texto de ubicación. Soporta tanto una liga
@@ -71,7 +72,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
   const tieneFicha = fichaVehiculo.some(([, v]) => v) || p.danios || p.gpsUbicacion;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-6xl">
       <VolverLink href="/prendas" label="Comprar" />
       <PageHeader
         title={p.descripcion}
@@ -79,10 +80,10 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
         action={estadoPrendaBadge(p.estado)}
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-surface p-4">
+      <div className="shadow-soft mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-surface p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={qrDataUrl} alt={`QR ${p.folio}`} className="h-24 w-24 rounded-lg border border-border bg-white p-1" />
-        <div className="min-w-0">
+        <img src={qrDataUrl} alt={`QR ${p.folio}`} className="h-24 w-24 shrink-0 rounded-xl border border-border bg-white p-1" />
+        <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">Código QR de la prenda</p>
           <p className="text-xs text-muted">
             Folio <span className="font-mono">{p.folio}</span>. Escanéalo con cualquier cámara para abrir esta ficha.
@@ -91,9 +92,9 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
             href={`/prendas/${p.id}/etiqueta`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium hover:bg-surface"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-surface"
           >
-            🖨️ Imprimir etiqueta
+            <Printer className="h-4 w-4" aria-hidden /> Imprimir etiqueta
           </a>
         </div>
       </div>
@@ -101,27 +102,27 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
       {esVehiculo && p.fotos.length > 0 && (
         <Card className="mb-6">
           <CardHeader title="Historial del vehículo" subtitle="Primera foto vs. más reciente, para ver si hay cambios" />
-          <div className="p-5">
+          <div className="p-4 sm:p-6">
             <HistorialFotosVehiculo fotos={p.fotos} />
           </div>
         </Card>
       )}
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader title="Fotografías" subtitle={`${p.fotos.length} imagen(es)`} />
-          <div className="p-5">
+          <div className="p-4 sm:p-6">
             {p.fotos.length === 0 ? (
               <p className="text-sm text-muted">Aún no hay fotos de esta prenda.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
                 {p.fotos.map((url, i) => {
                   const esPrimera = esVehiculo && i === 0 && p.fotos.length > 1;
                   return (
-                    <div key={url} className="group relative overflow-hidden rounded-lg border border-border">
+                    <div key={url} className="group relative overflow-hidden rounded-xl border border-border bg-surface-2">
                       {esPrimera && (
-                        <span className="absolute left-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-semibold text-primary-fg">
-                          📌 Primera
+                        <span className="absolute left-1 top-1 z-10 inline-flex items-center gap-1 rounded-md bg-primary/90 px-1.5 py-0.5 text-[10px] font-semibold text-primary-fg">
+                          <Pin className="h-3 w-3" aria-hidden /> Primera
                         </span>
                       )}
                       {/\.(mp4|webm|mov|m4v)(\?|$)/i.test(url) ? (
@@ -132,7 +133,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
                       )}
                       <form
                         action={eliminarFotoPrenda.bind(null, p.id, url)}
-                        className="absolute right-1 top-1 opacity-0 transition group-hover:opacity-100"
+                        className="absolute right-1 top-1 z-10 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                       >
                         {esPrimera ? (
                           <ConfirmSubmit
@@ -140,15 +141,16 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
                             className="!rounded-md !bg-black/60 !px-2 !py-1 !text-xs hover:!bg-danger"
                             confirmacion="Esta es la primera foto del vehículo (referencia de ingreso para comparar). ¿Borrarla de todos modos?"
                           >
-                            ✕
+                            <X className="h-3.5 w-3.5" aria-label="Eliminar" />
                           </ConfirmSubmit>
                         ) : (
                           <button
                             type="submit"
                             className="rounded-md bg-black/60 px-2 py-1 text-xs text-white hover:bg-danger"
                             title="Eliminar"
+                            aria-label="Eliminar"
                           >
-                            ✕
+                            <X className="h-3.5 w-3.5" aria-hidden />
                           </button>
                         )}
                       </form>
@@ -164,7 +166,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
                 name="foto"
                 accept="image/*,video/*"
                 required
-                className="block text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary"
+                className="block min-w-0 max-w-full text-sm text-muted file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary"
               />
               <ConfirmSubmit confirmacion="¿Subir este archivo?">Subir foto/video</ConfirmSubmit>
             </form>
@@ -173,7 +175,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
 
         <Card>
           <CardHeader title="Avalúo" />
-          <div className="space-y-3 p-5">
+          <div className="space-y-3 p-4 sm:p-6">
             <div>
               <p className="text-xs text-muted">Valor de avalúo</p>
               <p className="text-2xl font-bold text-foreground">{formatMXN(p.valorAvaluo)}</p>
@@ -185,17 +187,17 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
             {/* Ubicación / pin */}
             <div className="border-t border-border pt-3">
               <p className="text-xs text-muted">Ubicación de resguardo</p>
-              <p className="text-sm font-medium text-foreground">{p.ubicacionResguardo ?? "Sin asignar"}</p>
+              <p className="break-all text-sm font-medium text-foreground">{p.ubicacionResguardo ?? "Sin asignar"}</p>
               {(p.resguardo.mapsUrl || p.ubicacionResguardo) && (
                 <a href={p.resguardo.mapsUrl || enlaceMaps(p.ubicacionResguardo)!} target="_blank" rel="noopener noreferrer"
-                  className="mt-1 inline-flex text-xs font-medium text-info underline-offset-2 hover:underline">
-                  📍 Ver en el mapa →
+                  className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline">
+                  <MapPin className="h-3.5 w-3.5" aria-hidden /> Ver en el mapa <ArrowRight className="h-3.5 w-3.5" aria-hidden />
                 </a>
               )}
               <form action={actualizarResguardo.bind(null, p.id)} className="mt-3 space-y-2">
                 <select name="tipoUbicacion" defaultValue={p.resguardo.tipo} className={campoCls}>
-                  <option value="Matriz">📍 Matriz</option>
-                  <option value="Externa">📍 Externa / otra sucursal</option>
+                  <option value="Matriz">Matriz</option>
+                  <option value="Externa">Externa / otra sucursal</option>
                 </select>
                 <div className="grid grid-cols-3 gap-2">
                   <input name="calle" defaultValue={p.resguardo.calle ?? ""} placeholder="Calle" className={`col-span-2 ${campoCls}`} />
@@ -223,32 +225,32 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
       {esVehiculo && tieneFicha && (
         <Card className="mt-6">
           <CardHeader title="Ficha del vehículo" subtitle="Datos técnicos, factura y seguro" />
-          <dl className="grid gap-4 p-5 sm:grid-cols-3">
+          <dl className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 xl:grid-cols-4">
             {fichaVehiculo.filter(([, v]) => v).map(([k, v]) => (
-              <div key={k}>
+              <div key={k} className="min-w-0">
                 <dt className="text-xs uppercase tracking-wide text-muted">{k}</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{v}</dd>
+                <dd className="mt-0.5 break-words text-sm text-foreground">{v}</dd>
               </div>
             ))}
           </dl>
           {p.gpsUbicacion && (
             <div className="border-t border-border px-5 py-4">
               <p className="text-xs uppercase tracking-wide text-muted">Ubicación del GPS</p>
-              <p className="mt-1 text-sm text-foreground">{p.gpsUbicacion}</p>
+              <p className="mt-1 break-all text-sm text-foreground">{p.gpsUbicacion}</p>
               <a
                 href={enlaceMaps(p.gpsUbicacion)!}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-1 inline-flex text-sm font-medium text-info underline-offset-2 hover:underline"
+                className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-2 hover:underline"
               >
-                📍 Ver en el mapa →
+                <MapPin className="h-4 w-4" aria-hidden /> Ver en el mapa <ArrowRight className="h-4 w-4" aria-hidden />
               </a>
             </div>
           )}
           {p.danios && (
             <div className="border-t border-border px-5 py-4">
               <p className="text-xs uppercase tracking-wide text-muted">Daños visibles</p>
-              <p className="mt-1 text-sm text-foreground">{p.danios}</p>
+              <p className="mt-1 break-words text-sm text-foreground">{p.danios}</p>
             </div>
           )}
         </Card>
@@ -256,18 +258,18 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
 
       <Card className="mt-6">
         <CardHeader title="Detalles" />
-        <dl className="grid gap-4 p-5 sm:grid-cols-3">
+        <dl className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6 lg:grid-cols-3 xl:grid-cols-4">
           {datos.filter(([, v]) => v).map(([k, v]) => (
-            <div key={k}>
+            <div key={k} className="min-w-0">
               <dt className="text-xs uppercase tracking-wide text-muted">{k}</dt>
-              <dd className="mt-0.5 text-sm text-foreground">{v}</dd>
+              <dd className="mt-0.5 break-words text-sm text-foreground">{v}</dd>
             </div>
           ))}
         </dl>
         {p.notas && (
           <div className="border-t border-border px-5 py-4">
             <p className="text-xs uppercase tracking-wide text-muted">Notas</p>
-            <p className="mt-1 text-sm text-foreground">{p.notas}</p>
+            <p className="mt-1 break-words text-sm text-foreground">{p.notas}</p>
           </div>
         )}
       </Card>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CalendarDays, Satellite, Warehouse } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { listarEmpenos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { resumenModalidades, modalidadVehiculo } from "@/lib/gps";
@@ -23,33 +25,46 @@ export default async function GpsPage() {
         title="GPS y resguardo"
         subtitle="Vehículos en garantía por modalidad"
         action={
-          <Link href="/gps/citas" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90">
-            📅 Citas de GPS
+          <Link href="/gps/citas" className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg shadow-soft transition hover:brightness-105">
+            <CalendarDays className="h-4 w-4" aria-hidden /> Citas de GPS
           </Link>
         }
       />
 
       {!rastreoHabilitado() && (
-        <div className="mb-6 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
-          📡 El rastreo en vivo aún no está conectado — por ahora la ubicación de cada vehículo con GPS se anota a mano
-          al registrarlo (ver "Ubicación del GPS"). En cuanto se confirme el proveedor de rastreo, se conecta aquí.
+        <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
+          <Satellite className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p>El rastreo en vivo aún no está conectado — por ahora la ubicación de cada vehículo con GPS se anota a mano
+          al registrarlo (ver &quot;Ubicación del GPS&quot;). En cuanto se confirme el proveedor de rastreo, se conecta aquí.</p>
         </div>
       )}
 
       <GpsModalidades resumen={resumen} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ListaVehiculos titulo="📡 Con GPS" empenos={porGps} />
-        <ListaVehiculos titulo="🏢 En resguardo" empenos={porResguardo} />
+        <ListaVehiculos titulo="Con GPS" icono={Satellite} empenos={porGps} />
+        <ListaVehiculos titulo="En resguardo" icono={Warehouse} empenos={porResguardo} />
       </div>
     </div>
   );
 }
 
-function ListaVehiculos({ titulo, empenos }: { titulo: string; empenos: Awaited<ReturnType<typeof listarEmpenos>> }) {
+function ListaVehiculos({
+  titulo,
+  icono: Icono,
+  empenos,
+}: {
+  titulo: string;
+  icono: LucideIcon;
+  empenos: Awaited<ReturnType<typeof listarEmpenos>> }) {
   return (
     <Card>
-      <CardHeader title={titulo} subtitle={`${empenos.length} vehículo(s)`} />
+      <CardHeader
+        title={
+          <span className="inline-flex items-center gap-2">
+            <Icono className="h-5 w-5 text-primary" aria-hidden /> {titulo}
+          </span>
+        } subtitle={`${empenos.length} vehículo(s)`} />
       {empenos.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-muted">Sin vehículos en esta modalidad.</p>
       ) : (
@@ -58,7 +73,7 @@ function ListaVehiculos({ titulo, empenos }: { titulo: string; empenos: Awaited<
             const calc = calcularLiquidacion(e);
             return (
               <li key={e.id}>
-                <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-3 px-5 py-3 transition hover:bg-surface-2">
+                <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-surface-2 sm:px-5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
                       {e.prenda.descripcion || `${e.prenda.marca ?? ""} ${e.prenda.submarca ?? ""}`.trim()}
@@ -68,7 +83,7 @@ function ListaVehiculos({ titulo, empenos }: { titulo: string; empenos: Awaited<
                       {e.prenda.placas ? ` · ${e.prenda.placas}` : ""} · vence {formatFecha(e.fechaVencimiento)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
                     <span className="text-sm font-semibold tabular-nums text-foreground">{formatMXN(e.montoPrestado)}</span>
                     {calc.vencido && <Badge tono="danger">Vencido</Badge>}
                   </div>

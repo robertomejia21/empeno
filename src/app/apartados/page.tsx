@@ -35,9 +35,9 @@ export default async function ApartadosPage() {
     <div>
       <PageHeader title="Apartados" subtitle={`${activos.length} activos · ${apartados.length} en total`} />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-3 2xl:grid-cols-4">
         {/* Nuevo apartado */}
-        <Card className="lg:col-span-1">
+        <Card className="self-start lg:col-span-1">
           <CardHeader title="Nuevo apartado" subtitle="Reserva con enganche" />
           {enVenta.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-muted">
@@ -57,9 +57,9 @@ export default async function ApartadosPage() {
         </Card>
 
         {/* Lista de apartados */}
-        <div className="space-y-4 lg:col-span-2">
+        <div className="grid min-w-0 content-start gap-4 lg:col-span-2 2xl:col-span-3 2xl:grid-cols-2">
           {apartados.length === 0 ? (
-            <Card>
+            <Card className="2xl:col-span-2">
               <EmptyState titulo="Sin apartados" descripcion="Crea un apartado reservando una prenda en venta." />
             </Card>
           ) : (
@@ -68,10 +68,10 @@ export default async function ApartadosPage() {
               const pct = Math.min(100, Math.round((a.abonado / a.precioTotal) * 100));
               const cli = clienteDe(a.clienteId);
               return (
-                <Card key={a.id} className="p-5">
+                <Card key={a.id} className="min-w-0 p-4 sm:p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
+                    <div className="min-w-0 flex-1">
+                      <p className="wrap-break-word text-sm font-semibold text-foreground">
                         {a.folio} · {prendaDe(a.prendaId)?.descripcion ?? "Prenda"}
                       </p>
                       <p className="text-xs text-muted">
@@ -84,12 +84,12 @@ export default async function ApartadosPage() {
                   </div>
 
                   <div className="mt-3">
-                    <div className="mb-1 flex justify-between text-xs text-muted">
+                    <div className="mb-1 flex flex-wrap justify-between gap-x-3 text-xs text-muted">
                       <span>Abonado {formatMXN(a.abonado)}</span>
                       <span>Total {formatMXN(a.precioTotal)}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
-                      <div className="bg-gold-gradient h-full rounded-full" style={{ width: `${pct}%` }} />
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
                     </div>
                     <p className="mt-1 text-xs font-medium text-foreground">
                       Saldo: {formatMXN(saldo)} ({pct}%)
@@ -107,7 +107,7 @@ export default async function ApartadosPage() {
                             step="0.01"
                             required
                             defaultValue={saldo}
-                            className="w-28 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm focus:border-primary-2 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary-2/20"
+                            className="w-28 rounded-lg border border-border bg-surface-2 px-2 py-1.5 text-sm transition focus:border-primary-2 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-primary-2/20"
                           />
                         </label>
                         <ConfirmSubmit confirmacion="¿Registrar este abono?">Abonar</ConfirmSubmit>

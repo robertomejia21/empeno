@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import { responderAvaluoMecanico } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { CHECKLIST_MECANICO, CHECKLIST_OPCIONES, CHECKLIST_ETIQUETA } from "@/lib/checklist";
+import { PartyPopper, Paperclip } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui";
 import type { Cotizacion } from "@/lib/types";
 
 const inputCls =
-  "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+  "w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 function claseChecklist(op: string, activo: boolean): string {
-  const base = "rounded px-1.5 py-0.5 text-[10px] font-medium transition ";
+  const base = "rounded-md px-1.5 py-0.5 text-[10px] font-medium transition ";
   if (!activo) return base + "border border-border text-muted hover:bg-surface-2";
   if (op === "bueno") return base + "bg-success-soft text-success";
   if (op === "regular") return base + "bg-warning-soft text-warning";
@@ -26,7 +27,9 @@ export function AvaluosMecanico({ pendientes, respondidas }: { pendientes: Cotiz
       <Card>
         <CardHeader title="Vehículos por avaluar" subtitle={`${pendientes.length} pendiente(s)`} />
         {pendientes.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">No hay vehículos pendientes de avalúo. 🎉</p>
+          <p className="flex items-center justify-center gap-1.5 px-5 py-8 text-center text-sm text-muted">
+            No hay vehículos pendientes de avalúo. <PartyPopper className="h-4 w-4 text-primary" aria-hidden />
+          </p>
         ) : (
           <ul className="divide-y divide-border">
             {pendientes.map((c) => (
@@ -43,7 +46,7 @@ export function AvaluosMecanico({ pendientes, respondidas }: { pendientes: Cotiz
         ) : (
           <ul className="divide-y divide-border">
             {respondidas.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm sm:px-5">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-foreground">{c.descripcion}{c.modelo ? ` (${c.modelo})` : ""}</p>
                   <p className="truncate text-xs text-muted">
@@ -83,34 +86,34 @@ function ItemPendiente({ c }: { c: Cotizacion }) {
   }
 
   return (
-    <li className="space-y-3 px-5 py-4">
-      <div>
+    <li className="space-y-3 px-4 py-4 sm:px-5">
+      <div className="min-w-0">
         <p className="font-medium text-foreground">{c.descripcion}{c.modelo ? ` (${c.modelo})` : ""}</p>
-        <p className="text-xs text-muted">
+        <p className="break-words text-xs text-muted">
           {[c.marca, c.submarca, c.placas, c.serie, c.kilometraje ? `${c.kilometraje} km` : null].filter(Boolean).join(" · ") || "—"}
         </p>
         <p className="mt-1 text-sm text-foreground">
           Valor de referencia (Facebook): <strong>{c.busquedaFacebook ? formatMXN(c.busquedaFacebook) : "sin dato"}</strong>
-          <span className="ml-2 text-xs text-muted">· solicitado {formatFecha(c.creadoEn)}</span>
+          <span className="ml-2 inline-block text-xs text-muted">· solicitado {formatFecha(c.creadoEn)}</span>
         </p>
       </div>
 
       {archivos.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {archivos.map((u, i) => (
-            <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-border bg-surface-2 px-3 py-1 text-xs font-medium hover:bg-surface">
-              📎 archivo {i + 1}
+            <a key={i} href={u} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-foreground transition hover:bg-surface">
+              <Paperclip className="h-3.5 w-3.5" aria-hidden /> archivo {i + 1}
             </a>
           ))}
         </div>
       )}
 
-      <div className="rounded-lg border border-border">
-        <p className="border-b border-border px-3 py-2 text-xs font-semibold text-foreground">Lista de chequeo vehicular</p>
+      <div className="overflow-hidden rounded-xl border border-border">
+        <p className="border-b border-border bg-surface-2/60 px-3 py-2 text-xs font-semibold text-foreground">Lista de chequeo vehicular</p>
         <div className="max-h-72 divide-y divide-border overflow-y-auto">
           {CHECKLIST_MECANICO.map((item) => (
-            <div key={item} className="flex items-center justify-between gap-2 px-3 py-1.5">
-              <span className="min-w-0 truncate text-xs text-foreground">{item}</span>
+            <div key={item} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-xs text-foreground">{item}</span>
               <div className="flex shrink-0 gap-1">
                 {CHECKLIST_OPCIONES.map((op) => (
                   <button
@@ -128,10 +131,10 @@ function ItemPendiente({ c }: { c: Cotizacion }) {
         </div>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
+      <div className="grid gap-2 sm:grid-cols-[1fr_2fr_auto] xl:max-w-4xl">
         <input type="number" step="0.01" placeholder="Tu avalúo (MXN)" value={monto} onChange={(e) => setMonto(e.target.value)} className={inputCls} />
         <input placeholder="Comentario: estado, fallas, detalles…" value={comentario} onChange={(e) => setComentario(e.target.value)} className={inputCls} />
-        <button type="button" onClick={guardar} disabled={guardando || !monto} className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50">
+        <button type="button" onClick={guardar} disabled={guardando || !monto} className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:brightness-110 disabled:opacity-50">
           {guardando ? "Enviando…" : "Enviar avalúo"}
         </button>
       </div>

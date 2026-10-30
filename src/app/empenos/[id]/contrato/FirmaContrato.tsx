@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CircleCheck, Eraser, PenLine } from "lucide-react";
 import { guardarFirmaEmpeno } from "@/lib/actions";
 
 export function FirmaContrato({
@@ -78,8 +79,10 @@ export function FirmaContrato({
 
   if (yaFirmado) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-success">✓ El contrato ya fue firmado por el cliente.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="inline-flex items-center gap-1.5 text-sm font-medium text-success">
+          <CircleCheck className="h-4 w-4 shrink-0" aria-hidden /> El contrato ya fue firmado por el cliente.
+        </p>
         {!publico && (
           <button
             type="button"
@@ -95,24 +98,26 @@ export function FirmaContrato({
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-foreground">Firma del consumidor</p>
+      <p className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
+        <PenLine className="h-4 w-4 text-muted" aria-hidden /> Firma del consumidor
+      </p>
       <canvas
         ref={canvasRef}
-        className="h-40 w-full touch-none rounded-lg border-2 border-dashed border-border bg-white"
+        className="h-40 w-full touch-none rounded-xl border-2 border-dashed border-border bg-white"
         onPointerDown={start}
         onPointerMove={move}
         onPointerUp={end}
         onPointerLeave={end}
       />
-      <div className="flex gap-2">
-        <button type="button" onClick={limpiar} className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2">
-          Limpiar
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={limpiar} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition hover:bg-surface-2">
+          <Eraser className="h-4 w-4" aria-hidden /> Limpiar
         </button>
         <button
           type="button"
           onClick={guardar}
           disabled={vacio || guardando}
-          className="rounded-lg bg-success px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-success px-5 py-2 text-sm font-medium text-white shadow-soft transition hover:brightness-105 disabled:opacity-50"
         >
           {guardando ? "Guardando…" : "Guardar firma"}
         </button>

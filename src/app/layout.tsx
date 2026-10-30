@@ -32,7 +32,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const sinShell = pathname === "/login" || pathname === "/inicio" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps" || pathname === "/cotiza-vehiculo" || pathname === "/avances" || pathname === "/encuesta" || pathname.startsWith("/firmar/");
+  const sinShell = pathname === "/login" || pathname === "/tienda" || pathname.startsWith("/tienda/") || pathname === "/agendar-gps" || pathname === "/cotiza-vehiculo" || pathname === "/avances" || pathname === "/encuesta" || pathname.startsWith("/firmar/");
   const usuario = sinShell ? null : await getUsuarioActual();
 
   return (
@@ -58,7 +58,7 @@ export default async function RootLayout({
             <Sidebar usuario={usuario} />
             <div className="flex min-w-0 flex-1 flex-col">
               <MobileMenu usuario={usuario} />
-              <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-8 md:py-10">
+              <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5 sm:px-6 md:py-8 xl:px-10">
                 {children}
               </main>
             </div>

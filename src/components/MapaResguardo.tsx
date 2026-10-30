@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { Map as LMap, Marker as LMarker, DivIcon } from "leaflet";
+import { Map as MapIcon, MapPin, Search, Store, TriangleAlert, Warehouse } from "lucide-react";
 import { SUCURSAL } from "@/lib/negocio";
 
 const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
@@ -13,20 +14,29 @@ const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
 // Ubicaciones fijas del negocio, para no tener que buscarlas cada vez.
 // Este componente es de uso interno (requiere sesión) — nunca se muestra al cliente.
 const LUGARES_FIJOS = [
-  { label: "🏪 Casa de empeño", texto: "Casa de empeño", url: "https://maps.app.goo.gl/2XGvvR3KLJy9KSfR7" },
-  { label: "📦 Resguardo (bóveda)", texto: "Resguardo (bóveda)", url: "https://maps.app.goo.gl/h2XnxGvWz9Wv9zep8" },
+  { label: "Casa de empeño", icono: Store, texto: "Casa de empeño", url: "https://maps.app.goo.gl/2XGvvR3KLJy9KSfR7" },
+  { label: "Resguardo (bóveda)", icono: Warehouse, texto: "Resguardo (bóveda)", url: "https://maps.app.goo.gl/h2XnxGvWz9Wv9zep8" },
 ] as const;
+
+// Los marcadores de Leaflet son HTML en texto (no JSX): se pintan con los tokens
+// del tema vía `style` para que sigan la paleta (y el modo oscuro).
+const PIN_PATH =
+  '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z"';
 
 const PIN_SVG =
   '<svg width="28" height="40" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">' +
-  '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#d96a10"/>' +
-  '<circle cx="14" cy="14" r="6" fill="#fff"/></svg>';
+  PIN_PATH + ' style="fill:var(--primary)"/>' +
+  '<circle cx="14" cy="14" r="6" style="fill:var(--primary-fg)"/></svg>';
 
-// Marcador de nuestra sucursal (matriz), en azul con un ícono de tienda.
+// Marcador de nuestra sucursal (matriz): naranja profundo con el glifo "store" de lucide.
 const SUCURSAL_SVG =
   '<svg width="30" height="42" viewBox="0 0 28 40" xmlns="http://www.w3.org/2000/svg">' +
-  '<path d="M14 0C6.3 0 0 6.3 0 14c0 9.5 12.2 24.2 12.7 24.8a1.7 1.7 0 0 0 2.6 0C15.8 38.2 28 23.5 28 14 28 6.3 21.7 0 14 0z" fill="#1d4ed8"/>' +
-  '<text x="14" y="19" font-size="12" text-anchor="middle" fill="#fff">🏪</text></svg>';
+  PIN_PATH + ' style="fill:var(--brand)"/>' +
+  '<svg x="7" y="7" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--brand-fg)">' +
+  '<path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/>' +
+  '<path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/>' +
+  '<path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/>' +
+  '</svg></svg>';
 
 export function MapaResguardo({
   onChange,
@@ -50,7 +60,7 @@ export function MapaResguardo({
   const LRef = useRef<typeof import("leaflet") | null>(null);
 
   const inputCls =
-    "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary";
+    "w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
   // Combina referencia + (liga fija o pin) y avisa al formulario contenedor.
   useEffect(() => {
@@ -90,7 +100,7 @@ export function MapaResguardo({
       const sucursalIcon = L.divIcon({ className: "", html: SUCURSAL_SVG, iconSize: [30, 42], iconAnchor: [15, 42] });
       L.marker([SUCURSAL.lat, SUCURSAL.lng], { icon: sucursalIcon })
         .addTo(map)
-        .bindTooltip(`🏪 ${SUCURSAL.nombre}`, { direction: "top", offset: [0, -38] });
+        .bindTooltip(SUCURSAL.nombre, { direction: "top", offset: [0, -38] });
       map.on("click", (e) => { setLugarFijoUrl(null); setPin({ lat: e.latlng.lat, lng: e.latlng.lng }); });
       mapRef.current = map;
       if (pin) markerRef.current = L.marker([pin.lat, pin.lng], { icon: iconRef.current }).addTo(map);
@@ -161,10 +171,11 @@ export function MapaResguardo({
               setPin(null);
               setLugarFijoUrl(l.url);
             }}
-            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-              lugarFijoUrl === l.url ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface hover:bg-surface-2"
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+              lugarFijoUrl === l.url ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface text-foreground hover:bg-surface-2"
             }`}
           >
+            <l.icono className="h-4 w-4" aria-hidden />
             {l.label}
           </button>
         ))}
@@ -182,9 +193,10 @@ export function MapaResguardo({
           type="button"
           onClick={buscar}
           disabled={buscando}
-          className="shrink-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium hover:bg-surface-2 disabled:opacity-50"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground transition hover:bg-surface-2 disabled:opacity-50"
         >
-          {buscando ? "Buscando…" : "🔎 Buscar"}
+          {!buscando && <Search className="h-4 w-4" aria-hidden />}
+          {buscando ? "Buscando…" : "Buscar"}
         </button>
       </div>
 
@@ -192,9 +204,9 @@ export function MapaResguardo({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="text-sm font-medium text-info underline-offset-2 hover:underline"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline"
         >
-          🗺️ Colocar el pin en el mapa
+          <MapIcon className="h-4 w-4" aria-hidden /> Colocar el pin en el mapa
         </button>
       )}
 
@@ -202,13 +214,14 @@ export function MapaResguardo({
         <>
           <div
             ref={contRef}
-            className="h-64 w-full overflow-hidden rounded-xl border border-border"
+            className="h-64 w-full overflow-hidden rounded-xl border border-border sm:h-72 xl:h-80"
             aria-label="Mapa para colocar el pin de resguardo"
           />
-          <div className="flex items-center justify-between text-xs text-muted">
-            <span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
+            <span className="inline-flex items-center gap-1">
+              {pin && <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden />}
               {pin
-                ? `📍 Pin en ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`
+                ? `Pin en ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}`
                 : "Haz clic en el mapa para colocar el pin."}
             </span>
             {pin && (
@@ -228,7 +241,11 @@ export function MapaResguardo({
         </>
       )}
 
-      {msg && <p className="text-xs text-warning">{msg}</p>}
+      {msg && (
+        <p className="flex items-start gap-1.5 text-xs text-warning">
+          <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden /> {msg}
+        </p>
+      )}
     </div>
   );
 }

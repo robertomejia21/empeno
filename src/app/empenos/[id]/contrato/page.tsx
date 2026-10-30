@@ -4,6 +4,7 @@ import { calcularLiquidacion } from "@/lib/interes";
 import { getUsuarioActual } from "@/lib/session";
 import { generarQR, urlPrenda } from "@/lib/qr";
 import { enviarContratoWhatsApp } from "@/lib/actions";
+import { Printer, Send } from "lucide-react";
 import { PageHeader, VolverLink, Card } from "@/components/ui";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { ContratoProfeco } from "./ContratoProfeco";
@@ -31,22 +32,24 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
               {!invitado && (
                 <form action={enviarContratoWhatsApp.bind(null, empeno.id)}>
                   <ConfirmSubmit variante="secondary" confirmacion="¿Enviar el contrato al cliente por WhatsApp para que lo revise y firme?">
-                    📲 Enviar al cliente para firmar
+                    <Send className="h-4 w-4" aria-hidden /> Enviar al cliente para firmar
                   </ConfirmSubmit>
                 </form>
               )}
-              <PrintButton>🖨️ Imprimir / PDF</PrintButton>
+              <PrintButton>
+                <Printer className="h-4 w-4" aria-hidden /> Imprimir / PDF
+              </PrintButton>
             </div>
           }
         />
       </div>
 
-      <div className="shadow-card overflow-x-auto rounded-xl border border-border">
+      <div className="shadow-card overflow-x-auto rounded-2xl border border-border">
         <ContratoProfeco empeno={empeno} calc={calc} qrPrenda={qrPrenda} />
       </div>
 
       {!invitado && (
-        <Card className="no-print mt-6 p-5">
+        <Card className="no-print mt-6 p-4 sm:p-5">
           <FirmaContrato empenoId={empeno.id} yaFirmado={!!empeno.firmaCliente} />
         </Card>
       )}

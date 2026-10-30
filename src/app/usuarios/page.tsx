@@ -7,6 +7,7 @@ import { Card, CardHeader, PageHeader, Button, Field, SelectField, Badge } from 
 import { ConfirmSubmit } from "@/components/actions-ui";
 import type { RolUsuario } from "@/lib/types";
 import { TriangleAlert } from "lucide-react";
+import { EditarUsuario } from "./EditarUsuario";
 
 export default async function UsuariosPage() {
   const actual = await getUsuarioActual();
@@ -69,21 +70,10 @@ export default async function UsuariosPage() {
                       </td>
                       <td className="px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <details className="relative">
-                            <summary className="cursor-pointer list-none rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium transition hover:bg-surface-2">
-                              Editar
-                            </summary>
-                            <form
-                              action={editarUsuario.bind(null, u.id)}
-                              className="shadow-elevated absolute right-0 z-10 mt-2 w-72 max-w-[calc(100vw-2rem)] space-y-3 rounded-2xl border border-border bg-surface p-4 text-left"
-                            >
-                              <Field label="Nombre" name="nombre" defaultValue={u.nombre} required />
-                              <Field label="Correo" name="email" type="email" defaultValue={u.email} required />
-                              <SelectField label="Rol" name="rol" options={ROLES} defaultValue={u.rol} required />
-                              <Field label="Nueva contraseña" name="password" type="password" placeholder="Dejar en blanco para no cambiar" />
-                              <Button type="submit" className="w-full">Guardar cambios</Button>
-                            </form>
-                          </details>
+                          <EditarUsuario
+                            usuario={{ nombre: u.nombre, email: u.email, rol: u.rol }}
+                            action={editarUsuario.bind(null, u.id)}
+                          />
                           {u.id !== actual.uid && (
                             <form action={cambiarEstadoUsuario.bind(null, u.id, !u.activo)}>
                               <ConfirmSubmit

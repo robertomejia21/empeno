@@ -1,4 +1,4 @@
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual } from "@/lib/reporteSemanal";
 import { getUsuarioActual } from "@/lib/session";
@@ -33,7 +33,7 @@ const RUTA_REQUERIDA: Record<string, string> = {
 };
 
 export async function GET(req: Request, { params }: { params: Promise<{ tipo: string }> }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { tipo } = await params;
 
   const actual = await getUsuarioActual();
@@ -113,7 +113,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
     ];
   } else if (tipo === "cotizaciones") {
     nombre = "cotizaciones";
-    const cot = await listarCotizaciones();
+    // Filtro opcional por rango (?desde=YYYY-MM-DD&hasta=YYYY-MM-DD), p. ej. el reporte semanal.
+    const sp = new URL(req.url).searchParams;
+    const desdeCot = sp.get("desde");
+    const hastaCot = sp.get("hasta");
+    const enRangoCot = (iso: string) => {
+      const d = new Date(iso);
+      const f = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      return (!desdeCot || f >= desdeCot) && (!hastaCot || f <= hastaCot);
+    };
+    const cot = (await listarCotizaciones()).filter((c) => enRangoCot(c.creadoEn));
+    if (desdeCot || hastaCot) nombre = `cotizaciones_${desdeCot ?? "inicio"}_a_${hastaCot ?? "hoy"}`;
     const cab = ["#", "Bien", "Año", "Fecha", "Monto solicitado", "Monto a prestar", "Busqueda Facebook", "¿Se empeñó?", "Motivo (si no)", "Contacto"];
     const seEmp = (v: boolean | null) => (v === null ? "Pendiente" : v ? "Sí" : "No");
     const bloque = (titulo: string, lista: typeof cot) => {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Camera, Download, FileSignature, Hourglass, Printer, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
-import { obtenerEmpeno, contarRefrendos, obtenerFestivos } from "@/lib/db/repo";
+import { obtenerEmpeno, contarRefrendos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento } from "@/lib/interes";
 import { esDiaInhabil } from "@/lib/diasInhabiles";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno, eliminarEmpenoPermanente } from "@/lib/actions";
@@ -26,7 +26,7 @@ export default async function EmpenoDetalle({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { id } = await params;
   const empeno = await obtenerEmpeno(id);
   if (!empeno) notFound();
@@ -49,7 +49,7 @@ export default async function EmpenoDetalle({
   // siempre ancla al periodo anterior (ver refrendarEmpeno), nunca al día
   // real de pago — aquí solo se avisa si ese día fijo cae en domingo/festivo.
   const proximoVenc = calcularVencimiento(empeno.fechaVencimiento, empeno.periodo, empeno.plazoPeriodos);
-  const proximoVencInhabil = esDiaInhabil(proximoVenc, festivos);
+  const proximoVencInhabil = esDiaInhabil(proximoVenc, festivos.festivos);
 
   return (
     <div className="mx-auto max-w-7xl">

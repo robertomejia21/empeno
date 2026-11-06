@@ -402,6 +402,17 @@ export interface FilaChecklistVehiculo {
   revision?: Partial<Record<import("@/lib/checklist").PuntoRevision, import("@/lib/checklist").CalificacionRevision>>;
 }
 
+/** Revisión semanal (viernes) de un vehículo en resguardo: video/fotos 360°. */
+export interface ChecklistSemanal {
+  id: ID;
+  prendaId: ID;
+  semana: string; // YYYY-MM-DD del viernes de la semana operativa
+  responsable: string;
+  archivos: string[];
+  observaciones: string | null;
+  creadoEn: string;
+}
+
 export interface ChecklistVehicular {
   id: ID;
   fecha: string; // ISO date

@@ -37,6 +37,7 @@ interface Store {
   productosInteres: import("@/lib/types").ProductoInteres[];
   checklistsVehiculares: import("@/lib/types").ChecklistVehicular[];
   ajustes: import("@/lib/ajustesBase").Ajustes;
+  checklistsSemanales: import("@/lib/types").ChecklistSemanal[];
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -61,6 +62,7 @@ export function getStore(): Store {
       checklistsVehiculares: [],
       encuestas: [],
       ajustes: structuredClone(AJUSTES_DEFAULT),
+      checklistsSemanales: [],
       // "tasa" es el interés por separado (lo que de verdad se usa para
       // calcular): en TRADICIONAL y COMPRA (artículos, no vehículos) el
       // almacenaje se refleja igual que el interés, así que el % que ve el

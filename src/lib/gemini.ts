@@ -154,3 +154,33 @@ export async function extraerDatosVehiculo(base64: string, mime: string): Promis
     },
   };
 }
+
+/** Pregunta de texto libre a Gemini (sin imagen). Devuelve texto plano. */
+export async function preguntarTexto(prompt: string): Promise<{ ok: true; texto: string } | { ok: false; error: string }> {
+  if (!KEY) return { ok: false, error: "La IA no está configurada (falta GEMINI_API_KEY)." };
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2 },
+        }),
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) {
+      console.error("[Gemini] texto respondió", res.status, (await res.text().catch(() => "")).slice(0, 300));
+      if (res.status === 429) return { ok: false, error: "Se agotó la cuota de la IA. Intenta en un momento." };
+      return { ok: false, error: `La IA no respondió (${res.status}).` };
+    }
+    const data = await res.json();
+    const partes: { text?: string }[] = data?.candidates?.[0]?.content?.parts ?? [];
+    const texto = partes.map((p) => p.text ?? "").join("").trim();
+    return texto ? { ok: true, texto } : { ok: false, error: "La IA no dio respuesta." };
+  } catch {
+    return { ok: false, error: "No hay conexión con la IA." };
+  }
+}

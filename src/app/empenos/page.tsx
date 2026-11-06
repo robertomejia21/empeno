@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
@@ -18,7 +18,7 @@ export default async function EmpenosPage({
 }: {
   searchParams: Promise<{ q?: string; cat?: string }>;
 }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { q, cat } = await searchParams;
   const todos = await listarEmpenos();
   const t = (q ?? "").trim();

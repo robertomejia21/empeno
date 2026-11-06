@@ -2,7 +2,7 @@
 import type { Empeno, CalculoLiquidacion, PeriodoInteres } from "./types";
 import { parseFechaLocal, aISOLocal } from "./format";
 import { diasHabilesDespues } from "./diasInhabiles";
-import { porcentajePrestamo, AJUSTES_DEFAULT, type AjustesPrestamo } from "./ajustesBase";
+import { porcentajePrestamo, AJUSTES_DEFAULT, type AjustesPrestamo, type ReglasCalculo } from "./ajustesBase";
 
 const DIAS_POR_PERIODO: Record<PeriodoInteres, number> = {
   mensual: 30, // referencia para costo diario; el vencimiento usa mes calendario
@@ -59,7 +59,7 @@ type EmpenoCalc = Pick<
   Empeno,
   "montoPrestado" | "tasaInteres" | "periodo" | "fechaInicio" | "fechaVencimiento" | "diasGracia"
 > &
-  Partial<Pick<Empeno, "almacenajePct" | "ivaPct" | "abonoCapital">>;
+  Partial<Pick<Empeno, "almacenajePct" | "ivaPct" | "abonoCapital" | "estado">>;
 
 /**
  * @param festivos Días festivos (YYYY-MM-DD) dados de alta en /configuracion.
@@ -69,8 +69,11 @@ type EmpenoCalc = Pick<
 export function calcularLiquidacion(
   empeno: EmpenoCalc,
   aFecha: Date = new Date(),
-  festivos: readonly string[] = []
+  reglas: readonly string[] | ReglasCalculo = []
 ): CalculoLiquidacion {
+  const festivos = Array.isArray(reglas) ? (reglas as readonly string[]) : (reglas as ReglasCalculo).festivos;
+  // Sin reglas explícitas (vistas previas) se cobra el mes completo, como antes.
+  const modo = Array.isArray(reglas) ? null : (reglas as ReglasCalculo).desempeno;
   const dias = Math.max(0, diffDias(empeno.fechaInicio, aFecha));
 
   // Periodos transcurridos (mínimo 1: al pactar ya se devenga el primer periodo)
@@ -84,9 +87,13 @@ export function calcularLiquidacion(
   const almacenajePorPeriodo = empeno.montoPrestado * (almacenajePct / 100);
   const ivaPorPeriodo = (interesPorPeriodo + almacenajePorPeriodo) * (ivaPct / 100);
 
-  const interesAcumulado = interesPorPeriodo * periodosTranscurridos;
-  const almacenajeAcumulado = almacenajePorPeriodo * periodosTranscurridos;
-  const ivaAcumulado = ivaPorPeriodo * periodosTranscurridos;
+  // Periodos que se cobran al desempeñar: los completos + el periodo en curso
+  // según el modo de Ajustes (completo, proporcional por días o con gracia).
+  const periodosCobrados = periodosACobrar(empeno, periodosTranscurridos, aFecha, modo);
+
+  const interesAcumulado = interesPorPeriodo * periodosCobrados;
+  const almacenajeAcumulado = almacenajePorPeriodo * periodosCobrados;
+  const ivaAcumulado = ivaPorPeriodo * periodosCobrados;
 
   const capitalPendiente = Math.max(0, empeno.montoPrestado - abonoCapital);
 
@@ -108,6 +115,33 @@ export function calcularLiquidacion(
     diasParaVencer,
     diasAtraso,
   };
+}
+
+/**
+ * Fracción de periodos a cobrar al desempeñar hoy. El periodo en curso es el
+ * n-ésimo (n = periodos devengados): va de inicio+(n-1) a inicio+n.
+ */
+function periodosACobrar(
+  empeno: Pick<Empeno, "fechaInicio" | "periodo"> & Partial<Pick<Empeno, "estado">>,
+  n: number,
+  aFecha: Date,
+  modo: ReglasCalculo["desempeno"] | null
+): number {
+  if (!modo || modo.modo === "completo") return n;
+  const inicioPeriodo = sumarPeriodos(empeno.fechaInicio, empeno.periodo, n - 1);
+  const finPeriodo = sumarPeriodos(empeno.fechaInicio, empeno.periodo, n);
+  const diasPeriodo = Math.max(1, diffDias(inicioPeriodo, parseFechaLocal(finPeriodo)));
+  const diasEnCurso = Math.min(diasPeriodo, Math.max(0, diffDias(inicioPeriodo, aFecha)));
+  if (modo.modo === "proporcional") {
+    // Mínimo un día: liquidar el mismo día del contrato/refrendo cobra 1 día.
+    return n - 1 + Math.max(1, diasEnCurso) / diasPeriodo;
+  }
+  // "gracia": dentro de los primeros días de un periodo NUEVO (después de un
+  // vencimiento o de un refrendo) no se cobra ese periodo. El primer mes de un
+  // empeño recién hecho siempre se cobra.
+  const periodoNuevo = n > 1 || empeno.estado === "refrendado";
+  if (periodoNuevo && diasEnCurso <= modo.diasGracia) return n - 1;
+  return n;
 }
 
 /** Calcula la fecha de vencimiento a partir del inicio, periodo y plazo. */
@@ -159,21 +193,26 @@ export function requiereAutorizacionTasa(tasa: number): boolean {
   return tasa > 0 && tasa <= TASA_MINIMA_LIBRE;
 }
 
+/** Tasa especial de vehículos: nunca se asigna sola, siempre con autorización de Dirección. */
+export const TASA_ESPECIAL_DIRECCION = 6.48;
+
 /**
- * Tasa de interés mensual sugerida según el historial del cliente
- * (basado en el flujo PRENDAFLEX):
- *  - Cliente regular: 10.80%
- *  - Más de 3 empeños: 8.64%
- *  - Más de 5 empeños: 6.48%
+ * Tasa de interés mensual sugerida según el historial del cliente (reunión con la sucursal):
+ *  - Vehículos: 10.80% base; con más de 3 empeños se sugiere 8.64%.
+ *    La de 6.48% es un precio especial que solo se usa con autorización de
+ *    Dirección: se elige a mano en el catálogo, nunca en automático.
+ *  - Artículos (electrónicos, herramienta, alhajas…): 10.80% interés + 10.80%
+ *    almacenaje = 21.60% para todos, sin descuento por historial.
  */
-export function tasaPorHistorial(empenosPrevios: number): {
+export function tasaPorHistorial(
+  empenosPrevios: number,
+  esVehiculo = true
+): {
   tasa: number;
   nivel: string;
   requiereAutorizacion: boolean;
 } {
-  if (empenosPrevios > 5)
-    return { tasa: 6.48, nivel: "Preferente (+5 empeños)", requiereAutorizacion: true };
-  if (empenosPrevios > 3)
+  if (esVehiculo && empenosPrevios > 3)
     return { tasa: 8.64, nivel: "Frecuente (+3 empeños)", requiereAutorizacion: false };
   return { tasa: 10.8, nivel: "Regular", requiereAutorizacion: false };
 }

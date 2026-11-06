@@ -40,7 +40,7 @@ export function EmpenoForm({
 
   const cliente = clientes.find((c) => c.id === clienteId);
   const prenda = prendas.find((p) => p.id === prendaId);
-  const historial = tasaPorHistorial(cliente?.previos ?? 0);
+  const historial = tasaPorHistorial(cliente?.previos ?? 0, prenda ? prenda.categoria === "Vehículos" : true);
 
   const [monto, setMonto] = useState(0);
   const [tasa, setTasa] = useState(historial.tasa);
@@ -72,7 +72,7 @@ export function EmpenoForm({
   function onCliente(id: string) {
     setClienteId(id);
     const c = clientes.find((x) => x.id === id);
-    setTasa(tasaPorHistorial(c?.previos ?? 0).tasa);
+    setTasa(tasaPorHistorial(c?.previos ?? 0, prenda ? prenda.categoria === "Vehículos" : true).tasa);
   }
   // Cuando cambia la prenda, prefijar el préstamo sugerido
   function onPrenda(id: string) {

@@ -14,14 +14,17 @@ import {
   PRECIO_ORO_24K_GRAMO,
   PRECIO_PLATA_GRAMO,
 } from "@/lib/compliance";
-import { tasaPorHistorial } from "@/lib/interes";
+import { tasaPorHistorial, TASA_ESPECIAL_DIRECCION } from "@/lib/interes";
 import { formatMXN } from "@/lib/format";
 
 export default async function ConfiguracionPage() {
   const actual = await getUsuarioActual();
   if (!actual || !["admin", "gerente", "invitado"].includes(actual.rol)) redirect("/");
 
-  const niveles = [0, 4, 6].map((n) => tasaPorHistorial(n));
+  const niveles = [
+    ...[0, 4].map((n) => tasaPorHistorial(n)),
+    { tasa: TASA_ESPECIAL_DIRECCION, nivel: "Especial (solo con autorización de Dirección)", requiereAutorizacion: true },
+  ];
   const [productos, ajustes] = await Promise.all([listarProductosInteres(), obtenerAjustes()]);
 
   return (
@@ -43,7 +46,7 @@ export default async function ConfiguracionPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Tasas de interés por historial" subtitle="Mensual, según nº de empeños" />
+          <CardHeader title="Tasas de interés por historial" subtitle="Vehículos · mensual, según nº de empeños (artículos: 21.6% fijo)" />
           <div className="space-y-3 p-5">
             {niveles.map((nv) => (
               <div key={nv.nivel} className="flex items-center justify-between text-sm">

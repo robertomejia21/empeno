@@ -1,10 +1,12 @@
-import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas, listarPagos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas, listarPagos, obtenerReglasCalculo, obtenerAjustes } from "@/lib/db/repo";
+import { EnviarReporte } from "./EnviarReporte";
+import { SUCURSAL } from "@/lib/negocio";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
 import { BarrasIngresoEgreso, Dona, type BarraMes } from "@/components/Charts";
 import { PrintButton } from "@/components/actions-ui";
-import { rangoMesActual, calcularReporteSemanal } from "@/lib/reporteSemanal";
+import { rangoMesActual, rangoMesPasado, rangoSemanaActual, rangoSemanaPasada, calcularReporteSemanal, textoReporte } from "@/lib/reporteSemanal";
 import { ReporteSemanalCard } from "@/components/ReportePorModalidad";
 import { normalizarBusqueda } from "@/lib/buscar";
 import { Download, Filter, Printer } from "lucide-react";
@@ -22,19 +24,26 @@ export default async function ReportesPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { desde: desdeParam, hasta: hastaParam } = await searchParams;
   const rangoPorDefecto = rangoMesActual();
   const desde = desdeParam || rangoPorDefecto.desde;
   const hasta = hastaParam || rangoPorDefecto.hasta;
 
-  const [empenos, movimientos, prendas, ventas, pagos] = await Promise.all([
+  const [empenos, movimientos, prendas, ventas, pagos, ajustes] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),
     listarPrendas(),
     listarVentas(),
     listarPagos(),
+    obtenerAjustes(),
   ]);
+  const atajos = [
+    { label: "Esta semana", ...rangoSemanaActual() },
+    { label: "Semana pasada", ...rangoSemanaPasada() },
+    { label: "Este mes", ...rangoMesActual() },
+    { label: "Mes pasado", ...rangoMesPasado() },
+  ];
 
   const reportePeriodo = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
 
@@ -178,7 +187,30 @@ export default async function ReportesPage({
           <Filter className="h-4 w-4" aria-hidden />
           Filtrar
         </button>
-        <span className="text-xs text-muted">Aplica al flujo y al desglose por vehículos/artículos de abajo.</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {atajos.map((a) => {
+            const activo = a.desde === desde && a.hasta === hasta;
+            return (
+              <a
+                key={a.label}
+                href={`/reportes?desde=${a.desde}&hasta=${a.hasta}`}
+                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${activo ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface-2 hover:bg-surface"}`}
+              >
+                {a.label}
+              </a>
+            );
+          })}
+        </div>
+        <span className="text-xs text-muted">Semanas de sábado a viernes. Aplica al flujo y al desglose de abajo.</span>
+        <div className="w-full border-t border-border pt-3">
+          <EnviarReporte
+            desde={desde}
+            hasta={hasta}
+            texto={textoReporte(reportePeriodo, SUCURSAL.nombre)}
+            correo={ajustes.direccion.correo}
+            whatsapp={ajustes.direccion.whatsapp}
+          />
+        </div>
       </form>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

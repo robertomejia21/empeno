@@ -1,10 +1,15 @@
-import { listarPrendas, listarChecklistsVehiculares } from "@/lib/db/repo";
+import { listarPrendas, listarChecklistsVehiculares, listarChecklistsSemanales } from "@/lib/db/repo";
+import { ChecklistSemanal } from "./ChecklistSemanal";
+import { rangoSemanaActual } from "@/lib/reporteSemanal";
+import { hoyISO } from "@/lib/format";
+import { RESPONSABLE_CHECKLIST_DEFAULT } from "@/lib/checklist";
 import { PageHeader, Card, CardHeader, EmptyState } from "@/components/ui";
 import { formatFecha } from "@/lib/format";
 import { ChecklistVehiculosForm } from "./ChecklistVehiculosForm";
 
 export default async function ChecklistVehiculosPage() {
-  const [prendas, historial] = await Promise.all([listarPrendas(), listarChecklistsVehiculares()]);
+  const [prendas, historial, semanales] = await Promise.all([listarPrendas(), listarChecklistsVehiculares(), listarChecklistsSemanales()]);
+  const viernes = rangoSemanaActual().hasta;
 
   const vehiculosEnResguardo = prendas.filter(
     (p) => p.categoria === "Vehículos" && p.estado === "empenada" && p.modalidad === "resguardo"
@@ -13,8 +18,8 @@ export default async function ChecklistVehiculosPage() {
   return (
     <div>
       <PageHeader
-        title="Checklist diario de vehículos"
-        subtitle="Revisión física de los vehículos que están en resguardo — una vez al día"
+        title="Checklist de vehículos"
+        subtitle="Revisión diaria de los vehículos en resguardo y revisión semanal (viernes) con video"
       />
 
       {vehiculosEnResguardo.length === 0 ? (
@@ -25,7 +30,16 @@ export default async function ChecklistVehiculosPage() {
           />
         </Card>
       ) : (
-        <ChecklistVehiculosForm vehiculos={vehiculosEnResguardo} />
+        <>
+          <ChecklistVehiculosForm vehiculos={vehiculosEnResguardo} />
+          <ChecklistSemanal
+            vehiculos={vehiculosEnResguardo}
+            registros={semanales}
+            semana={viernes}
+            esDiaLimite={hoyISO() >= viernes}
+            responsableDefault={RESPONSABLE_CHECKLIST_DEFAULT}
+          />
+        </>
       )}
 
       {historial.length > 0 && (

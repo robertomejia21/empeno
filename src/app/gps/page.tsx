@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Satellite, Warehouse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { resumenModalidades, modalidadVehiculo } from "@/lib/gps";
 import { rastreoHabilitado } from "@/lib/gpsRastreo";
@@ -10,7 +10,7 @@ import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
 import { GpsModalidades } from "@/components/GpsModalidades";
 
 export default async function GpsPage() {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const empenos = await listarEmpenos();
   const resumen = resumenModalidades(empenos);
 
@@ -57,7 +57,7 @@ function ListaVehiculos({
   festivos,
 }: {
   titulo: string;
-  festivos: string[];
+  festivos: import("@/lib/ajustesBase").ReglasCalculo;
   icono: LucideIcon;
   empenos: Awaited<ReturnType<typeof listarEmpenos>> }) {
   return (

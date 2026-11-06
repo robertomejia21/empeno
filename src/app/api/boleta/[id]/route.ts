@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerEmpeno, obtenerFestivos } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
@@ -9,7 +9,7 @@ const fecha = (iso: string | null) =>
   iso ? new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(iso)) : "—";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const actual = await getUsuarioActual();
   if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;

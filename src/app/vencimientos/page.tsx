@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, ResumenChips, EmptyState } from "@/components/ui";
 
 export default async function VencimientosPage() {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const empenos = await listarEmpenos();
   const activos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")

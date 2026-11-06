@@ -4,6 +4,7 @@ import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Sidebar, MobileMenu } from "@/components/Sidebar";
 import { getUsuarioActual } from "@/lib/session";
+import { CotizadorIA } from "@/components/CotizadorIA";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,6 +63,7 @@ export default async function RootLayout({
                 {children}
               </main>
             </div>
+            {usuario && usuario.rol !== "invitado" && <CotizadorIA />}
           </div>
         )}
       </body>

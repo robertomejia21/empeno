@@ -417,7 +417,9 @@ export async function obtenerAjustes(): Promise<Ajustes> {
   const direccion = porClave.get("direccion") as Partial<typeof AJUSTES_DEFAULT.direccion> | undefined;
   const prestamo = porClave.get("prestamo") as Partial<typeof AJUSTES_DEFAULT.prestamo> | undefined;
   const festivos = porClave.get("festivos");
+  const desempeno = porClave.get("desempeno") as Partial<typeof AJUSTES_DEFAULT.desempeno> | undefined;
   return {
+    desempeno: { ...AJUSTES_DEFAULT.desempeno, ...(desempeno ?? {}) },
     direccion: { ...AJUSTES_DEFAULT.direccion, ...(direccion ?? {}) },
     prestamo: { ...AJUSTES_DEFAULT.prestamo, ...(prestamo ?? {}) },
     festivos: Array.isArray(festivos)
@@ -429,4 +431,34 @@ export async function obtenerAjustes(): Promise<Ajustes> {
 /** Solo las fechas festivas (YYYY-MM-DD), para el cálculo de días de retraso. */
 export async function obtenerFestivos(): Promise<string[]> {
   return (await obtenerAjustes()).festivos.map((f) => f.fecha);
+}
+
+/** Festivos + modo de cobro al desempeñar: todo lo que usa calcularLiquidacion. */
+export async function obtenerReglasCalculo(): Promise<import("@/lib/ajustesBase").ReglasCalculo> {
+  const a = await obtenerAjustes();
+  return { festivos: a.festivos.map((f) => f.fecha), desempeno: a.desempeno };
+}
+
+/** Revisiones semanales de vehículos (tabla `checklists_semanales`; vacía si aún no existe). */
+export async function listarChecklistsSemanales(prendaId?: string): Promise<import("@/lib/types").ChecklistSemanal[]> {
+  if (!supabaseConfigured) {
+    const todos = getStore().checklistsSemanales;
+    return (prendaId ? todos.filter((c) => c.prendaId === prendaId) : todos).slice().sort((a, b) => b.semana.localeCompare(a.semana));
+  }
+  let q = getServerSupabase().from("checklists_semanales").select("*").order("semana", { ascending: false }).limit(500);
+  if (prendaId) q = q.eq("prenda_id", prendaId);
+  const { data, error } = await q;
+  if (error) {
+    console.warn("[checklists_semanales] no se pudo leer (¿falta correr supabase/ajustes.sql?):", error.message);
+    return [];
+  }
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: String(r.id),
+    prendaId: String(r.prenda_id),
+    semana: String(r.semana),
+    responsable: String(r.responsable ?? ""),
+    archivos: (r.archivos as string[]) ?? [],
+    observaciones: (r.observaciones as string | null) ?? null,
+    creadoEn: String(r.creado_en),
+  }));
 }

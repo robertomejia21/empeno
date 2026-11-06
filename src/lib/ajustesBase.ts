@@ -19,6 +19,23 @@ export interface AjustesPrestamo {
   pctArribaUmbral: number;
 }
 
+/**
+ * Cómo se cobra el interés del periodo en curso cuando el cliente desempeña
+ * (liquida) antes de que termine el periodo:
+ *  - "completo":     se cobra el mes completo (comportamiento anterior).
+ *  - "proporcional": solo los días transcurridos del periodo (carátula PROFECO:
+ *                    tasa anual / 360 × días efectivamente transcurridos).
+ *  - "gracia":       si liquida dentro de los primeros N días del periodo nuevo
+ *                    no se cobra ese periodo; después, el mes completo.
+ */
+export type ModoDesempeno = "completo" | "proporcional" | "gracia";
+
+export interface AjustesDesempeno {
+  modo: ModoDesempeno;
+  /** Días de gracia del modo "gracia". */
+  diasGracia: number;
+}
+
 export interface DiaFestivo {
   fecha: string; // YYYY-MM-DD
   nombre: string;
@@ -27,6 +44,7 @@ export interface DiaFestivo {
 export interface Ajustes {
   direccion: AjustesDireccion;
   prestamo: AjustesPrestamo;
+  desempeno: AjustesDesempeno;
   /** Días que la sucursal cierra: no cuentan como día de retraso (además de los domingos). */
   festivos: DiaFestivo[];
 }
@@ -41,8 +59,15 @@ export const AJUSTES_DEFAULT: Ajustes = {
     pctHastaUmbral: 50,
     pctArribaUmbral: 40,
   },
+  desempeno: { modo: "proporcional", diasGracia: 5 },
   festivos: [],
 };
+
+/** Reglas que necesita el cálculo de liquidaciones (se leen de los ajustes). */
+export interface ReglasCalculo {
+  festivos: readonly string[];
+  desempeno: AjustesDesempeno;
+}
 
 /** Claves con las que se guarda cada sección en la tabla `ajustes`. */
 export type ClaveAjuste = keyof Ajustes;

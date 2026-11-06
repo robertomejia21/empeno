@@ -212,6 +212,7 @@ export function AsistenteEmpeno({
 
   // Modalidad del vehículo (GPS o Resguardo)
   const [modalidad, setModalidad] = useState<"gps" | "resguardo">("resguardo");
+  const [modalidadTocada, setModalidadTocada] = useState(false);
 
   // Paso 5 — préstamo
   const [monto, setMonto] = useState("");
@@ -231,7 +232,6 @@ export function AsistenteEmpeno({
 
   // Paso 8 — resguardo
   const [ubicacion, setUbicacion] = useState("");
-  const [condiciones, setCondiciones] = useState("");
   const [fotos, setFotos] = useState<string[]>([]);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
 
@@ -267,9 +267,9 @@ export function AsistenteEmpeno({
 
   const clienteSel = clientes.find((c) => c.id === clienteId);
   const previos = modoCliente === "existente" ? clienteSel?.previos ?? 0 : 0;
-  const historial = tasaPorHistorial(previos);
   const acumuladoPrevio = modoCliente === "existente" ? clienteSel?.acumulado6m ?? 0 : 0;
   const esVehiculo = categoria === "Vehículos";
+  const historial = tasaPorHistorial(previos, esVehiculo);
   const esJoyeria = categoria === "Joyería";
   const avaluoNum = parseFloat(valorAvaluo) || 0;
   const montoNum = parseFloat(monto) || 0;
@@ -315,6 +315,8 @@ export function AsistenteEmpeno({
     setPaso(n);
   }
 
+  const autoVerificado = sinRobo && docFactura && docTarjeta && docIdent;
+
   function puedeAvanzar(): boolean {
     switch (paso) {
       case 2:
@@ -324,7 +326,7 @@ export function AsistenteEmpeno({
       case 3:
         return !!categoria;
       case 4:
-        return !!bien.descripcion && avaluoNum > 0;
+        return !!bien.descripcion && avaluoNum > 0 && (!esVehiculo || autoVerificado);
       case 5:
         return montoNum > 0;
       case 6:
@@ -334,12 +336,10 @@ export function AsistenteEmpeno({
     }
   }
 
-  const autoVerificado = sinRobo && docFactura && docTarjeta && docIdent;
-
   async function finalizar() {
     if (esVehiculo && !autoVerificado) {
       setError("Para vehículos debes verificar REPUVE (sin reporte de robo) y la documentación completa.");
-      setPaso(8);
+      setPaso(4);
       return;
     }
     setGuardando(true);
@@ -408,7 +408,7 @@ export function AsistenteEmpeno({
           verificado: esVehiculo ? autoVerificado : true,
           repuveFolio: esVehiculo ? repuveFolio || null : null,
           modalidad: esVehiculo ? modalidad : null,
-          notas: [comentariosBien, condiciones].filter(Boolean).join("\n") || null,
+          notas: comentariosBien.trim() || null,
         },
         montoPrestado: montoNum,
         tasaInteres: tasa,
@@ -646,26 +646,12 @@ export function AsistenteEmpeno({
                   )}
                 </div>
 
-                {bien.serie && (
-                  <a
-                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => navigator.clipboard?.writeText(bien.serie).catch(() => {})}
-                    className="inline-flex max-w-full items-start gap-1.5 rounded-lg border border-info/30 bg-info-soft px-3 py-1.5 text-sm font-medium text-info transition hover:brightness-105"
-                  >
-                    <Search className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span className="min-w-0">Consulta rápida REPUVE (NIV copiado) — la verificación completa se confirma más adelante</span>
-                    <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                  </a>
-                )}
-
                 <div className="rounded-xl border border-border bg-surface-2/50 p-4">
                   <p className="mb-2 text-sm font-semibold text-foreground">Modalidad del vehículo</p>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <button
                       type="button"
-                      onClick={() => setModalidad("resguardo")}
+                      onClick={() => { setModalidad("resguardo"); setModalidadTocada(true); }}
                       className={`rounded-xl border p-3 text-left text-sm font-medium transition ${modalidad === "resguardo" ? "border-primary bg-primary-soft text-primary ring-2 ring-primary/20" : "border-border bg-surface text-foreground hover:bg-surface-2"}`}
                     >
                       <span className="inline-flex items-center gap-1.5">
@@ -675,7 +661,7 @@ export function AsistenteEmpeno({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setModalidad("gps")}
+                      onClick={() => { setModalidad("gps"); setModalidadTocada(true); }}
                       className={`rounded-xl border p-3 text-left text-sm font-medium transition ${modalidad === "gps" ? "border-primary bg-primary-soft text-primary ring-2 ring-primary/20" : "border-border bg-surface text-foreground hover:bg-surface-2"}`}
                     >
                       <span className="inline-flex items-center gap-1.5">
@@ -684,13 +670,29 @@ export function AsistenteEmpeno({
                       <span className="block text-[11px] font-normal text-muted">El cliente lo conserva con GPS</span>
                     </button>
                   </div>
+                  {(() => {
+                    const anio = parseInt(bien.modelo, 10);
+                    const sug = modalidadSugerida(bien.modelo);
+                    if (!anio) return <p className="mt-2 text-xs text-muted">Regla: 2008–2014 en resguardo; 2015 en adelante con GPS (con requisitos).</p>;
+                    if (!sug) return <p className="mt-2 text-xs text-warning">Modelo {anio}: fuera de la regla (antes de 2008). Requiere criterio de Dirección.</p>;
+                    return (
+                      <p className={`mt-2 text-xs ${sug === modalidad ? "text-success" : "text-warning"}`}>
+                        Modelo {anio}: se sugiere <strong>{sug === "gps" ? "GPS" : "resguardo"}</strong>
+                        {sug !== modalidad ? " (elegiste otra modalidad)" : ""}.
+                      </p>
+                    );
+                  })()}
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <Campo label="Tipo de vehículo" value={veh.tipoVehiculo} onChange={(v) => setVeh({ ...veh, tipoVehiculo: v })} placeholder="Sedán / Pick-up / SUV" />
                   <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} placeholder="Nissan" />
                   <Campo label="Submarca / línea" value={bien.submarca} onChange={(v) => setBien({ ...bien, submarca: v })} placeholder="Versa" />
-                  <Campo label="Modelo (año)" value={bien.modelo} onChange={(v) => setBien({ ...bien, modelo: v })} placeholder="2020" />
+                  <Campo label="Modelo (año)" value={bien.modelo} onChange={(v) => {
+                    setBien({ ...bien, modelo: v });
+                    const sug = modalidadSugerida(v);
+                    if (sug && !modalidadTocada) setModalidad(sug);
+                  }} placeholder="2020" />
                   <Campo label="Color" value={bien.color} onChange={(v) => setBien({ ...bien, color: v })} />
                   <Campo label="Transmisión" value={veh.transmision} onChange={(v) => setVeh({ ...veh, transmision: v })} placeholder="Estándar / Automática" />
                   <Campo label="Número de serie (NIV)" value={bien.serie} onChange={(v) => setBien({ ...bien, serie: v })} />
@@ -700,6 +702,43 @@ export function AsistenteEmpeno({
                   <Campo label="Placas" value={bien.placas} onChange={(v) => setBien({ ...bien, placas: v })} />
                   <Campo label="Clave vehicular" value={veh.claveVehicular} onChange={(v) => setVeh({ ...veh, claveVehicular: v })} />
                   <Campo label="Nivel de gasolina" value={veh.nivelGasolina} onChange={(v) => setVeh({ ...veh, nivelGasolina: v })} placeholder="1/2 tanque" />
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
+                  <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-warning">
+                    <Car className="h-4 w-4" aria-hidden /> Verificación REPUVE y documentos (obligatoria antes del avalúo)
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href="https://www2.repuve.gob.mx:8443/ciudadania/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => { if (bien.serie) navigator.clipboard?.writeText(bien.serie).catch(() => {}); }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-info px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:brightness-105"
+                    >
+                      <Search className="h-4 w-4" aria-hidden /> Abrir REPUVE {bien.serie ? "(NIV copiado)" : ""}
+                      <ExternalLink className="h-4 w-4" aria-hidden />
+                    </a>
+                    {bien.serie && (
+                      <span className="min-w-0 break-all text-xs text-muted">NIV: <span className="font-mono">{bien.serie}</span></span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted">
+                    Se abre el portal oficial y el NIV se copia al portapapeles: pégalo, resuelve el captcha y guarda el resultado.
+                    Sube la captura/PDF del resultado en las fotos del vehículo y anota el folio.
+                  </p>
+                  <Campo label="Folio de consulta REPUVE" value={repuveFolio} onChange={setRepuveFolio} placeholder="Folio o referencia de la consulta" />
+                  <div className="space-y-2 border-t border-warning/20 pt-2">
+                    <Casilla label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />
+                    <Casilla label="Factura original verificada" checked={docFactura} onChange={setDocFactura} />
+                    <Casilla label="Tarjeta de circulación vigente" checked={docTarjeta} onChange={setDocTarjeta} />
+                    <Casilla label="Identificación del propietario coincide" checked={docIdent} onChange={setDocIdent} />
+                    <Casilla label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
+                    <Casilla label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
+                  </div>
+                  {!autoVerificado && (
+                    <p className="text-xs text-warning">Marca REPUVE sin robo + factura + tarjeta + identificación para poder continuar al avalúo.</p>
+                  )}
                 </div>
 
                 <div className="space-y-3 rounded-xl border border-border bg-surface-2/50 p-4">
@@ -1004,48 +1043,6 @@ export function AsistenteEmpeno({
               </p>
             </div>
             <MapaResguardo onChange={setUbicacion} />
-            <div>
-              <Label>Condiciones físicas / observaciones</Label>
-              <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={3} className={inputCls} />
-            </div>
-            {esVehiculo && (
-              <div className="space-y-3 rounded-xl border border-warning/30 bg-warning-soft p-4">
-                <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-warning">
-                  <Car className="h-4 w-4" aria-hidden /> Verificación obligatoria del vehículo
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href="https://www2.repuve.gob.mx:8443/ciudadania/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => { if (bien.serie) navigator.clipboard?.writeText(bien.serie).catch(() => {}); }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-info px-3 py-1.5 text-sm font-semibold text-white shadow-soft transition hover:brightness-105"
-                  >
-                    <Search className="h-4 w-4" aria-hidden /> Abrir REPUVE {bien.serie ? "(NIV copiado)" : ""}
-                    <ExternalLink className="h-4 w-4" aria-hidden />
-                  </a>
-                  {bien.serie && (
-                    <span className="min-w-0 break-all text-xs text-muted">NIV: <span className="font-mono">{bien.serie}</span></span>
-                  )}
-                </div>
-                <p className="text-xs text-muted">
-                  Se abre el portal oficial y el NIV se copia al portapapeles: pégalo, resuelve el captcha y guarda el resultado.
-                  Sube la captura/PDF del resultado en las fotos del vehículo y anota el folio.
-                </p>
-                <Campo label="Folio de consulta REPUVE" value={repuveFolio} onChange={setRepuveFolio} placeholder="Folio o referencia de la consulta" />
-                <div className="space-y-2 border-t border-warning/20 pt-2">
-                  <Casilla label="REPUVE consultado: SIN reporte de robo" checked={sinRobo} onChange={setSinRobo} />
-                  <Casilla label="Factura original verificada" checked={docFactura} onChange={setDocFactura} />
-                  <Casilla label="Tarjeta de circulación vigente" checked={docTarjeta} onChange={setDocTarjeta} />
-                  <Casilla label="Identificación del propietario coincide" checked={docIdent} onChange={setDocIdent} />
-                  <Casilla label="Funcionamiento validado" checked={funcionamiento} onChange={setFuncionamiento} />
-                  <Casilla label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
-                </div>
-                {!autoVerificado && (
-                  <p className="text-xs text-warning">Marca REPUVE sin robo + factura + tarjeta + identificación para poder registrar.</p>
-                )}
-              </div>
-            )}
             {error && (
               <p className="flex items-start gap-1.5 text-sm text-danger">
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> {error}
@@ -1227,4 +1224,13 @@ function iconoCat(c: CategoriaPrenda): LucideIcon {
     Relojes: Watch, Instrumentos: Guitar, Electrodomésticos: Plug, Otro: Package,
   };
   return m[c];
+}
+
+/** Regla de la sucursal: 2008–2014 en resguardo; 2015 en adelante con GPS. null = fuera de regla. */
+function modalidadSugerida(modelo: string): "gps" | "resguardo" | null {
+  const anio = parseInt(modelo, 10);
+  if (!anio || anio < 1950) return null;
+  if (anio >= 2015) return "gps";
+  if (anio >= 2008) return "resguardo";
+  return null;
 }

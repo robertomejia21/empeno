@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual } from "@/lib/reporteSemanal";
 import { ReporteSemanalCard } from "@/components/ReportePorModalidad";
@@ -31,7 +31,7 @@ const accesos: { href: string; icon: LucideIcon; label: string; tono: string }[]
 ];
 
 export default async function Tablero() {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const [empenos, movimientos, clientes, prendas, pagos, ventas] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),

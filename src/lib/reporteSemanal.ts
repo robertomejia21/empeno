@@ -81,3 +81,39 @@ export function calcularReporteSemanal(
 
   return { desde, hasta, ventasVitrina, vehiculos, articulos };
 }
+
+/** Semana operativa anterior (sábado–viernes). */
+export function rangoSemanaPasada(hoy: Date = new Date()): { desde: string; hasta: string } {
+  const base = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 7);
+  return rangoSemanaActual(base);
+}
+
+/** Mes calendario anterior. */
+export function rangoMesPasado(hoy: Date = new Date()): { desde: string; hasta: string } {
+  return rangoMesActual(new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1));
+}
+
+function mxn(n: number): string {
+  return n.toLocaleString("es-MX", { style: "currency", currency: "MXN" });
+}
+
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+/** Texto del reporte para mandarlo por WhatsApp o correo a Dirección. */
+export function textoReporte(r: ReporteSemanal, sucursal: string): string {
+  const fila = (t: string, f: FilaModalidad) =>
+    [`*${t}*`, `• Empeños: ${mxn(f.empenos)}`, `• Refrendos: ${mxn(f.refrendos)}`, `• Desempeños: ${mxn(f.desempenos)}`].join("\n");
+  return [
+    `📊 Reporte ${sucursal}`,
+    `Del ${fechaCorta(r.desde)} al ${fechaCorta(r.hasta)}`,
+    "",
+    `Ventas de vitrina: ${mxn(r.ventasVitrina)}`,
+    "",
+    fila("Vehículos", r.vehiculos),
+    "",
+    fila("Artículos", r.articulos),
+  ].join("\n");
+}

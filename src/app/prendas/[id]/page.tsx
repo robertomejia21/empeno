@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { ArrowRight, MapPin, Pin, Printer, X } from "lucide-react";
-import { obtenerPrenda } from "@/lib/db/repo";
+import { obtenerPrenda, listarChecklistsSemanales } from "@/lib/db/repo";
 import { subirFotoPrenda, eliminarFotoPrenda, actualizarResguardo } from "@/lib/actions";
 import { HistorialFotosVehiculo } from "./HistorialFotosVehiculo";
-import { formatMXN, formatFechaLarga } from "@/lib/format";
+import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, PageHeader, VolverLink } from "@/components/ui";
 import { estadoPrendaBadge } from "@/components/badges";
 import { ConfirmSubmit } from "@/components/actions-ui";
@@ -31,7 +31,10 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
   const p = await obtenerPrenda(id);
   if (!p) notFound();
 
-  const qrDataUrl = await generarQR(urlPrenda(p.id));
+  const [qrDataUrl, semanales] = await Promise.all([
+    generarQR(urlPrenda(p.id)),
+    p.categoria === "Vehículos" ? listarChecklistsSemanales(p.id) : Promise.resolve([]),
+  ]);
 
   const datos: [string, string | null][] = [
     ["Folio", p.folio],
@@ -274,6 +277,36 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
           </div>
         )}
       </Card>
+
+      {p.categoria === "Vehículos" && (
+        <Card className="mt-6">
+          <CardHeader
+            title="Revisiones semanales"
+            subtitle="Video/fotos de cada viernes para comparar contra cómo ingresó el vehículo"
+          />
+          {semanales.length === 0 ? (
+            <p className="px-5 pb-5 text-sm text-muted">Aún no hay revisiones semanales de esta unidad.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {semanales.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">Semana del viernes {formatFecha(c.semana)} · {c.responsable}</p>
+                    {c.observaciones && <p className="text-xs text-muted">{c.observaciones}</p>}
+                  </div>
+                  <span className="flex flex-wrap gap-1.5">
+                    {c.archivos.map((u, i) => (
+                      <a key={u} href={u} target="_blank" rel="noopener noreferrer" className="rounded-md border border-border px-2 py-0.5 text-xs text-info hover:bg-surface-2">
+                        Archivo {i + 1}
+                      </a>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
     </div>
   );
 }

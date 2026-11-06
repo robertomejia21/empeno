@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, listarPrendasEnVenta, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, listarPrendasEnVenta, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarARemate } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -13,7 +13,7 @@ export default async function RematesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { q } = await searchParams;
   const [empenos, enVenta] = await Promise.all([
     listarEmpenos(),

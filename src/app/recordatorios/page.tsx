@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarRecordatorioWhatsApp, enviarRecordatoriosHoy } from "@/lib/actions";
 import { whatsappHabilitado } from "@/lib/whatsapp";
@@ -9,7 +9,7 @@ import { ConfirmSubmit } from "@/components/actions-ui";
 import { CircleCheck, Hourglass, MessageCircle, Phone, Send } from "lucide-react";
 
 export default async function RecordatoriosPage() {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const empenos = await listarEmpenos();
   const activos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")

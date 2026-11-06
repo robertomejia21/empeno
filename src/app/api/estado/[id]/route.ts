@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerCliente, listarEmpenos, listarMovimientos, obtenerFestivos } from "@/lib/db/repo";
+import { obtenerCliente, listarEmpenos, listarMovimientos, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
@@ -14,7 +14,7 @@ const estadoLabel: Record<string, string> = {
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const actual = await getUsuarioActual();
   if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;

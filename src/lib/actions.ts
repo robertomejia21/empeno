@@ -33,7 +33,9 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion, obtenerAjustes, obtenerFestivos } from "@/lib/db/repo";
+import { listarPagos } from "@/lib/db/repo";
+import { calcularReporteSemanal, textoReporte } from "@/lib/reporteSemanal";
+import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion, obtenerAjustes, obtenerReglasCalculo } from "@/lib/db/repo";
 import type { Ajustes, ClaveAjuste, DiaFestivo } from "@/lib/ajustesBase";
 import { festivosMexicoConNombre } from "@/lib/diasInhabiles";
 import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
@@ -657,7 +659,7 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   const e = await obtenerEmpeno(id);
   if (!e) return;
 
-  const calc = calcularLiquidacion(e, undefined, await obtenerFestivos());
+  const calc = calcularLiquidacion(e, undefined, await obtenerReglasCalculo());
 
   const g = (k: string) => {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
@@ -1152,7 +1154,7 @@ export async function crearEmpenoGuiado(
 
 // ----------------- NOTIFICACIONES (WhatsApp) -----------------
 
-function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>, festivos: string[]): string {
+function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>, festivos: import("@/lib/ajustesBase").ReglasCalculo): string {
   if (!e) return "";
   const calc = calcularLiquidacion(e, undefined, festivos);
   const venc = calc.vencido ? "venció" : "vence";
@@ -1169,7 +1171,7 @@ export async function enviarRecordatorioWhatsApp(empenoId: string) {
   if (await esInvitado()) return;
   const e = await obtenerEmpeno(empenoId);
   if (!e) return;
-  const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e, await obtenerFestivos()));
+  const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e, await obtenerReglasCalculo()));
   await bitacoraAuto(
     res.ok ? "Recordatorio WhatsApp enviado" : "Recordatorio WhatsApp falló",
     res.ok ? `a ${e.cliente.nombre}` : res.error ?? null,
@@ -1180,7 +1182,7 @@ export async function enviarRecordatorioWhatsApp(empenoId: string) {
 
 /** Envía recordatorios a todos los empeños vencidos o por vencer (≤3 días). Usado por el cron. */
 export async function enviarRecordatoriosPendientes(): Promise<{ enviados: number; fallidos: number }> {
-  const [empenos, festivos] = await Promise.all([listarEmpenos(), obtenerFestivos()]);
+  const [empenos, festivos] = await Promise.all([listarEmpenos(), obtenerReglasCalculo()]);
   let enviados = 0;
   let fallidos = 0;
   for (const e of empenos) {
@@ -2499,6 +2501,14 @@ export async function guardarAjustesPrestamo(form: FormData) {
   await guardarAjuste("prestamo", { umbral, pctHastaUmbral, pctArribaUmbral });
 }
 
+export async function guardarAjustesDesempeno(form: FormData) {
+  const modo = s(form, "modo");
+  if (modo !== "completo" && modo !== "proporcional" && modo !== "gracia") throw new Error("Modo inválido.");
+  const diasGracia = Math.round(num(form, "diasGracia"));
+  if (!(diasGracia >= 0 && diasGracia <= 15)) throw new Error("Los días de gracia deben estar entre 0 y 15.");
+  await guardarAjuste("desempeno", { modo, diasGracia });
+}
+
 function normalizarFestivos(lista: DiaFestivo[]): DiaFestivo[] {
   const porFecha = new Map<string, DiaFestivo>();
   for (const f of lista) porFecha.set(f.fecha, f);
@@ -2524,4 +2534,107 @@ export async function cargarFestivosOficiales(form: FormData) {
   if (!(anio >= 2000 && anio <= 2100)) throw new Error("Año inválido.");
   const { festivos } = await obtenerAjustes();
   await guardarAjuste("festivos", normalizarFestivos([...festivosMexicoConNombre(anio), ...festivos]));
+}
+
+// ----------------- REPORTE A DIRECCIÓN -----------------
+
+/** Manda por WhatsApp a Dirección el reporte del periodo (número de /configuracion). */
+export async function enviarReporteDireccion(desde: string, hasta: string): Promise<{ ok: boolean; mensaje: string }> {
+  const u = await getUsuarioActual();
+  if (!u || !["admin", "gerente"].includes(u.rol)) return { ok: false, mensaje: "Solo Gerencia o Dirección pueden enviar el reporte." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) return { ok: false, mensaje: "Rango de fechas inválido." };
+  const { direccion } = await obtenerAjustes();
+  if (!direccion.whatsapp) return { ok: false, mensaje: "Falta el WhatsApp de Dirección en Configuración." };
+  const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
+  const rep = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+  const res = await enviarWhatsApp(direccion.whatsapp, textoReporte(rep, SUCURSAL.nombre));
+  await bitacoraAuto("Reporte enviado a Dirección", res.ok ? `WhatsApp ${desde} a ${hasta}` : `Falló: ${res.error}`, null);
+  return res.ok
+    ? { ok: true, mensaje: "Reporte enviado por WhatsApp a Dirección." }
+    : { ok: false, mensaje: `No se pudo enviar: ${res.error}` };
+}
+
+// ----------------- CHECKLIST SEMANAL (viernes, video/fotos 360°) -----------------
+
+const ROLES_CHECKLIST = ["admin", "gerente", "lider", "cajero", "mecanico"];
+
+/**
+ * Prepara la subida directa de un video/foto al bucket "prendas" (el navegador
+ * sube el archivo con la liga firmada: los videos superan el límite de las
+ * acciones del servidor).
+ */
+export async function crearSubidaChecklist(
+  prendaId: string,
+  nombreArchivo: string
+): Promise<{ ok: true; urlSubida: string; urlPublica: string } | { ok: false; error: string }> {
+  const u = await getUsuarioActual();
+  if (!u || !ROLES_CHECKLIST.includes(u.rol)) return { ok: false, error: "No autorizado." };
+  if (!supabaseConfigured) return { ok: false, error: "La subida de archivos requiere Supabase." };
+  const ext = (nombreArchivo.split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "mp4";
+  const path = `checklist-semanal/${prendaId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const sb = getServerSupabase();
+  const { data, error } = await sb.storage.from("prendas").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, error: error?.message ?? "No se pudo preparar la subida." };
+  return { ok: true, urlSubida: data.signedUrl, urlPublica: sb.storage.from("prendas").getPublicUrl(path).data.publicUrl };
+}
+
+export async function guardarChecklistSemanal(input: {
+  prendaId: string;
+  semana: string;
+  responsable: string;
+  archivos: string[];
+  observaciones: string | null;
+}): Promise<{ ok: boolean; error?: string }> {
+  const u = await getUsuarioActual();
+  if (!u || !ROLES_CHECKLIST.includes(u.rol)) return { ok: false, error: "No autorizado." };
+  if (!input.responsable.trim()) return { ok: false, error: "Falta el responsable." };
+  if (input.archivos.length === 0) return { ok: false, error: "Sube al menos un video o foto del vehículo." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.semana)) return { ok: false, error: "Semana inválida." };
+  const fila = {
+    prenda_id: input.prendaId,
+    semana: input.semana,
+    responsable: input.responsable.trim(),
+    archivos: input.archivos,
+    observaciones: input.observaciones?.trim() || null,
+  };
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase().from("checklists_semanales").insert(fila);
+    if (error) {
+      return {
+        ok: false,
+        error: /checklists_semanales/.test(error.message)
+          ? "Falta la tabla de revisiones semanales: ejecuta supabase/ajustes.sql en Supabase."
+          : error.message,
+      };
+    }
+  } else {
+    getStore().checklistsSemanales.unshift({
+      id: nuevoId("cs"),
+      prendaId: fila.prenda_id,
+      semana: fila.semana,
+      responsable: fila.responsable,
+      archivos: fila.archivos,
+      observaciones: fila.observaciones,
+      creadoEn: new Date().toISOString(),
+    });
+  }
+  await bitacoraAuto("Revisión semanal de vehículo", `Semana ${input.semana}`, null);
+  revalidatePath("/checklist-vehiculos");
+  revalidatePath(`/prendas/${input.prendaId}`);
+  return { ok: true };
+}
+
+// ----------------- ASISTENTE DE COTIZACIÓN (IA) -----------------
+
+/** "¿Cuánto le presto por…?" — estimado con base en el historial de la sucursal. */
+export async function preguntarCotizador(pregunta: string): Promise<{ ok: boolean; respuesta: string }> {
+  const u = await getUsuarioActual();
+  if (!u || u.rol === "invitado") return { ok: false, respuesta: "Inicia sesión con tu usuario para usar el asistente." };
+  const q = pregunta.trim().slice(0, 500);
+  if (!q) return { ok: false, respuesta: "Escribe qué quieres cotizar." };
+  if (await limitadoPorIP("cotizador-ia", 30, 10 * 60 * 1000)) {
+    return { ok: false, respuesta: "Demasiadas preguntas seguidas. Espera unos minutos." };
+  }
+  const { responderCotizacion } = await import("@/lib/cotizadorIA");
+  return { ok: true, respuesta: await responderCotizacion(q) };
 }

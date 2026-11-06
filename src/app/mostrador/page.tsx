@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, obtenerFestivos, listarProductosInteres } from "@/lib/db/repo";
+import { listarEmpenos, obtenerReglasCalculo, listarProductosInteres } from "@/lib/db/repo";
 import { SimuladorRapido } from "./SimuladorRapido";
 import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
@@ -21,7 +21,7 @@ export default async function MostradorPage({
 }: {
   searchParams: Promise<{ q?: string; id?: string }>;
 }) {
-  const festivos = await obtenerFestivos();
+  const festivos = await obtenerReglasCalculo();
   const { q, id } = await searchParams;
   const t = (q ?? "").trim();
   const [empenos, productos] = await Promise.all([listarEmpenos(), listarProductosInteres(true)]);
@@ -114,7 +114,7 @@ export default async function MostradorPage({
   );
 }
 
-function Expediente({ e, q, festivos }: { e: EmpenoConDetalle; q: string; festivos: string[] }) {
+function Expediente({ e, q, festivos }: { e: EmpenoConDetalle; q: string; festivos: import("@/lib/ajustesBase").ReglasCalculo }) {
   const calc = calcularLiquidacion(e, undefined, festivos);
   const activo = e.estado === "activo" || e.estado === "refrendado";
   const cli = e.cliente;

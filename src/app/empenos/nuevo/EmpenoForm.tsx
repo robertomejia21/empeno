@@ -161,7 +161,7 @@ export function EmpenoForm({
 
       <Card className="xl:col-span-2">
         <CardHeader title="3. Condiciones del préstamo" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3 sm:p-5">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4 sm:p-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Monto a prestar (MXN) <span className="text-danger">*</span>
@@ -237,7 +237,7 @@ export function EmpenoForm({
           </label>
           <Field label="Días de gracia" name="diasGracia" type="number" defaultValue={7} />
 
-          <div className="sm:col-span-2 xl:col-span-3">
+          <div className="sm:col-span-2 xl:col-span-1">
             <TextArea label="Notas" name="notas" />
           </div>
         </div>

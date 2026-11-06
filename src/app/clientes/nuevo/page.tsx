@@ -17,9 +17,9 @@ export default function NuevoCliente() {
       <PageHeader title="Nuevo cliente" subtitle="Registro KYC / prevención de lavado" />
 
       <form action={crearCliente} className="grid items-start gap-6 xl:grid-cols-2">
-        <Card className="xl:col-span-2">
+        <Card>
           <CardHeader title="Datos personales" />
-          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Nombre(s)" name="nombre" required />
             <Field label="Apellido paterno" name="apellidoPaterno" required />
             <Field label="Apellido materno" name="apellidoMaterno" />
@@ -29,7 +29,7 @@ export default function NuevoCliente() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="xl:col-start-1">
           <CardHeader title="Identificación oficial" subtitle="Requerida por normativa PLD" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <SelectField
@@ -47,7 +47,7 @@ export default function NuevoCliente() {
           </div>
         </Card>
 
-        <Card>
+        <Card className="xl:col-start-2 xl:row-span-2 xl:row-start-1">
           <CardHeader title="Contacto" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Teléfono" name="telefono" type="tel" />

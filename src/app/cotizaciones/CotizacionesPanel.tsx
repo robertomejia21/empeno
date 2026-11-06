@@ -170,7 +170,8 @@ export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizacione
           }
         />
         {abierto && (
-          <div className="space-y-5 p-4 sm:p-6">
+          <div className="grid gap-6 p-4 sm:p-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+           <div className="min-w-0 space-y-5">
             <div className="flex flex-wrap gap-2">
               <Tab activo={esVehiculo} onClick={() => set("tipo", "vehiculo")}><Car className="h-4 w-4" aria-hidden /> Vehículo</Tab>
               <Tab activo={!esVehiculo} onClick={() => set("tipo", "articulo")}><Package className="h-4 w-4" aria-hidden /> Artículo</Tab>
@@ -195,8 +196,8 @@ export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizacione
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <div className="sm:col-span-2 xl:col-span-3">
+            <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+              <div className="sm:col-span-2 2xl:col-span-3">
                 <Campo label="Descripción del bien" req value={f.descripcion} onChange={(v) => set("descripcion", v)}
                   placeholder={esVehiculo ? "Ej. Nissan Versa 2020" : "Ej. iPhone 13, Taladro Bosch…"} />
               </div>
@@ -231,16 +232,18 @@ export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizacione
               <Campo label="Nombre del prospecto" value={f.prospectoNombre} onChange={(v) => set("prospectoNombre", v)} />
               <Campo label="Teléfono" value={f.prospectoTelefono} onChange={(v) => set("prospectoTelefono", v)} />
             </div>
+           </div>
 
-            <div className="grid gap-4 rounded-xl border border-border bg-surface-2/60 p-4 sm:grid-cols-2 xl:grid-cols-4">
-              <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground sm:col-span-2 xl:col-span-4"><Wallet className="h-4 w-4 text-primary" aria-hidden /> Valuación</p>
+           <div className="min-w-0 space-y-5">
+            <div className="grid gap-4 rounded-xl border border-border bg-surface-2/60 p-4 sm:grid-cols-2">
+              <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground sm:col-span-2"><Wallet className="h-4 w-4 text-primary" aria-hidden /> Valuación</p>
               <Campo label="Valor comercial (MXN)" req type="number" value={f.valorMercado} onChange={(v) => set("valorMercado", v)} />
               <Campo label="Búsqueda en Facebook (MXN)" type="number" value={f.busquedaFacebook} onChange={(v) => set("busquedaFacebook", v)}
                 placeholder="Precio de referencia hallado" />
               <Campo label="Monto solicitado por el cliente (MXN)" type="number" value={f.montoSolicitado} onChange={(v) => set("montoSolicitado", v)} />
               <Campo label="% del préstamo sobre el valor" type="number" value={f.porcentaje} onChange={(v) => set("porcentaje", v)}
                 placeholder={`${pctRegla}% (según ajustes)`} />
-              <div className="sm:col-span-2 xl:col-span-4">
+              <div className="sm:col-span-2">
                 <Label>Monto a prestar (MXN)</Label>
                 <input type="number" className={inputCls}
                   value={prestamoTocado ? f.prestamoOfrecido : String(sugerido || "")}
@@ -260,7 +263,7 @@ export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizacione
 
             <div>
               <Label>Notas / observaciones</Label>
-              <textarea value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={2} className={inputCls} />
+              <textarea value={f.notas} onChange={(e) => set("notas", e.target.value)} rows={3} className={inputCls} />
             </div>
 
             <div className="flex justify-end">
@@ -273,6 +276,7 @@ export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizacione
                 {guardando ? "Guardando…" : "Guardar cotización"}
               </button>
             </div>
+           </div>
           </div>
         )}
       </Card>

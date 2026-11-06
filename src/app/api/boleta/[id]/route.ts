@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerEmpeno } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
@@ -9,13 +9,14 @@ const fecha = (iso: string | null) =>
   iso ? new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "long", year: "numeric" }).format(new Date(iso)) : "—";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const festivos = await obtenerFestivos();
   const actual = await getUsuarioActual();
   if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;
   const e = await obtenerEmpeno(id);
   if (!e) return new Response("No encontrado", { status: 404 });
 
-  const calc = calcularLiquidacion(e);
+  const calc = calcularLiquidacion(e, undefined, festivos);
   const doc = await PDFDocument.create();
   const page = doc.addPage([595, 842]); // A4
   const font = await doc.embedFont(StandardFonts.Helvetica);

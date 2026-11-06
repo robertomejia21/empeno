@@ -78,7 +78,7 @@ export const ROLES: { value: RolUsuario; label: string }[] = [
   { value: "atencion", label: "Atención a clientes" },
   { value: "cobranza", label: "Cobranza" },
   { value: "cajero", label: "Cajero" },
-  { value: "mecanico", label: "Mecánico (avalúos)" },
+  { value: "mecanico", label: "Mecánico (avalúos y checklist)" },
 ];
 
 export const ROL_LABEL: Record<RolUsuario, string> = {
@@ -110,8 +110,8 @@ const PERMISOS: Record<RolUsuario, string[] | "*"> = {
   cobranza: ["/", "/cobranza", "/vencimientos", "/clientes", "/empenos", "/recordatorios", "/conversaciones", "/buscar"],
   cajero: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/conversaciones", "/buscar", "/remates", "/ventas", "/compras", "/apartados", "/caja", "/corte", "/vencimientos", "/cobranza", "/gps", "/checklist-vehiculos"],
   valuador: ["/", "/mostrador", "/empenos", "/cotizaciones", "/autorizaciones", "/prendas", "/clientes", "/recordatorios", "/buscar", "/avaluo"],
-  // Mecánico: acceso EXCLUSIVO a los avalúos de vehículos (reforzado en el middleware).
-  mecanico: ["/avaluos"],
+  // Mecánico: acceso EXCLUSIVO a avalúos y checklist de vehículos (reforzado en el middleware).
+  mecanico: ["/avaluos", "/checklist-vehiculos"],
   // Invitado (demo): ve TODO en solo lectura (las escrituras se bloquean aparte).
   invitado: "*",
 };

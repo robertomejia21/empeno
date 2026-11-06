@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { crearPrenda } from "@/lib/actions";
-import { prestamoSugerido } from "@/lib/interes";
+import { prestamoSugeridoPorRegla } from "@/lib/interes";
+import type { AjustesPrestamo } from "@/lib/ajustesBase";
 import { Card, CardHeader, Button, Field, TextArea } from "@/components/ui";
 import { MapaResguardo } from "@/components/MapaResguardo";
 import { rangoPorAnio } from "@/lib/valorVehiculoReferencia";
@@ -22,7 +23,7 @@ const categorias: { value: CategoriaPrenda; label: string }[] = [
   { value: "Otro", label: "Otro" },
 ];
 
-export function PrendaForm() {
+export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }) {
   const [categoria, setCategoria] = useState<CategoriaPrenda>("Joyería");
   const [montoSolicitado, setMontoSolicitado] = useState<number>(0);
   const [valorAvaluo, setValorAvaluo] = useState<number>(0);
@@ -35,7 +36,7 @@ export function PrendaForm() {
 
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
-  const sugerido = prestamoSugerido(valorAvaluo);
+  const { monto: sugerido, porcentaje: pctSugerido } = prestamoSugeridoPorRegla(valorAvaluo, reglaPrestamo);
   const rangoReferencia = esVehiculo ? rangoPorAnio(parseInt(modeloAnio, 10)) : null;
 
   return (
@@ -225,12 +226,12 @@ export function PrendaForm() {
             />
           </label>
           <Field
-            label="Préstamo sugerido (50%)"
+            label={`Préstamo sugerido (${pctSugerido}%)`}
             name="montoPrestamoSugerido"
             type="number"
             step="0.01"
             defaultValue={sugerido || undefined}
-            placeholder={sugerido ? sugerido.toString() : "Se calcula al 50%"}
+            placeholder={sugerido ? sugerido.toString() : `Se calcula al ${pctSugerido}%`}
           />
         </div>
         {montoSolicitado > 0 && valorAvaluo > 0 && (

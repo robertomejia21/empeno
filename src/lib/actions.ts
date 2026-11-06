@@ -30,13 +30,17 @@ import type {
   FilaChecklistVehiculo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion } from "@/lib/db/repo";
-import { enviarWhatsApp, enviarWhatsAppMedia, formatearNumeroMX } from "@/lib/whatsapp";
+import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion, obtenerAjustes, obtenerFestivos } from "@/lib/db/repo";
+import type { Ajustes, ClaveAjuste, DiaFestivo } from "@/lib/ajustesBase";
+import { festivosMexicoConNombre } from "@/lib/diasInhabiles";
+import { enviarWhatsApp, enviarWhatsAppMedia } from "@/lib/whatsapp";
+import { formatearNumeroMX, telefonoParaGuardar } from "@/lib/telefono";
+import { actividadPorCategoria, evaluarOperacionPLD } from "@/lib/compliance";
 import { limitadoPorIP } from "@/lib/rateLimit";
-import { SUCURSAL, APP_URL } from "@/lib/negocio";
+import { SUCURSAL, APP_URL, BODEGA_RESGUARDO } from "@/lib/negocio";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { getUsuarioActual } from "@/lib/session";
 import { RESGUARDO_VACIO, resumenResguardo } from "@/lib/resguardo";
@@ -172,7 +176,7 @@ export async function crearCliente(form: FormData) {
     apellido_materno: s(form, "apellidoMaterno"),
     curp: sn(form, "curp"),
     rfc: sn(form, "rfc"),
-    telefono: sn(form, "telefono"),
+    telefono: telefonoParaGuardar(sn(form, "telefono")),
     email: sn(form, "email"),
     tipo_identificacion: s(form, "tipoIdentificacion") || "INE",
     numero_identificacion: s(form, "numeroIdentificacion"),
@@ -218,7 +222,7 @@ export async function actualizarCliente(id: string, form: FormData) {
     apellido_materno: s(form, "apellidoMaterno"),
     curp: sn(form, "curp"),
     rfc: sn(form, "rfc"),
-    telefono: sn(form, "telefono"),
+    telefono: telefonoParaGuardar(sn(form, "telefono")),
     email: sn(form, "email"),
     tipo_identificacion: s(form, "tipoIdentificacion") || "INE",
     numero_identificacion: s(form, "numeroIdentificacion"),
@@ -336,7 +340,7 @@ export async function crearPrenda(form: FormData) {
   const valorAvaluo = num(form, "valorAvaluo");
   const sugerido = form.get("montoPrestamoSugerido")
     ? num(form, "montoPrestamoSugerido")
-    : Math.round(valorAvaluo * 0.5 * 100) / 100;
+    : prestamoSugeridoPorRegla(valorAvaluo, (await obtenerAjustes()).prestamo).monto;
   const datos = {
     categoria: s(form, "categoria") || "Otro",
     descripcion: s(form, "descripcion"),
@@ -650,7 +654,7 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   const e = await obtenerEmpeno(id);
   if (!e) return;
 
-  const calc = calcularLiquidacion(e);
+  const calc = calcularLiquidacion(e, undefined, await obtenerFestivos());
 
   const g = (k: string) => {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
@@ -876,6 +880,11 @@ export async function crearEmpenoGuiado(
     throw new Error("Este vehículo todavía no tiene verificación REPUVE registrada; no se puede empeñar.");
   }
   const fechaVencimiento = calcularVencimiento(data.fechaInicio, data.periodo, data.plazoPeriodos);
+  const sugeridoPrenda = prestamoSugeridoPorRegla(data.prenda.valorAvaluo, (await obtenerAjustes()).prestamo).monto;
+  // Si en el mapa eligieron la bodega, el bien queda marcado en Bodega (no en la matriz).
+  const tipoResguardo: Resguardo["tipo"] = (data.prenda.ubicacionResguardo ?? "").startsWith(BODEGA_RESGUARDO.nombre)
+    ? "Bodega"
+    : "Matriz";
   // Tasa especial (≤ 6.48%): el empeño se crea en BORRADOR hasta que Dirección autorice.
   const especial = requiereAutorizacionTasa(data.tasaInteres);
   const estadoInicial = especial ? "borrador" : "activo";
@@ -897,7 +906,7 @@ export async function crearEmpenoGuiado(
           apellido_paterno: cn.apellidoPaterno,
           apellido_materno: cn.apellidoMaterno,
           curp: cn.curp,
-          telefono: cn.telefono,
+          telefono: telefonoParaGuardar(cn.telefono),
           direccion: cn.direccion,
           email: cn.email,
           fecha_nacimiento: cn.fechaNacimiento,
@@ -928,10 +937,11 @@ export async function crearEmpenoGuiado(
         kilataje: data.prenda.kilataje,
         gramos: data.prenda.gramos,
         valor_avaluo: data.prenda.valorAvaluo,
-        monto_prestamo_sugerido: Math.round(data.prenda.valorAvaluo * 0.5 * 100) / 100,
+        monto_prestamo_sugerido: sugeridoPrenda,
         estado: "empenada",
         fotos: data.prenda.fotos,
         ubicacion_resguardo: data.prenda.ubicacionResguardo,
+        resguardo_tipo: tipoResguardo,
         seguro: data.prenda.seguro,
         gps: data.prenda.gps,
         garantia: data.prenda.garantia,
@@ -1025,7 +1035,7 @@ export async function crearEmpenoGuiado(
       apellidoMaterno: cn.apellidoMaterno,
       curp: cn.curp,
       rfc: null,
-      telefono: cn.telefono,
+      telefono: telefonoParaGuardar(cn.telefono),
       email: cn.email,
       tipoIdentificacion: cn.tipoIdentificacion,
       numeroIdentificacion: cn.numeroIdentificacion,
@@ -1055,11 +1065,11 @@ export async function crearEmpenoGuiado(
     kilataje: data.prenda.kilataje,
     gramos: data.prenda.gramos,
     valorAvaluo: data.prenda.valorAvaluo,
-    montoPrestamoSugerido: Math.round(data.prenda.valorAvaluo * 0.5 * 100) / 100,
+    montoPrestamoSugerido: sugeridoPrenda,
     estado: "empenada",
     fotos: data.prenda.fotos,
     ubicacionResguardo: data.prenda.ubicacionResguardo,
-    resguardo: RESGUARDO_VACIO,
+    resguardo: { ...RESGUARDO_VACIO, tipo: tipoResguardo },
     seguro: data.prenda.seguro,
     gps: data.prenda.gps,
     garantia: data.prenda.garantia,
@@ -1139,9 +1149,9 @@ export async function crearEmpenoGuiado(
 
 // ----------------- NOTIFICACIONES (WhatsApp) -----------------
 
-function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>): string {
+function mensajeRecordatorio(e: Awaited<ReturnType<typeof obtenerEmpeno>>, festivos: string[]): string {
   if (!e) return "";
-  const calc = calcularLiquidacion(e);
+  const calc = calcularLiquidacion(e, undefined, festivos);
   const venc = calc.vencido ? "venció" : "vence";
   return (
     `Hola ${e.cliente.nombre}, le recordamos su empeño *${e.folio}* ` +
@@ -1156,7 +1166,7 @@ export async function enviarRecordatorioWhatsApp(empenoId: string) {
   if (await esInvitado()) return;
   const e = await obtenerEmpeno(empenoId);
   if (!e) return;
-  const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e));
+  const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e, await obtenerFestivos()));
   await bitacoraAuto(
     res.ok ? "Recordatorio WhatsApp enviado" : "Recordatorio WhatsApp falló",
     res.ok ? `a ${e.cliente.nombre}` : res.error ?? null,
@@ -1167,15 +1177,15 @@ export async function enviarRecordatorioWhatsApp(empenoId: string) {
 
 /** Envía recordatorios a todos los empeños vencidos o por vencer (≤3 días). Usado por el cron. */
 export async function enviarRecordatoriosPendientes(): Promise<{ enviados: number; fallidos: number }> {
-  const empenos = await listarEmpenos();
+  const [empenos, festivos] = await Promise.all([listarEmpenos(), obtenerFestivos()]);
   let enviados = 0;
   let fallidos = 0;
   for (const e of empenos) {
     if (e.estado !== "activo" && e.estado !== "refrendado") continue;
-    const calc = calcularLiquidacion(e);
+    const calc = calcularLiquidacion(e, undefined, festivos);
     if (!(calc.vencido || calc.diasParaVencer <= 3)) continue;
     if (!e.cliente.telefono) continue;
-    const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e));
+    const res = await enviarWhatsApp(e.cliente.telefono, mensajeRecordatorio(e, festivos));
     if (res.ok) enviados++;
     else fallidos++;
   }
@@ -1264,6 +1274,8 @@ export async function actualizarResguardo(prendaId: string, form: FormData) {
     referencia: sn(form, "referencia"),
     mapsUrl: sn(form, "mapsUrl"),
   };
+  // En bodega sin liga capturada, usar la ubicación fija de la bodega.
+  if (resguardo.tipo === "Bodega" && !resguardo.mapsUrl && !resguardo.calle) resguardo.mapsUrl = BODEGA_RESGUARDO.mapsUrl;
   const resumen = resumenResguardo(resguardo);
 
   if (supabaseConfigured) {
@@ -1350,6 +1362,21 @@ export async function registrarVenta(form: FormData) {
   const notas = sn(form, "notas");
 
   const prendaVendida = await obtenerPrenda(prendaId);
+
+  // PLD (art. 32 LFPIORPI): venta de vehículo desde 3,210 UMA no admite efectivo en ninguna proporción.
+  const actividadPLD = actividadPorCategoria(prendaVendida?.categoria);
+  if (actividadPLD) {
+    const ev = evaluarOperacionPLD(actividadPLD, precio, precio, metodoPago === "efectivo");
+    if (ev.efectivoIndebido) {
+      throw new Error(
+        `Por PLD, una venta de vehículo de ${formatMXN(precio)} no puede pagarse en efectivo. Usa transferencia, cheque o tarjeta.`
+      );
+    }
+    if (ev.requiereIdentificacion && !clienteId) {
+      throw new Error("Por PLD, esta venta requiere identificar al comprador: selecciona o registra al cliente.");
+    }
+  }
+
   if (prendaVendida && prendaVendida.valorAvaluo > 0 && precio < prendaVendida.valorAvaluo) {
     const pctDescuento = ((prendaVendida.valorAvaluo - precio) / prendaVendida.valorAvaluo) * 100;
     if (pctDescuento > DESCUENTO_TOPE_VENTA) {
@@ -1721,7 +1748,7 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
         categoria: input.categoria,
         descripcion: input.descripcion,
         prospecto_nombre: input.prospectoNombre,
-        prospecto_telefono: input.prospectoTelefono,
+        prospecto_telefono: telefonoParaGuardar(input.prospectoTelefono),
         marca: input.marca,
         submarca: input.submarca,
         modelo: input.modelo,
@@ -1764,7 +1791,7 @@ export async function crearCotizacion(input: CotizacionInput): Promise<{ id: str
     descripcion: input.descripcion,
     clienteId: null,
     prospectoNombre: input.prospectoNombre,
-    prospectoTelefono: input.prospectoTelefono,
+    prospectoTelefono: telefonoParaGuardar(input.prospectoTelefono),
     marca: input.marca,
     submarca: input.submarca,
     modelo: input.modelo,
@@ -1833,7 +1860,7 @@ export async function crearCotizacionPublica(input: {
     categoria: "Vehículos",
     descripcion: input.descripcion.trim(),
     prospectoNombre: input.nombre.trim(),
-    prospectoTelefono: input.telefono.trim(),
+    prospectoTelefono: telefonoParaGuardar(input.telefono) ?? input.telefono.trim(),
     marca: input.marca,
     submarca: null,
     modelo: input.modelo,
@@ -1958,9 +1985,14 @@ export async function eliminarProductoInteres(id: string) {
 
 // ----------------- AUTORIZACIONES (Dirección General) -----------------
 
-/** Avisa por WhatsApp al supervisor que hay una autorización de tasa especial pendiente. */
+/**
+ * Avisa por WhatsApp a Dirección (número de /configuracion) que hay una
+ * autorización de tasa especial pendiente. Si no hay número en ajustes, usa
+ * SUPERVISOR_TEL del entorno.
+ */
 async function notificarSupervisorAutorizacion(input: AutorizacionInput, folio: string) {
-  const tel = process.env.SUPERVISOR_TEL;
+  const { direccion } = await obtenerAjustes().catch(() => ({ direccion: { whatsapp: "" } }));
+  const tel = direccion.whatsapp || process.env.SUPERVISOR_TEL;
   if (!tel) return;
   const texto = [
     `🔒 Autorización de tasa especial (${folio})`,
@@ -2295,7 +2327,7 @@ export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean
       fecha: input.fecha,
       hora: input.hora,
       cliente_nombre: input.clienteNombre,
-      telefono: input.telefono,
+      telefono: telefonoParaGuardar(input.telefono),
       vehiculo: input.vehiculo,
       notas: input.notas,
       estado: "agendada",
@@ -2316,7 +2348,7 @@ export async function agendarCitaGps(input: CitaGpsInput): Promise<{ ok: boolean
     fecha: input.fecha,
     hora: input.hora,
     clienteNombre: input.clienteNombre,
-    telefono: input.telefono,
+    telefono: telefonoParaGuardar(input.telefono),
     vehiculo: input.vehiculo,
     empenoId: null,
     estado: "agendada",
@@ -2336,7 +2368,7 @@ export async function guardarChecklistVehicular(
   incidencias: string | null
 ) {
   const u = await getUsuarioActual();
-  if (!u || !["admin", "gerente", "lider", "cajero"].includes(u.rol)) throw new Error("No autorizado.");
+  if (!u || !["admin", "gerente", "lider", "cajero", "mecanico"].includes(u.rol)) throw new Error("No autorizado.");
   if (!responsable.trim() || filas.length === 0) throw new Error("Falta el responsable o no hay vehículos para revisar.");
   const fecha = hoyISO();
 
@@ -2417,4 +2449,76 @@ export async function actualizarEstadoCitaGps(id: string, estado: EstadoCitaGps)
     if (c) c.estado = estado;
   }
   revalidatePath("/gps/citas");
+}
+
+// ----------------- AJUSTES (Dirección, % de préstamo, días festivos) -----------------
+
+const SQL_AJUSTES_AYUDA =
+  "Falta la tabla `ajustes` en Supabase. Ejecuta supabase/ajustes.sql en el SQL Editor y vuelve a intentar.";
+
+async function guardarAjuste<K extends ClaveAjuste>(clave: K, valor: Ajustes[K]) {
+  const u = await soloDireccion();
+  if (supabaseConfigured) {
+    const { error } = await getServerSupabase()
+      .from("ajustes")
+      .upsert({ clave, valor, actualizado_en: new Date().toISOString(), actualizado_por: u.nombre });
+    if (error) {
+      if (/ajustes/i.test(error.message) && /(not exist|schema cache|not find)/i.test(error.message)) {
+        throw new Error(SQL_AJUSTES_AYUDA);
+      }
+      throw error;
+    }
+  } else {
+    getStore().ajustes[clave] = structuredClone(valor);
+  }
+  await bitacoraAuto("Ajustes actualizados", clave, null);
+  revalidatePath("/", "layout");
+}
+
+export async function guardarAjustesDireccion(form: FormData) {
+  const correo = s(form, "correo").toLowerCase();
+  const whatsappRaw = s(form, "whatsapp");
+  if (correo && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo)) throw new Error("Correo de Dirección inválido.");
+  const whatsapp = whatsappRaw.trim() ? formatearNumeroMX(whatsappRaw) : "";
+  if (whatsapp === null) throw new Error("WhatsApp de Dirección inválido: captura 10 dígitos (o con 52/521).");
+  await guardarAjuste("direccion", { correo, whatsapp });
+}
+
+export async function guardarAjustesPrestamo(form: FormData) {
+  const umbral = num(form, "umbral");
+  const pctHastaUmbral = num(form, "pctHastaUmbral");
+  const pctArribaUmbral = num(form, "pctArribaUmbral");
+  const pctValido = (p: number) => p > 0 && p <= 100;
+  if (!(umbral >= 0)) throw new Error("El monto del umbral debe ser 0 o mayor.");
+  if (!pctValido(pctHastaUmbral) || !pctValido(pctArribaUmbral)) {
+    throw new Error("Los porcentajes de préstamo deben estar entre 1 y 100.");
+  }
+  await guardarAjuste("prestamo", { umbral, pctHastaUmbral, pctArribaUmbral });
+}
+
+function normalizarFestivos(lista: DiaFestivo[]): DiaFestivo[] {
+  const porFecha = new Map<string, DiaFestivo>();
+  for (const f of lista) porFecha.set(f.fecha, f);
+  return [...porFecha.values()].sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+export async function agregarDiaFestivo(form: FormData) {
+  const fecha = s(form, "fecha");
+  const nombre = s(form, "nombre") || "Día festivo";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw new Error("Fecha inválida.");
+  const { festivos } = await obtenerAjustes();
+  await guardarAjuste("festivos", normalizarFestivos([...festivos, { fecha, nombre }]));
+}
+
+export async function eliminarDiaFestivo(fecha: string) {
+  const { festivos } = await obtenerAjustes();
+  await guardarAjuste("festivos", festivos.filter((f) => f.fecha !== fecha));
+}
+
+/** Precarga los días de descanso obligatorio (Art. 74 LFT) del año indicado. */
+export async function cargarFestivosOficiales(form: FormData) {
+  const anio = Math.round(num(form, "anio"));
+  if (!(anio >= 2000 && anio <= 2100)) throw new Error("Año inválido.");
+  const { festivos } = await obtenerAjustes();
+  await guardarAjuste("festivos", normalizarFestivos([...festivosMexicoConNombre(anio), ...festivos]));
 }

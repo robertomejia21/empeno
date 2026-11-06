@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { obtenerEmpeno } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { getUsuarioActual } from "@/lib/session";
 import { generarQR, urlPrenda } from "@/lib/qr";
@@ -11,11 +11,12 @@ import { ContratoProfeco } from "./ContratoProfeco";
 import { FirmaContrato } from "./FirmaContrato";
 
 export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
+  const festivos = await obtenerFestivos();
   const { id } = await params;
   const empeno = await obtenerEmpeno(id);
   if (!empeno) notFound();
 
-  const calc = calcularLiquidacion(empeno);
+  const calc = calcularLiquidacion(empeno, undefined, festivos);
   const usuario = await getUsuarioActual();
   const invitado = usuario?.rol === "invitado";
   const qrPrenda = await generarQR(urlPrenda(empeno.prenda.id), 130);

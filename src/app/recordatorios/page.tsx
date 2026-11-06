@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarRecordatorioWhatsApp, enviarRecordatoriosHoy } from "@/lib/actions";
 import { whatsappHabilitado } from "@/lib/whatsapp";
@@ -9,10 +9,11 @@ import { ConfirmSubmit } from "@/components/actions-ui";
 import { CircleCheck, Hourglass, MessageCircle, Phone, Send } from "lucide-react";
 
 export default async function RecordatoriosPage() {
+  const festivos = await obtenerFestivos();
   const empenos = await listarEmpenos();
   const activos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")
-    .map((e) => ({ e, calc: calcularLiquidacion(e) }));
+    .map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }));
 
   const vencidos = activos.filter((x) => x.calc.vencido).sort((a, b) => a.calc.diasParaVencer - b.calc.diasParaVencer);
   const porVencer = activos

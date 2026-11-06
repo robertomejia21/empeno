@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerCliente, listarEmpenos, listarMovimientos } from "@/lib/db/repo";
+import { obtenerCliente, listarEmpenos, listarMovimientos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
@@ -14,6 +14,7 @@ const estadoLabel: Record<string, string> = {
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const festivos = await obtenerFestivos();
   const actual = await getUsuarioActual();
   if (!actual || actual.rol === "mecanico") return new Response("No autorizado", { status: 401 });
   const { id } = await params;
@@ -28,7 +29,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalVigente = activos.reduce((s, e) => s + e.montoPrestado, 0);
-  const totalLiquidar = activos.reduce((s, e) => s + calcularLiquidacion(e).totalDesempeno, 0);
+  const totalLiquidar = activos.reduce((s, e) => s + calcularLiquidacion(e, undefined, festivos).totalDesempeno, 0);
   const totalPagado = pagos.reduce((s, m) => s + m.monto, 0);
 
   const doc = await PDFDocument.create();
@@ -67,7 +68,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
   for (const e of empenos) {
     if (y < 120) break;
-    const calc = calcularLiquidacion(e);
+    const calc = calcularLiquidacion(e, undefined, festivos);
     const activo = e.estado === "activo" || e.estado === "refrendado";
     const fila = [
       e.folio,

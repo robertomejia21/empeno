@@ -6,8 +6,18 @@ import { guardarChecklistVehicular } from "@/lib/actions";
 import { Check, CircleCheck } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui";
 import type { Prenda, FilaChecklistVehiculo } from "@/lib/types";
+import {
+  PUNTOS_REVISION,
+  CALIFICACIONES_REVISION,
+  CALIFICACION_ETIQUETA,
+  RESPONSABLE_CHECKLIST_DEFAULT,
+  type PuntoRevision,
+  type CalificacionRevision,
+} from "@/lib/checklist";
 
-const ITEMS: { clave: keyof Omit<FilaChecklistVehiculo, "prendaId" | "observaciones">; label: string }[] = [
+type ClaveItem = keyof Omit<FilaChecklistVehiculo, "prendaId" | "observaciones" | "revision">;
+
+const ITEMS: { clave: ClaveItem; label: string }[] = [
   { clave: "presente", label: "Presente" },
   { clave: "exterior", label: "Exterior" },
   { clave: "interior", label: "Interior" },
@@ -37,7 +47,8 @@ function filaVacia(prendaId: string): FilaChecklistVehiculo {
 
 export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
   const router = useRouter();
-  const [responsable, setResponsable] = useState("");
+  const [responsable, setResponsable] = useState(RESPONSABLE_CHECKLIST_DEFAULT);
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
   const [incidencias, setIncidencias] = useState("");
   const [filas, setFilas] = useState<Record<string, FilaChecklistVehiculo>>(
     Object.fromEntries(vehiculos.map((v) => [v.id, filaVacia(v.id)]))
@@ -45,8 +56,16 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
 
-  function toggle(prendaId: string, clave: keyof Omit<FilaChecklistVehiculo, "prendaId" | "observaciones">) {
+  function toggle(prendaId: string, clave: ClaveItem) {
     setFilas((s) => ({ ...s, [prendaId]: { ...s[prendaId], [clave]: !s[prendaId][clave] } }));
+  }
+
+  function calificar(prendaId: string, punto: PuntoRevision, cal: CalificacionRevision) {
+    setFilas((s) => {
+      const actual = s[prendaId].revision ?? {};
+      const revision = { ...actual, [punto]: actual[punto] === cal ? undefined : cal };
+      return { ...s, [prendaId]: { ...s[prendaId], revision } };
+    });
   }
 
   function setObs(prendaId: string, texto: string) {
@@ -113,6 +132,39 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
                   );
                 })}
               </div>
+              <button
+                type="button"
+                onClick={() => setAbiertos((s) => ({ ...s, [v.id]: !s[v.id] }))}
+                className="mt-2 text-xs font-medium text-info hover:underline"
+              >
+                {abiertos[v.id] ? "Ocultar revisión B/R/M" : "Revisión B/R/M (aceite, frenos, luces…)"}
+              </button>
+              {abiertos[v.id] && (
+                <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  {PUNTOS_REVISION.map((punto) => (
+                    <div key={punto} className="flex items-center justify-between gap-2 rounded-lg bg-surface-2/60 px-2 py-1">
+                      <span className="text-xs text-foreground">{punto}</span>
+                      <span className="flex gap-1">
+                        {CALIFICACIONES_REVISION.map((cal) => {
+                          const sel = filas[v.id]?.revision?.[punto] === cal;
+                          const tono = cal === "B" ? "border-success bg-success-soft text-success" : cal === "R" ? "border-warning bg-warning-soft text-warning" : "border-danger bg-danger-soft text-danger";
+                          return (
+                            <button
+                              key={cal}
+                              type="button"
+                              title={CALIFICACION_ETIQUETA[cal]}
+                              onClick={() => calificar(v.id, punto, cal)}
+                              className={`h-6 w-6 rounded-md border text-[11px] font-semibold transition ${sel ? tono : "border-border bg-surface text-muted hover:bg-surface-2"}`}
+                            >
+                              {cal}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <input
                 value={filas[v.id]?.observaciones ?? ""}
                 onChange={(e) => setObs(v.id, e.target.value)}

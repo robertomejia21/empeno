@@ -47,7 +47,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
     ["Gramos", p.gramos != null ? `${p.gramos} g` : null],
     ["Resguardo", p.ubicacionResguardo],
     ["Domicilio de resguardo", direccionResguardo(p.resguardo)],
-    ["Tipo de resguardo", p.resguardo.tipo === "Externa" ? "Externa / otra sucursal" : null],
+    ["Tipo de resguardo", p.resguardo.tipo === "Externa" ? "Externa / otra sucursal" : p.resguardo.tipo === "Bodega" ? "Bodega de resguardo" : null],
   ];
 
   const esVehiculo = p.categoria === "Vehículos";
@@ -197,6 +197,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
               <form action={actualizarResguardo.bind(null, p.id)} className="mt-3 space-y-2">
                 <select name="tipoUbicacion" defaultValue={p.resguardo.tipo} className={campoCls}>
                   <option value="Matriz">Matriz</option>
+                  <option value="Bodega">Bodega de resguardo</option>
                   <option value="Externa">Externa / otra sucursal</option>
                 </select>
                 <div className="grid grid-cols-3 gap-2">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, PageHeader, LinkButton, EmptyState, SearchForm, ResumenChips } from "@/components/ui";
@@ -18,6 +18,7 @@ export default async function EmpenosPage({
 }: {
   searchParams: Promise<{ q?: string; cat?: string }>;
 }) {
+  const festivos = await obtenerFestivos();
   const { q, cat } = await searchParams;
   const todos = await listarEmpenos();
   const t = (q ?? "").trim();
@@ -51,7 +52,7 @@ export default async function EmpenosPage({
   };
 
   const activos = todos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
-  const conCalc = activos.map((e) => calcularLiquidacion(e));
+  const conCalc = activos.map((e) => calcularLiquidacion(e, undefined, festivos));
   const nVencidos = conCalc.filter((c) => c.vencido).length;
   const capital = activos.reduce((s, e) => s + e.montoPrestado, 0);
   const aRecuperar = conCalc.reduce((s, c) => s + c.totalDesempeno, 0);
@@ -127,7 +128,7 @@ export default async function EmpenosPage({
               <tbody className="divide-y divide-border">
                 {empenos.map((e) => {
                   const activo = e.estado === "activo" || e.estado === "refrendado";
-                  const calc = calcularLiquidacion(e);
+                  const calc = calcularLiquidacion(e, undefined, festivos);
                   const estado = activo && calc.vencido ? "vencido" : e.estado;
                   return (
                     <tr key={e.id} className="hover:bg-surface-2">

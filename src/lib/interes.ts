@@ -1,6 +1,8 @@
 // Lógica de cálculo de intereses y liquidaciones de empeños
 import type { Empeno, CalculoLiquidacion, PeriodoInteres } from "./types";
 import { parseFechaLocal, aISOLocal } from "./format";
+import { diasHabilesDespues } from "./diasInhabiles";
+import { porcentajePrestamo, AJUSTES_DEFAULT, type AjustesPrestamo } from "./ajustesBase";
 
 const DIAS_POR_PERIODO: Record<PeriodoInteres, number> = {
   mensual: 30, // referencia para costo diario; el vencimiento usa mes calendario
@@ -59,7 +61,16 @@ type EmpenoCalc = Pick<
 > &
   Partial<Pick<Empeno, "almacenajePct" | "ivaPct" | "abonoCapital">>;
 
-export function calcularLiquidacion(empeno: EmpenoCalc, aFecha: Date = new Date()): CalculoLiquidacion {
+/**
+ * @param festivos Días festivos (YYYY-MM-DD) dados de alta en /configuracion.
+ *   Junto con los domingos, no cuentan como día de retraso: un pago que vence
+ *   en sábado no genera moratorios el domingo.
+ */
+export function calcularLiquidacion(
+  empeno: EmpenoCalc,
+  aFecha: Date = new Date(),
+  festivos: readonly string[] = []
+): CalculoLiquidacion {
   const dias = Math.max(0, diffDias(empeno.fechaInicio, aFecha));
 
   // Periodos transcurridos (mínimo 1: al pactar ya se devenga el primer periodo)
@@ -80,7 +91,9 @@ export function calcularLiquidacion(empeno: EmpenoCalc, aFecha: Date = new Date(
   const capitalPendiente = Math.max(0, empeno.montoPrestado - abonoCapital);
 
   const diasParaVencer = -diffDias(empeno.fechaVencimiento, aFecha);
-  const vencido = diasParaVencer < -empeno.diasGracia;
+  // El retraso se cuenta en días hábiles: domingos y festivos no suman.
+  const diasAtraso = diasParaVencer < 0 ? diasHabilesDespues(empeno.fechaVencimiento, aFecha, festivos) : 0;
+  const vencido = diasAtraso > empeno.diasGracia;
 
   return {
     capital: round2(capitalPendiente),
@@ -93,6 +106,7 @@ export function calcularLiquidacion(empeno: EmpenoCalc, aFecha: Date = new Date(
     totalRefrendo: round2(interesPorPeriodo + almacenajePorPeriodo + ivaPorPeriodo),
     vencido,
     diasParaVencer,
+    diasAtraso,
   };
 }
 
@@ -108,6 +122,18 @@ export function calcularVencimiento(
 /** Préstamo sugerido como % del avalúo (default 50% — práctica común). */
 export function prestamoSugerido(valorAvaluo: number, porcentaje = 50): number {
   return round2(valorAvaluo * (porcentaje / 100));
+}
+
+/**
+ * Préstamo sugerido según la regla de /configuracion: un % hasta cierto
+ * avalúo y otro % arriba de él (ej. 50% hasta $10,000 y 40% arriba).
+ */
+export function prestamoSugeridoPorRegla(
+  valorAvaluo: number,
+  cfg: AjustesPrestamo = AJUSTES_DEFAULT.prestamo
+): { monto: number; porcentaje: number } {
+  const porcentaje = porcentajePrestamo(valorAvaluo, cfg);
+  return { monto: prestamoSugerido(valorAvaluo, porcentaje), porcentaje };
 }
 
 /** Tasa mínima del catálogo que NO requiere autorización de Dirección General. */

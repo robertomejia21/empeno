@@ -55,7 +55,7 @@ export function rowToPrenda(r: any): Prenda {
     fotos: r.fotos ?? [],
     ubicacionResguardo: r.ubicacion_resguardo,
     resguardo: {
-      tipo: (r.resguardo_tipo ?? "Matriz") as "Matriz" | "Externa",
+      tipo: (r.resguardo_tipo ?? "Matriz") as import("@/lib/types").TipoResguardo,
       calle: r.resguardo_calle ?? null,
       numero: r.resguardo_numero ?? null,
       colonia: r.resguardo_colonia ?? null,

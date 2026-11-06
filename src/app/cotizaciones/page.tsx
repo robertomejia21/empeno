@@ -1,10 +1,10 @@
-import { listarCotizaciones } from "@/lib/db/repo";
+import { listarCotizaciones, obtenerAjustes } from "@/lib/db/repo";
 import { Download } from "lucide-react";
 import { PageHeader } from "@/components/ui";
 import { CotizacionesPanel } from "./CotizacionesPanel";
 
 export default async function CotizacionesPage() {
-  const cotizaciones = await listarCotizaciones();
+  const [cotizaciones, ajustes] = await Promise.all([listarCotizaciones(), obtenerAjustes()]);
 
   return (
     <div>
@@ -22,7 +22,7 @@ export default async function CotizacionesPage() {
           </a>
         }
       />
-      <CotizacionesPanel cotizaciones={cotizaciones} />
+      <CotizacionesPanel cotizaciones={cotizaciones} reglaPrestamo={ajustes.prestamo} />
     </div>
   );
 }

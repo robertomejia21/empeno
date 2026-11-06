@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, listarPrendasEnVenta } from "@/lib/db/repo";
+import { listarEmpenos, listarPrendasEnVenta, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarARemate } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -13,6 +13,7 @@ export default async function RematesPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const festivos = await obtenerFestivos();
   const { q } = await searchParams;
   const [empenos, enVenta] = await Promise.all([
     listarEmpenos(),
@@ -22,7 +23,7 @@ export default async function RematesPage({
   const t = (q ?? "").trim();
   const vencidos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")
-    .map((e) => ({ e, calc: calcularLiquidacion(e) }))
+    .map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }))
     .filter((x) => x.calc.vencido)
     .filter((x) =>
       t ? coincideTexto([x.e.folio, x.e.prenda.descripcion, x.e.cliente.nombre, x.e.cliente.apellidoPaterno], t) : true

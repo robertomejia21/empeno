@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, Satellite, Warehouse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { listarEmpenos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { resumenModalidades, modalidadVehiculo } from "@/lib/gps";
 import { rastreoHabilitado } from "@/lib/gpsRastreo";
@@ -10,6 +10,7 @@ import { Card, CardHeader, PageHeader, Badge } from "@/components/ui";
 import { GpsModalidades } from "@/components/GpsModalidades";
 
 export default async function GpsPage() {
+  const festivos = await obtenerFestivos();
   const empenos = await listarEmpenos();
   const resumen = resumenModalidades(empenos);
 
@@ -42,8 +43,8 @@ export default async function GpsPage() {
       <GpsModalidades resumen={resumen} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ListaVehiculos titulo="Con GPS" icono={Satellite} empenos={porGps} />
-        <ListaVehiculos titulo="En resguardo" icono={Warehouse} empenos={porResguardo} />
+        <ListaVehiculos titulo="Con GPS" icono={Satellite} empenos={porGps} festivos={festivos} />
+        <ListaVehiculos titulo="En resguardo" icono={Warehouse} empenos={porResguardo} festivos={festivos} />
       </div>
     </div>
   );
@@ -53,8 +54,10 @@ function ListaVehiculos({
   titulo,
   icono: Icono,
   empenos,
+  festivos,
 }: {
   titulo: string;
+  festivos: string[];
   icono: LucideIcon;
   empenos: Awaited<ReturnType<typeof listarEmpenos>> }) {
   return (
@@ -70,7 +73,7 @@ function ListaVehiculos({
       ) : (
         <ul className="divide-y divide-border">
           {empenos.map((e) => {
-            const calc = calcularLiquidacion(e);
+            const calc = calcularLiquidacion(e, undefined, festivos);
             return (
               <li key={e.id}>
                 <Link href={`/empenos/${e.id}`} className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-surface-2 sm:px-5">

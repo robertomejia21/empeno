@@ -46,7 +46,7 @@ export type EstadoPrenda =
   | "apartada" // reservada en un apartado
   | "vendida";
 
-export type TipoResguardo = "Matriz" | "Externa";
+export type TipoResguardo = "Matriz" | "Bodega" | "Externa";
 
 /** Dónde está físicamente resguardado el bien, con la dirección desglosada. */
 export interface Resguardo {
@@ -398,6 +398,8 @@ export interface FilaChecklistVehiculo {
   bateria: boolean;
   carroceria: boolean;
   observaciones: string | null;
+  /** Revisión B/R/M (formato "Checklist de revisión de vehículos", hoja 3). Opcional. */
+  revision?: Partial<Record<import("@/lib/checklist").PuntoRevision, import("@/lib/checklist").CalificacionRevision>>;
 }
 
 export interface ChecklistVehicular {
@@ -606,6 +608,7 @@ export interface CalculoLiquidacion {
   diasTranscurridos: number;
   totalDesempeno: number; // capital + interés + almacenaje + IVA para liquidar hoy
   totalRefrendo: number; // interés + almacenaje + IVA de un periodo para renovar
-  vencido: boolean;
-  diasParaVencer: number; // negativo si ya venció
+  vencido: boolean; // ya pasó de los días de gracia (hábiles) → aplican moratorios
+  diasParaVencer: number; // negativo si ya venció (días naturales)
+  diasAtraso: number; // días HÁBILES de retraso tras el vencimiento (sin domingos ni festivos)
 }

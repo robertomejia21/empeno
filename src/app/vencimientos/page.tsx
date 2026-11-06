@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { listarEmpenos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, Badge, ResumenChips, EmptyState } from "@/components/ui";
 
 export default async function VencimientosPage() {
+  const festivos = await obtenerFestivos();
   const empenos = await listarEmpenos();
   const activos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")
-    .map((e) => ({ e, calc: calcularLiquidacion(e) }))
+    .map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }))
     .sort((a, b) => a.calc.diasParaVencer - b.calc.diasParaVencer);
 
   const vencidos = activos.filter((x) => x.calc.vencido);

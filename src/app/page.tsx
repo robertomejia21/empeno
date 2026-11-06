@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual } from "@/lib/reporteSemanal";
 import { ReporteSemanalCard } from "@/components/ReportePorModalidad";
@@ -31,6 +31,7 @@ const accesos: { href: string; icon: LucideIcon; label: string; tono: string }[]
 ];
 
 export default async function Tablero() {
+  const festivos = await obtenerFestivos();
   const [empenos, movimientos, clientes, prendas, pagos, ventas] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),
@@ -46,7 +47,7 @@ export default async function Tablero() {
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capitalPrestado = activos.reduce((s, e) => s + e.montoPrestado, 0);
-  const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e) }));
+  const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }));
   const aRecuperar = conCalc.reduce((s, x) => s + x.calc.totalDesempeno, 0);
   const vencidos = conCalc.filter((x) => x.calc.vencido);
   const porVencer = conCalc

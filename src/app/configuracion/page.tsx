@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUsuarioActual } from "@/lib/session";
-import { listarProductosInteres } from "@/lib/db/repo";
+import { listarProductosInteres, obtenerAjustes } from "@/lib/db/repo";
+import { AjustesConfig } from "./AjustesConfig";
 import { PageHeader, Card, CardHeader } from "@/components/ui";
 import { ProductosInteresConfig } from "./ProductosInteresConfig";
 import {
@@ -8,6 +9,8 @@ import {
   UMA_DIARIA_2026,
   UMBRAL_IDENTIFICACION_MXN,
   UMBRAL_AVISO_MXN,
+  ACTIVIDADES_PLD,
+  umaAMXN,
   PRECIO_ORO_24K_GRAMO,
   PRECIO_PLATA_GRAMO,
 } from "@/lib/compliance";
@@ -19,7 +22,7 @@ export default async function ConfiguracionPage() {
   if (!actual || !["admin", "gerente", "invitado"].includes(actual.rol)) redirect("/");
 
   const niveles = [0, 4, 6].map((n) => tasaPorHistorial(n));
-  const productos = await listarProductosInteres();
+  const [productos, ajustes] = await Promise.all([listarProductosInteres(), obtenerAjustes()]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -50,11 +53,13 @@ export default async function ConfiguracionPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Parámetros PLD (LFPIORPI)" />
+          <CardHeader title="Parámetros PLD (Manual 2026)" subtitle={`UMA diaria ${formatMXN(UMA_DIARIA_2026)}`} />
           <dl className="space-y-3 p-5 text-sm">
-            <Linea k="UMA diaria 2026" v={formatMXN(UMA_DIARIA_2026)} />
-            <Linea k="Umbral de identificación" v={formatMXN(UMBRAL_IDENTIFICACION_MXN)} />
-            <Linea k="Umbral de aviso (SAT/UIF)" v={formatMXN(UMBRAL_AVISO_MXN)} />
+            <Linea k="Préstamos — aviso" v={formatMXN(umaAMXN(ACTIVIDADES_PLD.prestamo.avisoUMA))} />
+            <Linea k="Joyería/metales — identificación" v={formatMXN(UMBRAL_IDENTIFICACION_MXN)} />
+            <Linea k="Joyería/metales — aviso" v={formatMXN(UMBRAL_AVISO_MXN)} />
+            <Linea k="Venta de vehículos — aviso" v={formatMXN(umaAMXN(ACTIVIDADES_PLD.vehiculo.avisoUMA))} />
+            <Linea k="Vehículos — sin efectivo desde" v={formatMXN(umaAMXN(ACTIVIDADES_PLD.vehiculo.efectivoMaxUMA ?? 0))} />
           </dl>
         </Card>
 
@@ -66,6 +71,8 @@ export default async function ConfiguracionPage() {
           </dl>
         </Card>
       </div>
+
+      <AjustesConfig ajustes={ajustes} editable={actual.rol === "admin"} />
 
       {actual.rol === "admin" ? (
         <ProductosInteresConfig productos={productos} />
@@ -82,9 +89,9 @@ export default async function ConfiguracionPage() {
       )}
 
       <div className="mt-6 rounded-xl border border-info/20 bg-info-soft px-5 py-4 text-sm text-info">
-        ℹ️ Estos parámetros están definidos en código (<code>src/lib/compliance.ts</code> e{" "}
-        <code>src/lib/interes.ts</code>). El siguiente paso es hacerlos editables desde esta pantalla y
-        guardarlos en Supabase para ajustarlos sin re-desplegar.
+        ℹ️ Dirección, % de préstamo y días festivos se guardan en Supabase (tabla <code>ajustes</code>) y
+        solo los edita Dirección General. Los parámetros PLD y precios de metales siguen definidos en
+        código (<code>src/lib/compliance.ts</code>).
       </div>
     </div>
   );

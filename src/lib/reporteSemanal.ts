@@ -57,9 +57,12 @@ export function calcularReporteSemanal(
   const esVehPorEmpeno = new Map<string, boolean>();
   for (const e of empenos) esVehPorEmpeno.set(e.id, esVehiculoCat(e.prenda.categoria));
 
-  // Empeños nuevos de la semana → capital prestado.
+  // Empeños nuevos de la semana → capital prestado. Se usa la fecha de
+  // creación: el refrendo mueve fechaInicio al día del pago, y con ella cada
+  // refrendo contaba otra vez como empeño nuevo.
   for (const e of empenos) {
-    if (!enRango(e.fechaInicio)) continue;
+    if (e.estado === "borrador" || e.estado === "cancelado") continue;
+    if (!enRango(aISOLocal(new Date(e.creadoEn)))) continue;
     (esVehiculoCat(e.prenda.categoria) ? vehiculos : articulos).empenos += e.montoPrestado;
   }
 

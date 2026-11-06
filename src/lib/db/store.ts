@@ -17,6 +17,7 @@ import {
   empenosSeed,
   movimientosSeed,
 } from "./seed";
+import { AJUSTES_DEFAULT } from "@/lib/ajustesBase";
 
 interface Store {
   clientes: Cliente[];
@@ -35,6 +36,7 @@ interface Store {
   encuestas: import("@/lib/types").Encuesta[];
   productosInteres: import("@/lib/types").ProductoInteres[];
   checklistsVehiculares: import("@/lib/types").ChecklistVehicular[];
+  ajustes: import("@/lib/ajustesBase").Ajustes;
 }
 
 // Usar globalThis evita que el hot-reload de Next reinicie los datos en dev.
@@ -58,6 +60,7 @@ export function getStore(): Store {
       citasGps: [],
       checklistsVehiculares: [],
       encuestas: [],
+      ajustes: structuredClone(AJUSTES_DEFAULT),
       // "tasa" es el interés por separado (lo que de verdad se usa para
       // calcular): en TRADICIONAL y COMPRA (artículos, no vehículos) el
       // almacenaje se refleja igual que el interés, así que el % que ve el

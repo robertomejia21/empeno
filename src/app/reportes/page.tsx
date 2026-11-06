@@ -1,4 +1,4 @@
-import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas, listarPagos } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarPrendas, listarVentas, listarPagos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatPorcentaje } from "@/lib/format";
 import { Card, CardHeader, PageHeader } from "@/components/ui";
@@ -22,6 +22,7 @@ export default async function ReportesPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
+  const festivos = await obtenerFestivos();
   const { desde: desdeParam, hasta: hastaParam } = await searchParams;
   const rangoPorDefecto = rangoMesActual();
   const desde = desdeParam || rangoPorDefecto.desde;
@@ -55,7 +56,7 @@ export default async function ReportesPage({
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const carteraActiva = activos.reduce((s, e) => s + e.montoPrestado, 0);
-  const interesDevengado = activos.reduce((s, e) => s + calcularLiquidacion(e).interesAcumulado, 0);
+  const interesDevengado = activos.reduce((s, e) => s + calcularLiquidacion(e, undefined, festivos).interesAcumulado, 0);
 
   const desempenados = empenos.filter((e) => e.estado === "desempenado").length;
   const rematados = empenos.filter((e) => e.estado === "rematado").length;
@@ -67,7 +68,7 @@ export default async function ReportesPage({
   const porEstado = estados.map((est) => {
     const lista =
       est === "vencido"
-        ? activos.filter((e) => calcularLiquidacion(e).vencido)
+        ? activos.filter((e) => calcularLiquidacion(e, undefined, festivos).vencido)
         : empenos.filter((e) => e.estado === est);
     return { est, n: lista.length, monto: lista.reduce((s, e) => s + e.montoPrestado, 0) };
   });
@@ -109,8 +110,8 @@ export default async function ReportesPage({
   }
 
   const donaCartera = [
-    { etiqueta: "Activos", valor: activos.filter((e) => !calcularLiquidacion(e).vencido).length, color: "var(--success)" },
-    { etiqueta: "Vencidos", valor: activos.filter((e) => calcularLiquidacion(e).vencido).length, color: "var(--danger)" },
+    { etiqueta: "Activos", valor: activos.filter((e) => !calcularLiquidacion(e, undefined, festivos).vencido).length, color: "var(--success)" },
+    { etiqueta: "Vencidos", valor: activos.filter((e) => calcularLiquidacion(e, undefined, festivos).vencido).length, color: "var(--danger)" },
     { etiqueta: "Desempeñados", valor: desempenados, color: "var(--muted)" },
     { etiqueta: "Rematados", valor: rematados, color: "var(--warning)" },
   ];

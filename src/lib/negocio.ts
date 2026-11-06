@@ -33,6 +33,17 @@ export const SUCURSAL = {
   lng: -115.357967,
 } as const;
 
+/**
+ * Bodega de resguardo (vehículos y artículos que no se quedan en la matriz).
+ * Liga enviada por la sucursal ("ubicacion bodega resguardo.txt").
+ */
+export const BODEGA_RESGUARDO = {
+  nombre: "Bodega de resguardo",
+  mapsUrl: "https://maps.app.goo.gl/kMuLMZMU2N5j5Kh37",
+  lat: 32.5836813,
+  lng: -115.3787943,
+} as const;
+
 /** Número de periodos al año según el periodo del contrato. */
 export function periodosPorAnio(periodo: "mensual" | "quincenal" | "semanal" | "diario"): number {
   if (periodo === "mensual") return 12;

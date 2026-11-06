@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion, solicitarAvaluoMecanico } from "@/lib/actions";
 import { normalizarImagen } from "@/lib/imagen";
 import { prestamoSugerido } from "@/lib/interes";
+import { porcentajePrestamo, type AjustesPrestamo } from "@/lib/ajustesBase";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader } from "@/components/ui";
@@ -30,11 +31,11 @@ const FORM_VACIO = {
   condicion: "bueno" as CondicionArticulo,
   prospectoNombre: "", prospectoTelefono: "",
   valorMercado: "", busquedaFacebook: "", montoSolicitado: "",
-  porcentaje: "50", prestamoOfrecido: "",
+  porcentaje: "", prestamoOfrecido: "", // "" = usa la regla de /configuracion
   notas: "",
 };
 
-export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[] }) {
+export function CotizacionesPanel({ cotizaciones, reglaPrestamo }: { cotizaciones: Cotizacion[]; reglaPrestamo: AjustesPrestamo }) {
   const router = useRouter();
   const [f, setF] = useState(FORM_VACIO);
   const [prestamoTocado, setPrestamoTocado] = useState(false);
@@ -71,7 +72,8 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
 
   const esVehiculo = f.tipo === "vehiculo";
   const valorNum = parseFloat(f.valorMercado) || 0;
-  const pctNum = parseFloat(f.porcentaje) || 0;
+  const pctRegla = porcentajePrestamo(valorNum, reglaPrestamo);
+  const pctNum = f.porcentaje.trim() === "" ? pctRegla : parseFloat(f.porcentaje) || 0;
   const sugerido = valorNum > 0 ? prestamoSugerido(valorNum, pctNum) : 0;
   const prestamoFinal = prestamoTocado ? parseFloat(f.prestamoOfrecido) || 0 : sugerido;
 
@@ -236,7 +238,8 @@ export function CotizacionesPanel({ cotizaciones }: { cotizaciones: Cotizacion[]
               <Campo label="Búsqueda en Facebook (MXN)" type="number" value={f.busquedaFacebook} onChange={(v) => set("busquedaFacebook", v)}
                 placeholder="Precio de referencia hallado" />
               <Campo label="Monto solicitado por el cliente (MXN)" type="number" value={f.montoSolicitado} onChange={(v) => set("montoSolicitado", v)} />
-              <Campo label="% del préstamo sobre el valor" type="number" value={f.porcentaje} onChange={(v) => set("porcentaje", v)} />
+              <Campo label="% del préstamo sobre el valor" type="number" value={f.porcentaje} onChange={(v) => set("porcentaje", v)}
+                placeholder={`${pctRegla}% (según ajustes)`} />
               <div className="sm:col-span-2 xl:col-span-4">
                 <Label>Monto a prestar (MXN)</Label>
                 <input type="number" className={inputCls}

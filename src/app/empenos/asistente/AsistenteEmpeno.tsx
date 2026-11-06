@@ -33,7 +33,9 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugerido, requiereAutorizacionTasa, IVA_FIJO } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO } from "@/lib/interes";
+import type { AjustesPrestamo } from "@/lib/ajustesBase";
+import { evaluarOperacionPLD, MESES_ACUMULACION } from "@/lib/compliance";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
 import { normalizarImagen, leerArchivo } from "@/lib/imagen";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
@@ -50,6 +52,8 @@ interface ClienteOpt {
   curp: string | null;
   telefono: string | null;
   previos: number;
+  /** Préstamos del cliente en los últimos 6 meses (acumulación PLD). */
+  acumulado6m: number;
 }
 
 const inputCls =
@@ -68,7 +72,15 @@ const tiposId: { value: TipoIdentificacion; label: string }[] = [
   { value: "Otro", label: "Otro" },
 ];
 
-export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[]; productos: ProductoInteres[] }) {
+export function AsistenteEmpeno({
+  clientes,
+  productos,
+  reglaPrestamo,
+}: {
+  clientes: ClienteOpt[];
+  productos: ProductoInteres[];
+  reglaPrestamo: AjustesPrestamo;
+}) {
   const [paso, setPaso] = useState(1);
 
   // Paso 2 — cliente
@@ -256,6 +268,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
   const clienteSel = clientes.find((c) => c.id === clienteId);
   const previos = modoCliente === "existente" ? clienteSel?.previos ?? 0 : 0;
   const historial = tasaPorHistorial(previos);
+  const acumuladoPrevio = modoCliente === "existente" ? clienteSel?.acumulado6m ?? 0 : 0;
   const esVehiculo = categoria === "Vehículos";
   const esJoyeria = categoria === "Joyería";
   const avaluoNum = parseFloat(valorAvaluo) || 0;
@@ -298,7 +311,7 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
       setTasa(historial.tasa);
       setAlmacenajePct(esVehiculo ? 0 : historial.tasa);
     }
-    if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugerido(avaluoNum)));
+    if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugeridoPorRegla(avaluoNum, reglaPrestamo).monto));
     setPaso(n);
   }
 
@@ -753,7 +766,8 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
             <Campo label="Valor de avalúo (MXN)" req type="number" value={valorAvaluo} onChange={setValorAvaluo} />
             {avaluoNum > 0 && (
               <p className="text-xs text-muted">
-                Préstamo sugerido (50%): <strong>{formatMXN(prestamoSugerido(avaluoNum))}</strong>
+                Préstamo sugerido ({prestamoSugeridoPorRegla(avaluoNum, reglaPrestamo).porcentaje}%):{" "}
+                <strong>{formatMXN(prestamoSugeridoPorRegla(avaluoNum, reglaPrestamo).monto)}</strong>
               </p>
             )}
           </div>
@@ -770,6 +784,22 @@ export function AsistenteEmpeno({ clientes, productos }: { clientes: ClienteOpt[
               {formatMXN(montoNum)} en el módulo de Caja (apartado de aportación y retiro).
               </p>
             </div>
+            {(() => {
+              const ev = evaluarOperacionPLD("prestamo", montoNum, montoNum + acumuladoPrevio, metodoPago === "efectivo");
+              if (!ev.requiereAviso && !ev.cercaDeAviso) return null;
+              return (
+                <div className="flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+                  <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  <span>
+                    <strong>Alerta PLD:</strong> con este préstamo el cliente acumula{" "}
+                    {formatMXN(montoNum + acumuladoPrevio)} en {MESES_ACUMULACION} meses.{" "}
+                    {ev.requiereAviso
+                      ? "Alcanza el umbral de Aviso a la UIF/SAT: completa el expediente y avisa al Encargado de Cumplimiento."
+                      : "Está cerca del umbral de Aviso: revisa el expediente con el Encargado de Cumplimiento."}
+                  </span>
+                </div>
+              );
+            })()}
             {avaluoNum > 0 && montoNum > avaluoNum && (
               <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning">
                 <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />

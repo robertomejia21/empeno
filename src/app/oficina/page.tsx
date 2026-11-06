@@ -1,4 +1,4 @@
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { formatMXN, formatFecha, formatFechaLarga } from "@/lib/format";
 import { Card, CardHeader, Badge } from "@/components/ui";
@@ -9,6 +9,7 @@ import type { LucideIcon } from "lucide-react";
 export const metadata = { title: "Oficina Virtual — Turbo Presta El Dorado" };
 
 export default async function OficinaVirtual() {
+  const festivos = await obtenerFestivos();
   const [empenos, movimientos, clientes, prendas] = await Promise.all([
     listarEmpenos(),
     listarMovimientos(),
@@ -18,7 +19,7 @@ export default async function OficinaVirtual() {
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
   const capital = activos.reduce((s, e) => s + e.montoPrestado, 0);
-  const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e) }));
+  const conCalc = activos.map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }));
   const vencidos = conCalc.filter((x) => x.calc.vencido);
   const porVencer = conCalc
     .filter((x) => x.calc.vencido || x.calc.diasParaVencer <= 7)

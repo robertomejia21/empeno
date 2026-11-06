@@ -41,3 +41,24 @@ export const CHECKLIST_ETIQUETA: Record<ChecklistValor, string> = {
   malo: "Malo",
   na: "N/A",
 };
+
+// Revisión de vehículos en resguardo, calificada Bueno / Regular / Malo.
+// Tomada del formato "01.CHECKLIST DIARIO" (hoja "Checklist de revisión de vehículos").
+export const PUNTOS_REVISION = [
+  "Aceite",
+  "Llantas",
+  "Frenos",
+  "Luces",
+  "Batería",
+  "Fluidos",
+  "Carrocería",
+  "Interior",
+] as const;
+export type PuntoRevision = (typeof PUNTOS_REVISION)[number];
+
+export const CALIFICACIONES_REVISION = ["B", "R", "M"] as const;
+export type CalificacionRevision = (typeof CALIFICACIONES_REVISION)[number];
+export const CALIFICACION_ETIQUETA: Record<CalificacionRevision, string> = { B: "Bueno", R: "Regular", M: "Malo" };
+
+/** Responsable habitual del checklist (según el formato de la sucursal). */
+export const RESPONSABLE_CHECKLIST_DEFAULT = "José Fernando Mesa Martínez";

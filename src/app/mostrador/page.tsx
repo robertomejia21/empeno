@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listarEmpenos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -20,6 +20,7 @@ export default async function MostradorPage({
 }: {
   searchParams: Promise<{ q?: string; id?: string }>;
 }) {
+  const festivos = await obtenerFestivos();
   const { q, id } = await searchParams;
   const t = (q ?? "").trim();
   const empenos = await listarEmpenos();
@@ -68,7 +69,7 @@ export default async function MostradorPage({
           />
         </Card>
       ) : seleccion ? (
-        <Expediente e={seleccion} q={t} />
+        <Expediente e={seleccion} q={t} festivos={festivos} />
       ) : matches.length === 0 ? (
         <Card>
           <EmptyState titulo="Sin coincidencias" descripcion={`No encontramos contratos para "${t}".`} />
@@ -78,7 +79,7 @@ export default async function MostradorPage({
           <CardHeader title={`${matches.length} contrato(s)`} subtitle="Elige el contrato del cliente" />
           <ul className="divide-y divide-border">
             {matches.slice(0, 30).map((e) => {
-              const c = calcularLiquidacion(e);
+              const c = calcularLiquidacion(e, undefined, festivos);
               return (
                 <li key={e.id}>
                   <Link
@@ -109,8 +110,8 @@ export default async function MostradorPage({
   );
 }
 
-function Expediente({ e, q }: { e: EmpenoConDetalle; q: string }) {
-  const calc = calcularLiquidacion(e);
+function Expediente({ e, q, festivos }: { e: EmpenoConDetalle; q: string; festivos: string[] }) {
+  const calc = calcularLiquidacion(e, undefined, festivos);
   const activo = e.estado === "activo" || e.estado === "refrendado";
   const cli = e.cliente;
   const nombreCompleto = `${cli.nombre} ${cli.apellidoPaterno} ${cli.apellidoMaterno}`.trim();

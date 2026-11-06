@@ -33,7 +33,7 @@ export default async function ChecklistVehiculosPage() {
           <CardHeader title="Historial" subtitle={`${historial.length} checklist(s) guardados`} />
           <ul className="divide-y divide-border">
             {historial.slice(0, 15).map((c) => {
-              const incidencias = c.filas.filter((f) => f.observaciones || !f.presente).length;
+              const incidencias = c.filas.filter((f) => f.observaciones || !f.presente || Object.values(f.revision ?? {}).includes("M")).length;
               return (
                 <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
                   <div className="min-w-0">

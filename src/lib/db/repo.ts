@@ -9,6 +9,7 @@ import type {
 } from "@/lib/types";
 import type { Venta, Compra, Apartado, Usuario, Bitacora, CorteCaja, Pago } from "@/lib/types";
 import { getStore } from "./store";
+import { AJUSTES_DEFAULT, type Ajustes, type DiaFestivo } from "@/lib/ajustesBase";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import {
   rowToCliente,
@@ -396,4 +397,36 @@ export async function listarBitacora(limite = 200): Promise<Bitacora[]> {
     return (data ?? []).map(rowToBitacora);
   }
   return getStore().bitacora.slice(0, limite);
+}
+
+/**
+ * Ajustes editables (Dirección, % de préstamo, días festivos). Se guardan en
+ * la tabla `ajustes` (clave → valor jsonb; ver supabase/ajustes.sql). Si la
+ * tabla aún no existe o falta una clave, se usan los valores por defecto para
+ * que el sistema siga funcionando.
+ */
+export async function obtenerAjustes(): Promise<Ajustes> {
+  if (!supabaseConfigured) return structuredClone(getStore().ajustes);
+
+  const { data, error } = await getServerSupabase().from("ajustes").select("clave, valor");
+  if (error) {
+    console.warn("[ajustes] no se pudo leer la tabla `ajustes`, usando valores por defecto:", error.message);
+    return structuredClone(AJUSTES_DEFAULT);
+  }
+  const porClave = new Map((data ?? []).map((r: { clave: string; valor: unknown }) => [r.clave, r.valor]));
+  const direccion = porClave.get("direccion") as Partial<typeof AJUSTES_DEFAULT.direccion> | undefined;
+  const prestamo = porClave.get("prestamo") as Partial<typeof AJUSTES_DEFAULT.prestamo> | undefined;
+  const festivos = porClave.get("festivos");
+  return {
+    direccion: { ...AJUSTES_DEFAULT.direccion, ...(direccion ?? {}) },
+    prestamo: { ...AJUSTES_DEFAULT.prestamo, ...(prestamo ?? {}) },
+    festivos: Array.isArray(festivos)
+      ? (festivos as DiaFestivo[]).slice().sort((a, b) => a.fecha.localeCompare(b.fecha))
+      : [],
+  };
+}
+
+/** Solo las fechas festivas (YYYY-MM-DD), para el cálculo de días de retraso. */
+export async function obtenerFestivos(): Promise<string[]> {
+  return (await obtenerAjustes()).festivos.map((f) => f.fecha);
 }

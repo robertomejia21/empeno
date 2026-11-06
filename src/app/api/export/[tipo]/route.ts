@@ -1,4 +1,4 @@
-import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora } from "@/lib/db/repo";
+import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual } from "@/lib/reporteSemanal";
 import { getUsuarioActual } from "@/lib/session";
@@ -33,6 +33,7 @@ const RUTA_REQUERIDA: Record<string, string> = {
 };
 
 export async function GET(req: Request, { params }: { params: Promise<{ tipo: string }> }) {
+  const festivos = await obtenerFestivos();
   const { tipo } = await params;
 
   const actual = await getUsuarioActual();
@@ -55,7 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
     for (const x of e) {
       const nombreCli = `${x.cliente.nombre} ${x.cliente.apellidoPaterno} ${x.cliente.apellidoMaterno}`;
       if (!match(`${x.folio} ${nombreCli} ${x.prenda.descripcion} ${x.estado}`)) continue;
-      const c = calcularLiquidacion(x);
+      const c = calcularLiquidacion(x, undefined, festivos);
       rows.push([x.folio, nombreCli, x.prenda.descripcion, x.prenda.categoria, x.montoPrestado, x.tasaInteres, x.almacenajePct, x.ivaPct, x.metodoPago, x.fechaInicio, x.fechaVencimiento, x.estado, c.totalDesempeno]);
     }
   } else if (tipo === "movimientos" || tipo === "caja") {

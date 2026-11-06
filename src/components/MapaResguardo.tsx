@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import type { Map as LMap, Marker as LMarker, DivIcon } from "leaflet";
 import { Map as MapIcon, MapPin, Search, Store, TriangleAlert, Warehouse } from "lucide-react";
-import { SUCURSAL } from "@/lib/negocio";
+import { SUCURSAL, BODEGA_RESGUARDO } from "@/lib/negocio";
 
 const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
 
@@ -15,7 +15,7 @@ const MEXICALI: [number, number] = [SUCURSAL.lat, SUCURSAL.lng];
 // Este componente es de uso interno (requiere sesión) — nunca se muestra al cliente.
 const LUGARES_FIJOS = [
   { label: "Casa de empeño", icono: Store, texto: "Casa de empeño", url: "https://maps.app.goo.gl/2XGvvR3KLJy9KSfR7" },
-  { label: "Resguardo (bóveda)", icono: Warehouse, texto: "Resguardo (bóveda)", url: "https://maps.app.goo.gl/h2XnxGvWz9Wv9zep8" },
+  { label: BODEGA_RESGUARDO.nombre, icono: Warehouse, texto: BODEGA_RESGUARDO.nombre, url: BODEGA_RESGUARDO.mapsUrl },
 ] as const;
 
 // Los marcadores de Leaflet son HTML en texto (no JSX): se pintan con los tokens
@@ -101,6 +101,10 @@ export function MapaResguardo({
       L.marker([SUCURSAL.lat, SUCURSAL.lng], { icon: sucursalIcon })
         .addTo(map)
         .bindTooltip(SUCURSAL.nombre, { direction: "top", offset: [0, -38] });
+      // Bodega de resguardo, también siempre visible.
+      L.marker([BODEGA_RESGUARDO.lat, BODEGA_RESGUARDO.lng], { icon: sucursalIcon })
+        .addTo(map)
+        .bindTooltip(BODEGA_RESGUARDO.nombre, { direction: "top", offset: [0, -38] });
       map.on("click", (e) => { setLugarFijoUrl(null); setPin({ lat: e.latlng.lat, lng: e.latlng.lng }); });
       mapRef.current = map;
       if (pin) markerRef.current = L.marker([pin.lat, pin.lng], { icon: iconRef.current }).addTo(map);

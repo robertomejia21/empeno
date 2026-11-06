@@ -5,6 +5,8 @@
 //   - se busca "apellido nombre" en vez del orden en que está guardado
 //   - un teléfono/folio tiene otro formato (espacios, guiones)
 
+import { telefonoNacionalMX } from "./telefono";
+
 /** Quita acentos/diacríticos y pasa a minúsculas. */
 export function normalizarBusqueda(s: string): string {
   return s
@@ -38,5 +40,12 @@ export function soloDigitos(s: string | null | undefined): string {
 /** ¿El teléfono guardado contiene los dígitos buscados? Ignora formato (espacios, guiones, lada). */
 export function coincideTelefono(telefono: string | null | undefined, busqueda: string): boolean {
   const digitos = soloDigitos(busqueda);
-  return digitos.length > 0 && soloDigitos(telefono).includes(digitos);
+  if (digitos.length === 0) return false;
+  // Coincidencia parcial por dígitos (ej. buscar solo "1571095").
+  if (soloDigitos(telefono).includes(digitos)) return true;
+  // Mismo número capturado con otro prefijo (521…, 52…, 1…, 044…): compara los 10 dígitos.
+  if (digitos.length < 10) return false;
+  const buscado = telefonoNacionalMX(digitos);
+  const guardado = telefonoNacionalMX(telefono);
+  return Boolean(buscado && guardado && buscado === guardado);
 }

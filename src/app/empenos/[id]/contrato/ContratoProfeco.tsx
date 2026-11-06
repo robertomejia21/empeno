@@ -2,6 +2,7 @@ import type { EmpenoConDetalle, CalculoLiquidacion } from "@/lib/types";
 import { formatMXN, formatFecha, formatPorcentaje } from "@/lib/format";
 import { pesosALetras } from "@/lib/letras";
 import { PROVEEDOR, PROFECO, periodosPorAnio } from "@/lib/negocio";
+import { TASA_MORATORIOS } from "@/lib/interes";
 
 const periodoLabel: Record<string, string> = { mensual: "mensual", quincenal: "quincenal", semanal: "semanal", diario: "diario" };
 
@@ -25,8 +26,10 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
   const almacenajeTotal = almacenajePeriodo * empeno.plazoPeriodos;
   const ivaTotal = (interesTotal + almacenajeTotal) * (empeno.ivaPct / 100);
   const montoTotalPagar = monto + interesTotal + almacenajeTotal + ivaTotal;
-  const costoMensual = tasaAnual / 12;
-  const costoDiario = tasaAnual / 360;
+  // CAT y costos totales (sin IVA): interés + almacenaje, como pide la carátula PROFECO.
+  const costoAnualTotal = (empeno.tasaInteres + empeno.almacenajePct) * periodosPorAnio(empeno.periodo);
+  const costoMensual = costoAnualTotal / 12;
+  const costoDiario = costoAnualTotal / 360;
   const pctPrestamo = p.valorAvaluo > 0 ? (monto / p.valorAvaluo) * 100 : 0;
   const inicioComercializacion = sumarDias(empeno.fechaVencimiento, empeno.diasGracia);
   const caracteristicas =
@@ -76,8 +79,8 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
         </thead>
         <tbody>
           <tr className="align-top">
-            <td className="border-r border-black p-1 font-bold">{formatPorcentaje(tasaAnual)}</td>
-            <td className="border-r border-black p-1 font-bold">{formatPorcentaje(tasaAnual)}</td>
+            <td className="border-r border-black p-1 font-bold">{formatPorcentaje(costoAnualTotal)} FIJO<br /><span className="text-[8px] font-normal">Sin IVA</span></td>
+            <td className="border-r border-black p-1 font-bold">{formatPorcentaje(tasaAnual)}<br /><span className="text-[8px] font-normal">TASA FIJA</span></td>
             <td className="border-r border-black p-1 font-bold">{formatMXN(monto)}<br /><span className="text-[8px] font-normal">Moneda Nacional</span></td>
             <td className="border-r border-black p-1 font-bold">{formatMXN(montoTotalPagar)}<br /><span className="text-[8px] font-normal">Estimado al plazo máximo</span></td>
             <td className="p-1 text-left text-[8.5px] leading-tight">
@@ -85,7 +88,7 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
               Avalúo: $______ [Cláus. 11 b)]<br />
               Comercialización: ____% [Cláus. 11 c)]<br />
               Reposición de contrato: $______ [Cláus. 11 d)]<br />
-              Desempeño extemporáneo: ____% [Cláus. 11 e)]<br />
+              Desempeño extemporáneo: {formatPorcentaje(TASA_MORATORIOS)} [Cláus. 11 e)]<br />
               Gastos de administración: $______ [Cláus. 11 f)]
             </td>
           </tr>
@@ -218,12 +221,19 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
         corresponda, liberándolo de cualquier responsabilidad jurídica que hubiere surgido o pudiese surgir en relación
         al contrato y a la prenda.
       </p>
+      <div className="mt-3 grid grid-cols-2 gap-6 text-center text-[9px]">
+        <div>
+          <p className="text-left">FECHA: ______ de ______________ de ______.</p>
+          <div className="mt-6 border-t border-black pt-1 font-semibold">&ldquo;EL CONSUMIDOR&rdquo; (al desempeñar)</div>
+        </div>
+        <p className="self-start text-left">FECHA: {formatFecha(empeno.fechaInicio)}.</p>
+      </div>
 
       {/* Firmas */}
       <div className="mt-8 grid grid-cols-3 gap-6 text-center text-[9.5px]">
         <Firma titulo="EL CONSUMIDOR" nombre={`${c.nombre} ${c.apellidoPaterno} ${c.apellidoMaterno}`} firma={empeno.firmaCliente} fecha={empeno.firmaFecha} />
         <Firma titulo="EL PROVEEDOR" nombre={PROVEEDOR.marca} />
-        <Firma titulo="EL VALUADOR" nombre=" " />
+        <Firma titulo="EL VALUADOR" nombre="(Nombre o clave)" />
       </div>
 
       <p className="mt-6 text-justify text-[8.5px]">

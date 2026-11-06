@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { obtenerEmpeno } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerFestivos } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
 import { generarQR, urlPrenda } from "@/lib/qr";
 import { SUCURSAL } from "@/lib/negocio";
@@ -12,11 +12,12 @@ export const metadata: Metadata = {
 };
 
 export default async function FirmarPage({ params }: { params: Promise<{ id: string }> }) {
+  const festivos = await obtenerFestivos();
   const { id } = await params;
   const empeno = await obtenerEmpeno(id);
   if (!empeno) notFound();
 
-  const calc = calcularLiquidacion(empeno);
+  const calc = calcularLiquidacion(empeno, undefined, festivos);
   const qrPrenda = await generarQR(urlPrenda(empeno.prenda.id), 130);
 
   return (

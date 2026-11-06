@@ -28,7 +28,9 @@ export default async function ConfiguracionPage() {
     <div className="mx-auto max-w-4xl">
       <PageHeader title="Configuración" subtitle="Parámetros del sistema y datos de la empresa" />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <AjustesConfig ajustes={ajustes} editable={actual.rol === "admin"} />
+
+      <div className="mt-6 grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader title="Datos de la empresa" />
           <dl className="space-y-3 p-5 text-sm">
@@ -71,8 +73,6 @@ export default async function ConfiguracionPage() {
           </dl>
         </Card>
       </div>
-
-      <AjustesConfig ajustes={ajustes} editable={actual.rol === "admin"} />
 
       {actual.rol === "admin" ? (
         <ProductosInteresConfig productos={productos} />

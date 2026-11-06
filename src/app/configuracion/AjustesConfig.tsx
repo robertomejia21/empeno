@@ -29,7 +29,7 @@ export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editabl
   const pasados = festivos.length - proximos.length;
 
   return (
-    <div className="mt-6 grid gap-6 md:grid-cols-2">
+    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       <Card>
         <CardHeader title="Dirección" subtitle="Recibe los reportes y las alertas de autorización" />
         <form action={guardarAjustesDireccion} className="space-y-3 p-5">
@@ -66,7 +66,7 @@ export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editabl
         </form>
       </Card>
 
-      <Card className="md:col-span-2">
+      <Card className="md:col-span-2 xl:col-span-1">
         <CardHeader
           title="Días festivos (sucursal cerrada)"
           subtitle="Junto con los domingos, estos días no cuentan como día de retraso ni generan moratorios"
@@ -100,7 +100,7 @@ export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editabl
           )}
 
           {editable && (
-            <div className="grid gap-3 lg:grid-cols-2">
+            <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-1">
               <form action={agregarDiaFestivo} className="flex flex-wrap items-end gap-2 rounded-xl border border-border bg-surface-2/50 p-3">
                 <div className="min-w-0 flex-1 basis-36">
                   <Campo label="Fecha">

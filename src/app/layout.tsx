@@ -58,7 +58,7 @@ export default async function RootLayout({
             <Sidebar usuario={usuario} />
             <div className="flex min-w-0 flex-1 flex-col">
               <MobileMenu usuario={usuario} />
-              <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 py-5 sm:px-6 md:py-8 xl:px-10">
+              <main className="mx-auto w-full max-w-[2200px] flex-1 px-4 py-5 sm:px-6 md:py-8 xl:px-10 2xl:px-12">
                 {children}
               </main>
             </div>

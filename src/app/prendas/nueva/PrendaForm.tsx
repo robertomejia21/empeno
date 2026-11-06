@@ -40,10 +40,10 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
   const rangoReferencia = esVehiculo ? rangoPorAnio(parseInt(modeloAnio, 10)) : null;
 
   return (
-    <form action={crearPrenda}>
+    <form action={crearPrenda} className="grid items-start gap-6 xl:grid-cols-2">
       <Card>
         <CardHeader title="Departamento y descripción" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Departamento <span className="text-danger">*</span>
@@ -63,7 +63,7 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
             </select>
           </label>
           <div />
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 2xl:col-span-3">
             <Field
               label="Descripción del bien"
               name="descripcion"
@@ -76,9 +76,9 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
 
       {/* Datos específicos por departamento */}
       {esVehiculo ? (
-        <Card className="mt-6">
+        <Card>
           <CardHeader title="Datos del vehículo" />
-          <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+          <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
             <Field label="Marca" name="marca" placeholder="Ej. Nissan" />
             <Field label="Submarca / línea" name="submarca" placeholder="Ej. Versa" />
             <label className="flex flex-col gap-1.5">
@@ -171,9 +171,9 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
           </div>
         </Card>
       ) : esJoyeria ? (
-        <Card className="mt-6">
+        <Card>
           <CardHeader title="Datos de joyería" />
-          <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+          <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
             <Field label="Metal" name="metal" placeholder="Oro, plata..." />
             <Field label="Kilataje" name="kilataje" placeholder="10k, 14k, 18k, 24k" />
             <Field label="Gramos" name="gramos" type="number" step="0.01" />
@@ -181,9 +181,9 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
           </div>
         </Card>
       ) : (
-        <Card className="mt-6">
+        <Card>
           <CardHeader title="Identificación del bien" />
-          <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+          <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
             <Field label="Marca" name="marca" />
             <Field label="Modelo" name="modelo" />
             <Field label="Número de serie" name="serie" />
@@ -192,9 +192,9 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
         </Card>
       )}
 
-      <Card className="mt-6">
+      <Card>
         <CardHeader title="Monto solicitado" subtitle="Lo que pide el cliente, antes de avaluar el bien" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">Monto solicitado por el cliente (MXN)</span>
             <input
@@ -209,9 +209,9 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
         </div>
       </Card>
 
-      <Card className="mt-6">
+      <Card>
         <CardHeader title="Avalúo" subtitle="Valor comercial y préstamo recomendado" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-6">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-6">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Valor de avalúo (MXN) <span className="text-danger">*</span>
@@ -250,7 +250,7 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
         )}
       </Card>
 
-      <Card className="mt-6">
+      <Card className="xl:col-span-2">
         <CardHeader title="Resguardo y notas" />
         <div className="grid gap-4 p-4 sm:p-6">
           <input type="hidden" name="ubicacionResguardo" value={ubicacionResguardo} />
@@ -263,7 +263,7 @@ export function PrendaForm({ reglaPrestamo }: { reglaPrestamo: AjustesPrestamo }
         </div>
       </Card>
 
-      <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end xl:col-span-2">
         <Link
           href="/prendas"
           className="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"

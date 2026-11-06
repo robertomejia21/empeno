@@ -5,7 +5,7 @@ import { obtenerAjustes } from "@/lib/db/repo";
 export default async function NuevaPrenda() {
   const { prestamo } = await obtenerAjustes();
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageHeader
         title="Registrar artículo"
         subtitle="Captura del bien y su avalúo (empeño o compra)"

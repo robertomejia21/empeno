@@ -30,7 +30,7 @@ export default async function NuevoEmpeno({
   }));
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageHeader title="Nuevo empeño" subtitle="Registro del contrato prendario" />
       <EmpenoForm clientes={clientes} prendas={prendas} clienteInicial={cliente} />
     </div>

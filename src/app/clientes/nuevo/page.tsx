@@ -13,25 +13,23 @@ const tiposId = [
 
 export default function NuevoCliente() {
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageHeader title="Nuevo cliente" subtitle="Registro KYC / prevención de lavado" />
 
-      <form action={crearCliente}>
-        <Card>
+      <form action={crearCliente} className="grid items-start gap-6 xl:grid-cols-2">
+        <Card className="xl:col-span-2">
           <CardHeader title="Datos personales" />
-          <div className="grid gap-4 p-5 sm:grid-cols-2">
+          <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
             <Field label="Nombre(s)" name="nombre" required />
-            <div />
             <Field label="Apellido paterno" name="apellidoPaterno" required />
             <Field label="Apellido materno" name="apellidoMaterno" />
             <Field label="CURP" name="curp" placeholder="18 caracteres" />
             <Field label="RFC" name="rfc" />
             <Field label="Fecha de nacimiento" name="fechaNacimiento" type="date" />
-            <div />
           </div>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader title="Identificación oficial" subtitle="Requerida por normativa PLD" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <SelectField
@@ -49,7 +47,7 @@ export default function NuevoCliente() {
           </div>
         </Card>
 
-        <Card className="mt-6">
+        <Card>
           <CardHeader title="Contacto" />
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             <Field label="Teléfono" name="telefono" type="tel" />
@@ -63,7 +61,7 @@ export default function NuevoCliente() {
           </div>
         </Card>
 
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="flex justify-end gap-3 xl:col-span-2">
           <Link
             href="/clientes"
             className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium hover:bg-surface-2"

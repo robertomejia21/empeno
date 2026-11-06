@@ -34,7 +34,7 @@ export default function AvaluoPage() {
   const prestamoSugerido = valorMetal * (porcentaje / 100);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-7xl">
       <PageHeader title="Avalúo de metales" subtitle="Calculadora de oro y plata por gramaje" />
 
       <div className="grid gap-6 md:grid-cols-2">

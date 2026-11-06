@@ -251,7 +251,10 @@ export async function actualizarCliente(id: string, form: FormData) {
         notas: datos.notas,
       });
   }
+  await bitacoraAuto("Cliente actualizado", `${datos.nombre} ${datos.apellido_paterno}`.trim(), null);
   revalidatePath("/clientes");
+  revalidatePath(`/clientes/${id}`);
+  revalidatePath("/cumplimiento");
   redirect(`/clientes/${id}`);
 }
 

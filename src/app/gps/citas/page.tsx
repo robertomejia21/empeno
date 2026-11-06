@@ -6,7 +6,7 @@ import { AgendaGps } from "./AgendaGps";
 export default async function CitasGpsPage() {
   const citas = await listarCitasGps();
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-7xl">
       <VolverLink href="/gps" label="GPS y resguardo" />
       <PageHeader
         title="Citas de GPS"

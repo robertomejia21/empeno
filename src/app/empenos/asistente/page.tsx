@@ -25,7 +25,7 @@ export default async function AsistentePage() {
   }));
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Asistente de empeño"
         subtitle="Flujo guiado PRENDAFLEX · Etapa 1: Empeños"

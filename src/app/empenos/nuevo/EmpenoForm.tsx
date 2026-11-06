@@ -84,10 +84,10 @@ export function EmpenoForm({
   const sinPrendas = prendas.length === 0;
 
   return (
-    <form action={crearEmpeno}>
+    <form action={crearEmpeno} className="grid items-start gap-6 xl:grid-cols-2">
       <Card>
         <CardHeader title="1. Cliente" subtitle="Selecciona el cliente del empeño" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 2xl:grid-cols-3 sm:p-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Cliente <span className="text-danger">*</span>
@@ -124,7 +124,7 @@ export function EmpenoForm({
         </div>
       </Card>
 
-      <Card className="mt-6">
+      <Card>
         <CardHeader title="2. Prenda en garantía" subtitle="Bien que respalda el préstamo" />
         <div className="p-4 sm:p-5">
           {sinPrendas ? (
@@ -159,9 +159,9 @@ export function EmpenoForm({
         </div>
       </Card>
 
-      <Card className="mt-6">
+      <Card className="xl:col-span-2">
         <CardHeader title="3. Condiciones del préstamo" />
-        <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">
+        <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3 sm:p-5">
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">
               Monto a prestar (MXN) <span className="text-danger">*</span>
@@ -237,7 +237,7 @@ export function EmpenoForm({
           </label>
           <Field label="Días de gracia" name="diasGracia" type="number" defaultValue={7} />
 
-          <div className="sm:col-span-2">
+          <div className="sm:col-span-2 xl:col-span-3">
             <TextArea label="Notas" name="notas" />
           </div>
         </div>
@@ -245,7 +245,7 @@ export function EmpenoForm({
 
       {/* Cotización: Préstamo/Avalúo uno junto al otro, Refrendo/Desempeño con
           la fórmula real — mismos números que se van a cobrar después. */}
-      <Card className="mt-6 overflow-hidden border-primary/30">
+      <Card className="overflow-hidden border-primary/30 xl:col-span-2">
         <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
           <Resumen etiqueta="Préstamo" valor={formatMXN(monto)} />
           <Resumen etiqueta="Avalúo" valor={formatMXN(prenda?.valorAvaluo ?? 0)} />
@@ -262,7 +262,7 @@ export function EmpenoForm({
         </p>
       </Card>
 
-      <div className="mt-6 flex flex-wrap justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3 xl:col-span-2">
         <Link
           href="/empenos"
           className="inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"

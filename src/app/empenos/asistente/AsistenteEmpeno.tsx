@@ -525,9 +525,9 @@ export function AsistenteEmpeno({
                 )}
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {/* Escaneo de INE + foto del cliente */}
-                <div className="sm:col-span-2 flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
+                <div className="sm:col-span-2 xl:col-span-3 flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary-soft/40 p-3">
                   <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg shadow-soft transition hover:brightness-105">
                     {escaneando ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -587,7 +587,7 @@ export function AsistenteEmpeno({
                   </select>
                 </div>
                 <Campo label="Número de identificación" req value={cn.numeroIdentificacion} onChange={(v) => setCn({ ...cn, numeroIdentificacion: v })} />
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2 xl:col-span-3">
                   <Campo label="Dirección" value={cn.direccion} onChange={(v) => setCn({ ...cn, direccion: v })} />
                 </div>
               </div>
@@ -686,7 +686,7 @@ export function AsistenteEmpeno({
                   </div>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   <Campo label="Tipo de vehículo" value={veh.tipoVehiculo} onChange={(v) => setVeh({ ...veh, tipoVehiculo: v })} placeholder="Sedán / Pick-up / SUV" />
                   <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} placeholder="Nissan" />
                   <Campo label="Submarca / línea" value={bien.submarca} onChange={(v) => setBien({ ...bien, submarca: v })} placeholder="Versa" />
@@ -706,7 +706,7 @@ export function AsistenteEmpeno({
                   <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     <ReceiptText className="h-4 w-4 text-muted" aria-hidden /> Factura
                   </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <Campo label="No. de factura" value={veh.numeroFactura} onChange={(v) => setVeh({ ...veh, numeroFactura: v })} />
                     <Campo label="Emisor de la factura" value={veh.emisorFactura} onChange={(v) => setVeh({ ...veh, emisorFactura: v })} />
                     <Campo label="Valor de factura (MXN)" type="number" value={veh.valorFactura} onChange={(v) => setVeh({ ...veh, valorFactura: v })} />
@@ -721,7 +721,7 @@ export function AsistenteEmpeno({
                   <p className="inline-flex items-center gap-1.5 text-sm font-semibold text-foreground">
                     <ShieldCheck className="h-4 w-4 text-muted" aria-hidden /> Seguro, pensión y GPS
                   </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     <Campo label="Aseguradora" value={veh.aseguradora} onChange={(v) => setVeh({ ...veh, aseguradora: v })} />
                     <Campo label="Póliza" value={veh.poliza} onChange={(v) => setVeh({ ...veh, poliza: v })} />
                     <Campo label="Seguro mensual (MXN)" type="number" value={veh.seguroMensual} onChange={(v) => setVeh({ ...veh, seguroMensual: v })} />
@@ -732,14 +732,14 @@ export function AsistenteEmpeno({
                 </div>
               </>
             ) : esJoyeria ? (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <Campo label="Metal" value={bien.metal} onChange={(v) => setBien({ ...bien, metal: v })} placeholder="Oro" />
                 <Campo label="Kilataje" value={bien.kilataje} onChange={(v) => setBien({ ...bien, kilataje: v })} placeholder="14k" />
                 <Campo label="Gramos" type="number" value={bien.gramos} onChange={(v) => setBien({ ...bien, gramos: v })} />
                 <Campo label="Color" value={bien.color} onChange={(v) => setBien({ ...bien, color: v })} />
               </div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 <Campo label="Marca" value={bien.marca} onChange={(v) => setBien({ ...bien, marca: v })} />
                 <Campo label="Modelo" value={bien.modelo} onChange={(v) => setBien({ ...bien, modelo: v })} />
                 <Campo label="Número de serie" value={bien.serie} onChange={(v) => setBien({ ...bien, serie: v })} />
@@ -917,7 +917,7 @@ export function AsistenteEmpeno({
                 </p>
               );
             })()}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
               <Campo label="Almacenaje (% por periodo)" type="number" value={String(almacenajePct)} onChange={(v) => setAlmacenajePct(parseFloat(v) || 0)} />
               <div>

@@ -72,7 +72,7 @@ export default async function PrendaDetalle({ params }: { params: Promise<{ id: 
   const tieneFicha = fichaVehiculo.some(([, v]) => v) || p.danios || p.gpsUbicacion;
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div>
       <VolverLink href="/prendas" label="Comprar" />
       <PageHeader
         title={p.descripcion}

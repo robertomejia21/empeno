@@ -107,7 +107,7 @@ export function ChecklistVehiculosForm({ vehiculos }: { vehiculos: Prenda[] }) {
           />
         </label>
 
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {vehiculos.map((v) => (
             <div key={v.id} className="min-w-0 rounded-xl border border-border bg-surface p-4">
               <p className="break-words text-sm font-semibold text-foreground">

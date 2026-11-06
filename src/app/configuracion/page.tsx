@@ -25,12 +25,12 @@ export default async function ConfiguracionPage() {
   const [productos, ajustes] = await Promise.all([listarProductosInteres(), obtenerAjustes()]);
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <PageHeader title="Configuración" subtitle="Parámetros del sistema y datos de la empresa" />
 
       <AjustesConfig ajustes={ajustes} editable={actual.rol === "admin"} />
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-6 md:grid-cols-2 2xl:grid-cols-4">
         <Card>
           <CardHeader title="Datos de la empresa" />
           <dl className="space-y-3 p-5 text-sm">

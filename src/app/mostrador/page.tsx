@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { listarEmpenos, obtenerFestivos } from "@/lib/db/repo";
+import { listarEmpenos, obtenerFestivos, listarProductosInteres } from "@/lib/db/repo";
+import { SimuladorRapido } from "./SimuladorRapido";
 import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -23,7 +24,7 @@ export default async function MostradorPage({
   const festivos = await obtenerFestivos();
   const { q, id } = await searchParams;
   const t = (q ?? "").trim();
-  const empenos = await listarEmpenos();
+  const [empenos, productos] = await Promise.all([listarEmpenos(), listarProductosInteres(true)]);
 
   // Coincidencias por nombre/apellido (sin acentos, cualquier orden), prenda,
   // teléfono (por dígitos, sin importar formato) o número de contrato.
@@ -62,12 +63,15 @@ export default async function MostradorPage({
       </div>
 
       {!t ? (
-        <Card>
-          <EmptyState
-            titulo="Escribe para atender al cliente"
-            descripcion="Teclea el apellido o el número de contrato y aparecerá el expediente con los montos a cobrar."
-          />
-        </Card>
+        <div className="space-y-6">
+          <SimuladorRapido productos={productos} />
+          <Card>
+            <EmptyState
+              titulo="Escribe para atender al cliente"
+              descripcion="Teclea el apellido o el número de contrato y aparecerá el expediente con los montos a cobrar."
+            />
+          </Card>
+        </div>
       ) : seleccion ? (
         <Expediente e={seleccion} q={t} festivos={festivos} />
       ) : matches.length === 0 ? (

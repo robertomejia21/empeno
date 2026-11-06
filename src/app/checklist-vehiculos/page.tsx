@@ -11,7 +11,7 @@ export default async function ChecklistVehiculosPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div>
       <PageHeader
         title="Checklist diario de vehículos"
         subtitle="Revisión física de los vehículos que están en resguardo — una vez al día"

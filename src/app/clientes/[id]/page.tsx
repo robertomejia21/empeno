@@ -6,7 +6,7 @@ import { tasaPorHistorial } from "@/lib/interes";
 import { formatFecha, formatFechaLarga, formatMXN } from "@/lib/format";
 import { Card, CardHeader, PageHeader, LinkButton, Badge, VolverLink } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
-import { FileText, Plus, Receipt, TriangleAlert } from "lucide-react";
+import { FileText, Pencil, Plus, Receipt, TriangleAlert } from "lucide-react";
 
 export default async function ClienteDetalle({
   params,
@@ -24,7 +24,7 @@ export default async function ClienteDetalle({
   const { tasa, nivel, requiereAutorizacion } = tasaPorHistorial(previos);
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div>
       <VolverLink href="/clientes" label="Clientes" />
       <PageHeader
         title={`${cliente.nombre} ${cliente.apellidoPaterno} ${cliente.apellidoMaterno}`}
@@ -40,6 +40,13 @@ export default async function ClienteDetalle({
               <FileText className="h-4 w-4" aria-hidden />
               Estado de cuenta
             </a>
+            <Link
+              href={`/clientes/${cliente.id}/editar`}
+              className="shadow-soft inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium transition hover:bg-surface-2"
+            >
+              <Pencil className="h-4 w-4" aria-hidden />
+              Editar cliente
+            </Link>
             <LinkButton href={`/empenos/nuevo?cliente=${cliente.id}`}>
               <Plus className="h-4 w-4" aria-hidden />
               Nuevo empeño

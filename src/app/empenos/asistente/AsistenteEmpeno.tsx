@@ -315,7 +315,8 @@ export function AsistenteEmpeno({
     setPaso(n);
   }
 
-  const autoVerificado = sinRobo && docFactura && docTarjeta && docIdent;
+  // Solo el REPUVE sin reporte de robo es obligatorio; los documentos se marcan como referencia.
+  const autoVerificado = sinRobo;
 
   function puedeAvanzar(): boolean {
     switch (paso) {
@@ -338,7 +339,7 @@ export function AsistenteEmpeno({
 
   async function finalizar() {
     if (esVehiculo && !autoVerificado) {
-      setError("Para vehículos debes verificar REPUVE (sin reporte de robo) y la documentación completa.");
+      setError("Para vehículos debes consultar REPUVE y confirmar que no tiene reporte de robo.");
       setPaso(4);
       return;
     }
@@ -737,7 +738,7 @@ export function AsistenteEmpeno({
                     <Casilla label="Documentación resguardada" checked={documentacion} onChange={setDocumentacion} />
                   </div>
                   {!autoVerificado && (
-                    <p className="text-xs text-warning">Marca REPUVE sin robo + factura + tarjeta + identificación para poder continuar al avalúo.</p>
+                    <p className="text-xs text-warning">Marca "REPUVE consultado: SIN reporte de robo" para poder continuar al avalúo.</p>
                   )}
                 </div>
 

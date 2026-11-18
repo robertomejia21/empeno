@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, Plus, TriangleAlert } from "lucide-react";
 import { crearEmpeno } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, IVA_FIJO } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, IVA_FIJO, diasGraciaSugeridos } from "@/lib/interes";
 import { CargosEditor } from "@/components/CargosEditor";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
-import { Card, CardHeader, Button, Field, SelectField, TextArea } from "@/components/ui";
+import { Card, CardHeader, Button, SelectField, TextArea } from "@/components/ui";
 import type { CategoriaPrenda, PeriodoInteres } from "@/lib/types";
 
 interface ClienteOpt {
@@ -46,6 +46,7 @@ export function EmpenoForm({
   const [monto, setMonto] = useState(0);
   const [tasa, setTasa] = useState(historial.interes);
   const [almacenajePct, setAlmacenajePct] = useState(historial.almacenaje);
+  const [diasGracia, setDiasGracia] = useState(diasGraciaSugeridos(prenda ? prenda.categoria === "Vehículos" : true));
 
   const vencimiento = useMemo(
     () => calcularVencimiento(fechaInicio, periodo as "mensual" | "quincenal" | "semanal", plazo),
@@ -58,6 +59,7 @@ export function EmpenoForm({
     const h = tasaPorHistorial(previos, p ? p.categoria === "Vehículos" : true);
     setTasa(h.interes);
     setAlmacenajePct(h.almacenaje);
+    setDiasGracia(diasGraciaSugeridos(p ? p.categoria === "Vehículos" : true));
   }
   const previewCalc = useMemo(() => {
     if (monto <= 0 || tasa <= 0) return null;
@@ -67,12 +69,12 @@ export function EmpenoForm({
       periodo: periodo as PeriodoInteres,
       fechaInicio,
       fechaVencimiento: vencimiento,
-      diasGracia: 7,
+      diasGracia,
       almacenajePct,
       ivaPct: IVA_FIJO,
       abonoCapital: 0,
     });
-  }, [monto, tasa, periodo, fechaInicio, vencimiento, almacenajePct]);
+  }, [monto, tasa, periodo, fechaInicio, vencimiento, almacenajePct, diasGracia]);
 
   // Cuando cambia el cliente, sugerir su tasa por historial
   function onCliente(id: string) {
@@ -240,7 +242,18 @@ export function EmpenoForm({
               className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
-          <Field label="Días de gracia" name="diasGracia" type="number" defaultValue={7} />
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">Días de gracia</span>
+            <input
+              name="diasGracia"
+              type="number"
+              min={0}
+              value={diasGracia}
+              onChange={(e) => setDiasGracia(parseInt(e.target.value) || 0)}
+              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            <span className="text-xs text-muted">Automóvil 5 · artículo 3</span>
+          </label>
 
           <div className="sm:col-span-2 xl:col-span-1">
             <TextArea label="Notas" name="notas" />

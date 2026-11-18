@@ -30,7 +30,7 @@ import type {
   FilaChecklistVehiculo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva, diasGraciaSugeridos } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { listarPagos } from "@/lib/db/repo";
@@ -453,7 +453,7 @@ export async function crearEmpeno(form: FormData) {
   const comisionista = sn(form, "comisionista");
   const centroCosto = sn(form, "centroCosto");
   const realSucursal = form.get("realSucursal") ? num(form, "realSucursal") : null;
-  const diasGracia = form.get("diasGracia") ? Math.round(num(form, "diasGracia")) : 7;
+  const diasGracia = form.get("diasGracia") ? Math.round(num(form, "diasGracia")) : diasGraciaSugeridos(prendaCat === "Vehículos");
   const fechaVencimiento = calcularVencimiento(fechaInicio, periodo, plazoPeriodos);
   const especial = requiereAutorizacionTasa(tasaInteres, almacenajePct, ivaPct);
   const tasaTotal = tasaEfectiva(tasaInteres, almacenajePct, ivaPct);

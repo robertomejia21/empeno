@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO, desgloseProducto, tasaEfectiva } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO, desgloseProducto, tasaEfectiva, diasGraciaSugeridos } from "@/lib/interes";
 import { CargosEditor } from "@/components/CargosEditor";
 import type { AjustesPrestamo } from "@/lib/ajustesBase";
 import { evaluarOperacionPLD, MESES_ACUMULACION } from "@/lib/compliance";
@@ -228,7 +228,7 @@ export function AsistenteEmpeno({
   const [comisionista, setComisionista] = useState("");
   const [periodo, setPeriodo] = useState<PeriodoInteres>("mensual");
   const [plazo, setPlazo] = useState(1);
-  const [diasGracia, setDiasGracia] = useState(7);
+  const [diasGracia, setDiasGracia] = useState(5);
   const [fechaInicio, setFechaInicio] = useState(hoyISO());
 
   // Paso 8 — resguardo
@@ -311,6 +311,7 @@ export function AsistenteEmpeno({
     if (n === 6) {
       setTasa(historial.interes);
       setAlmacenajePct(historial.almacenaje);
+      setDiasGracia(diasGraciaSugeridos(esVehiculo));
       setProductoSelId(null);
     }
     if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugeridoPorRegla(avaluoNum, reglaPrestamo).monto));
@@ -979,7 +980,7 @@ export function AsistenteEmpeno({
                 </select>
               </div>
               <Campo label="Plazo (periodos)" type="number" value={String(plazo)} onChange={(v) => setPlazo(parseInt(v) || 1)} />
-              <Campo label="Días de gracia" type="number" value={String(diasGracia)} onChange={(v) => setDiasGracia(parseInt(v) || 0)} />
+              <Campo label={`Días de gracia (sugerido: ${diasGraciaSugeridos(esVehiculo)})`} type="number" value={String(diasGracia)} onChange={(v) => setDiasGracia(parseInt(v) || 0)} />
               <div>
                 <Label>Fecha de inicio</Label>
                 <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className={inputCls} />

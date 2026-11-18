@@ -205,6 +205,15 @@ export function requiereAutorizacionTasa(interesPct: number, almacenajePct = 0, 
   return total > 0 && total <= TASA_MINIMA_LIBRE;
 }
 
+/**
+ * Días de gracia después del vencimiento antes de perder el bien:
+ * 5 para automóviles y 3 para el resto de los artículos. Se precargan y el
+ * personal los puede ajustar.
+ */
+export function diasGraciaSugeridos(esVehiculo: boolean): number {
+  return esVehiculo ? 5 : 3;
+}
+
 /** Tasa especial de vehículos (total): nunca se asigna sola, siempre con autorización de Dirección. */
 export const TASA_ESPECIAL_DIRECCION = 6.48;
 

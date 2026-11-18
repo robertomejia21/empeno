@@ -187,6 +187,23 @@ export const IVA_FIJO = 8;
  */
 export const TASA_MORATORIOS = 6;
 
+/** Desglose de UN periodo (lo que se cobra en un refrendo), redondeado a centavos. */
+export function cargosPeriodo(e: Pick<Empeno, "montoPrestado" | "tasaInteres" | "almacenajePct" | "ivaPct">): {
+  interes: number;
+  almacenaje: number;
+  iva: number;
+} {
+  const interes = round2(e.montoPrestado * (e.tasaInteres / 100));
+  const almacenaje = round2(e.montoPrestado * (e.almacenajePct / 100));
+  const iva = round2((interes + almacenaje) * (e.ivaPct / 100));
+  return { interes, almacenaje, iva };
+}
+
+/**
+ * Moratorios que cobra el sistema: se calculan solos según el atraso y no se
+ * pueden quitar ni editar en caja (para condonar se usa el descuento, con sus
+ * topes por rol).
+ */
 export function moratoriosSugeridos(montoPrestado: number, vencido: boolean): number {
   return vencido ? Math.round(montoPrestado * (TASA_MORATORIOS / 100) * 100) / 100 : 0;
 }

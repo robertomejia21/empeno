@@ -30,7 +30,7 @@ import type {
   FilaChecklistVehiculo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva, diasGraciaSugeridos } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva, diasGraciaSugeridos, cargosPeriodo, moratoriosSugeridos } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { listarPagos } from "@/lib/db/repo";
@@ -548,17 +548,17 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   if (!e) return;
 
   // Desglose de un periodo
-  const interesP = round2(e.montoPrestado * (e.tasaInteres / 100));
-  const almacenajeP = round2(e.montoPrestado * (e.almacenajePct / 100));
-  const ivaP = round2((interesP + almacenajeP) * (e.ivaPct / 100));
+  const { interes: interesP, almacenaje: almacenajeP, iva: ivaP } = cargosPeriodo(e);
+  // Moratorios: los calcula el sistema según el atraso; no se aceptan del formulario.
+  const calcRef = calcularLiquidacion(e, undefined, await obtenerReglasCalculo());
+  const moratorios = moratoriosSugeridos(e.montoPrestado, calcRef.vencido);
 
   const g = (k: string) => {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
-    return Number.isFinite(v) ? v : 0;
+    return Number.isFinite(v) && v > 0 ? v : 0;
   };
   const capitalPendiente = Math.max(0, e.montoPrestado - e.abonoCapital);
-  const abonoCapital = Math.min(g("abonoCapital"), capitalPendiente);
-  const moratorios = g("moratorios");
+  const abonoCapital = Math.min(Math.max(0, g("abonoCapital")), capitalPendiente);
   const descuento = g("descuento");
   const gastosAdmin = g("gastosAdmin");
   const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
@@ -663,9 +663,10 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
 
   const g = (k: string) => {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
-    return Number.isFinite(v) ? v : 0;
+    return Number.isFinite(v) && v > 0 ? v : 0;
   };
-  const moratorios = g("moratorios");
+  // Moratorios: los calcula el sistema según el atraso; no se aceptan del formulario.
+  const moratorios = moratoriosSugeridos(e.montoPrestado, calc.vencido);
   const gastosAdmin = g("gastosAdmin");
   const rentaGps = g("rentaGps");
   const rentaSeguro = g("rentaSeguro");

@@ -1,20 +1,18 @@
 import Link from "next/link";
 import { listarEmpenos, obtenerReglasCalculo, listarProductosInteres } from "@/lib/db/repo";
 import { SimuladorRapido } from "./SimuladorRapido";
-import { calcularLiquidacion, moratoriosSugeridos } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos, cargosPeriodo } from "@/lib/interes";
+import { RefrendoForm } from "@/app/empenos/[id]/RefrendoForm";
+import { DesempenoForm } from "@/app/empenos/[id]/DesempenoForm";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader, PageHeader, SearchForm, EmptyState } from "@/components/ui";
 import { estadoEmpenoBadge } from "@/components/badges";
-import { ConfirmSubmit } from "@/components/actions-ui";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import type { EmpenoConDetalle, CalculoLiquidacion } from "@/lib/types";
 import { Archive, ArrowLeft, ArrowRight, MapPin, Package, Phone, Printer, User } from "lucide-react";
 
 export const metadata = { title: "Mostrador" };
-
-const campoCls =
-  "w-full min-w-0 rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary-2 focus:outline-none focus:ring-2 focus:ring-primary-2/20";
 
 export default async function MostradorPage({
   searchParams,
@@ -248,77 +246,43 @@ function Expediente({ e, q, festivos }: { e: EmpenoConDetalle; q: string; festiv
 }
 
 function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
-  const moratorios = moratoriosSugeridos(e.montoPrestado, calc.vencido);
   return (
     <Card>
       <CardHeader title="Refrendo (pago del periodo)" subtitle="Renueva el contrato otro periodo" />
-      <div className="px-4 pb-2 pt-4 sm:px-5">
-        <p className="text-2xl font-bold tracking-tight tabular-nums text-primary sm:text-3xl">{formatMXN(calc.totalRefrendo)}</p>
-        <p className="mt-1 text-xs text-muted">Interés + almacenaje + IVA del periodo</p>
+      <div className="p-4 sm:p-5">
+        <RefrendoForm
+          titulo="Pago del periodo"
+          accion={refrendarEmpeno.bind(null, e.id)}
+          metodoDefault={e.metodoPago}
+          {...cargosPeriodo(e)}
+          moratorios={moratoriosSugeridos(e.montoPrestado, calc.vencido)}
+          diasAtraso={calc.diasAtraso}
+          capitalPendiente={calc.capital}
+        />
       </div>
-      <form action={refrendarEmpeno.bind(null, e.id)} className="space-y-3 p-4 pt-3 sm:p-5 sm:pt-3">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Método de pago
-            <select name="metodoPago" defaultValue={e.metodoPago} className={campoCls}>
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="cheque">Cheque</option>
-              <option value="tarjeta">Tarjeta</option>
-            </select>
-          </label>
-          <Num name="moratorios" label="Moratorios" defaultValue={moratorios} nota={calc.vencido ? "6% por atraso (editable)" : undefined} />
-          <Num name="abonoCapital" label="Abono a capital" />
-          <Num name="descuento" label="Descuento" />
-          <Num name="recibido" label="Efectivo recibido" />
-        </div>
-        <ConfirmSubmit confirmacion="¿Registrar el refrendo y generar el recibo?" className="w-full">
-          Refrendar y entregar recibo
-        </ConfirmSubmit>
-      </form>
     </Card>
   );
 }
 
 function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
-  const moratorios = moratoriosSugeridos(e.montoPrestado, calc.vencido);
   return (
     <Card>
       <CardHeader title="Desempeño (liquidación)" subtitle="El cliente recupera su prenda" />
-      <div className="px-4 pb-2 pt-4 sm:px-5">
-        <p className="text-2xl font-bold tracking-tight tabular-nums text-foreground sm:text-3xl">{formatMXN(calc.totalDesempeno)}</p>
-        <p className="mt-1 text-xs text-muted">Capital {formatMXN(calc.capital)} + interés + almacenaje + IVA</p>
+      <div className="p-4 sm:p-5">
+        <DesempenoForm
+          accion={desempenarEmpeno.bind(null, e.id)}
+          metodoDefault={e.metodoPago}
+          prestamo={e.montoPrestado}
+          abonos={e.abonoCapital}
+          interes={calc.interesAcumulado}
+          almacenaje={calc.almacenajeAcumulado}
+          iva={calc.ivaAcumulado}
+          moratorios={moratoriosSugeridos(e.montoPrestado, calc.vencido)}
+          diasAtraso={calc.diasAtraso}
+          conExtras={false}
+        />
       </div>
-      <form action={desempenarEmpeno.bind(null, e.id)} className="space-y-3 p-4 pt-3 sm:p-5 sm:pt-3">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-xs text-muted">
-            Método de pago
-            <select name="metodoPago" defaultValue={e.metodoPago} className={campoCls}>
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="cheque">Cheque</option>
-              <option value="tarjeta">Tarjeta</option>
-            </select>
-          </label>
-          <Num name="moratorios" label="Moratorios" defaultValue={moratorios} nota={calc.vencido ? "6% por atraso (editable)" : undefined} />
-          <Num name="descuento" label="Descuento" />
-          <Num name="recibido" label="Efectivo recibido" />
-        </div>
-        <ConfirmSubmit variante="secondary" confirmacion={`¿Registrar desempeño por ${formatMXN(calc.totalDesempeno)}?`} className="w-full">
-          Desempeñar y entregar ticket
-        </ConfirmSubmit>
-      </form>
     </Card>
-  );
-}
-
-function Num({ name, label, defaultValue, nota }: { name: string; label: string; defaultValue?: number; nota?: string }) {
-  return (
-    <label className="flex flex-col gap-1 text-xs text-muted">
-      {label}
-      <input name={name} type="number" step="0.01" placeholder="0.00" defaultValue={defaultValue || undefined} className={campoCls} />
-      {nota && <span className="text-[10px] text-info">{nota}</span>}
-    </label>
   );
 }
 

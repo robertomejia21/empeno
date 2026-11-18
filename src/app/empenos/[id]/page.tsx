@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Camera, Download, FileSignature, Hourglass, Printer, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { obtenerEmpeno, contarRefrendos, obtenerReglasCalculo } from "@/lib/db/repo";
-import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento, catPorTipo } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento, catPorTipo, cargosPeriodo } from "@/lib/interes";
 import { esDiaInhabil } from "@/lib/diasInhabiles";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno, eliminarEmpenoPermanente } from "@/lib/actions";
 import { getUsuarioActual } from "@/lib/session";
@@ -12,6 +12,7 @@ import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { Boleta } from "./Boleta";
 import { RefrendoForm } from "./RefrendoForm";
+import { DesempenoForm } from "./DesempenoForm";
 import { FotoLavado } from "./FotoLavado";
 
 const periodoLabel: Record<string, string> = {
@@ -32,6 +33,7 @@ export default async function EmpenoDetalle({
   if (!empeno) notFound();
 
   const calc = calcularLiquidacion(empeno, undefined, festivos);
+  const moratorios = moratoriosSugeridos(empeno.montoPrestado, calc.vencido);
   const activo = empeno.estado === "activo" || empeno.estado === "refrendado";
   const estadoMostrar = activo && calc.vencido ? "vencido" : empeno.estado;
 
@@ -131,51 +133,24 @@ export default async function EmpenoDetalle({
                 {/* Refrendo / abono mensual con recibo */}
                 <RefrendoForm
                   accion={refrendar}
-                  base={calc.totalRefrendo}
                   metodoDefault={empeno.metodoPago}
-                  montoPrestado={empeno.montoPrestado}
-                  vencido={calc.vencido}
+                  {...cargosPeriodo(empeno)}
+                  moratorios={moratorios}
+                  diasAtraso={calc.diasAtraso}
+                  capitalPendiente={calc.capital}
                   proximoVencInhabil={proximoVencInhabil}
                 />
-                <form action={desempenar} className="rounded-xl border border-border bg-surface p-4">
-                  <p className="mb-3 text-sm font-semibold text-foreground">Desempeño (liquidación)</p>
-                  <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3">
-                    <label className="flex flex-col gap-1 text-xs text-muted">
-                      Método de pago
-                      <select name="metodoPago" defaultValue={empeno.metodoPago} className={campoCls}>
-                        <option value="efectivo">Efectivo</option>
-                        <option value="transferencia">Transferencia</option>
-                        <option value="cheque">Cheque</option>
-                        <option value="tarjeta">Tarjeta</option>
-                      </select>
-                    </label>
-                    <CampoNum
-                      name="moratorios"
-                      label="Moratorios"
-                      defaultValue={moratoriosSugeridos(empeno.montoPrestado, calc.vencido)}
-                      nota={calc.vencido ? "6% por atraso (editable)" : undefined}
-                    />
-                    <CampoNum name="gastosAdmin" label="Gastos admin." />
-                    <CampoNum name="rentaGps" label="Renta GPS" />
-                    <CampoNum name="rentaSeguro" label="Renta seguro" />
-                    <CampoNum name="pension" label="Pensión" />
-                    <CampoNum name="gastosVenta" label="Gastos venta" />
-                    <CampoNum name="descuento" label="Descuento" />
-                    <CampoNum name="recibido" label="Efectivo recibido" />
-                  </div>
-                  <p className="mt-3 text-xs text-muted">
-                    A liquidar hoy: <strong>{formatMXN(calc.totalDesempeno)}</strong> (capital + interés + almacenaje +
-                    IVA). Los cargos extra se suman y se genera el ticket de desempeño.
-                  </p>
-                  <div className="mt-3">
-                    <ConfirmSubmit
-                      variante="secondary"
-                      confirmacion={`¿Registrar desempeño por ${formatMXN(calc.totalDesempeno)}? El cliente recupera su prenda.`}
-                    >
-                      Desempeñar y entregar ticket
-                    </ConfirmSubmit>
-                  </div>
-                </form>
+                <DesempenoForm
+                  accion={desempenar}
+                  metodoDefault={empeno.metodoPago}
+                  prestamo={empeno.montoPrestado}
+                  abonos={empeno.abonoCapital}
+                  interes={calc.interesAcumulado}
+                  almacenaje={calc.almacenajeAcumulado}
+                  iva={calc.ivaAcumulado}
+                  moratorios={moratorios}
+                  diasAtraso={calc.diasAtraso}
+                />
               </div>
             )}
           </Card>
@@ -315,19 +290,6 @@ export default async function EmpenoDetalle({
       {/* Boleta para imprimir */}
       <Boleta empeno={empeno} calc={calc} />
     </div>
-  );
-}
-
-const campoCls =
-  "rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-
-function CampoNum({ name, label, defaultValue, nota }: { name: string; label: string; defaultValue?: number; nota?: string }) {
-  return (
-    <label className="flex flex-col gap-1 text-xs text-muted">
-      {label}
-      <input name={name} type="number" step="0.01" placeholder="0.00" defaultValue={defaultValue || undefined} className={campoCls} />
-      {nota && <span className="text-[10px] text-info">{nota}</span>}
-    </label>
   );
 }
 

@@ -9,9 +9,9 @@ export function ProductosInteresConfig({ productos }: { productos: ProductoInter
     <Card className="mt-6">
       <CardHeader title="Productos de interés (catálogo)" subtitle="Tasas por departamento/modalidad — se usan en el asistente" />
       <p className="px-5 pt-2 text-xs text-muted">
-        La tasa aquí es solo el <strong>interés</strong>. En Vehículos y GPS no se cobra almacenaje aparte.
-        En los demás (Tradicional, Compra…) el almacenaje se cobra igual al interés — por eso en el asistente
-        el % que ve el personal sale doblado (ej. 10.8% aquí → 21.6% en el catálogo del asistente).
+        La tasa aquí es la que se conocía en el sistema anterior (ya con IVA). En el asistente se desglosa:
+        en <strong>Vehículos y GPS</strong> es la tasa total (10.8% → 5% interés + 5% almacenaje + IVA 8%);
+        en los demás (Tradicional, Compra…) es por concepto (10.8% → 10% interés + 10% almacenaje + IVA = 21.6%).
       </p>
 
       <div className="overflow-x-auto px-5 pt-2">

@@ -30,7 +30,7 @@ import type {
   FilaChecklistVehiculo,
 } from "@/lib/types";
 import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
-import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO } from "@/lib/interes";
+import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
 import { listarPagos } from "@/lib/db/repo";
@@ -435,9 +435,9 @@ export async function crearEmpeno(form: FormData) {
   const prendaId = s(form, "prendaId");
   const clienteId = s(form, "clienteId");
   const tasaInteres = num(form, "tasaInteres");
-  // El formulario simple no captura almacenaje: los artículos (todo lo que no
-  // sea Vehículos) lo cargan igual al interés (ej. 10.8% + 10.8% = 21.6%
-  // mensual); los vehículos no cargan almacenaje por esta vía.
+  // El formulario manda interés y almacenaje por separado (automóvil 5% + 5%,
+  // artículo 10% + 10%, más IVA). Si alguna vía vieja no manda almacenaje,
+  // se usa el mismo % que el interés.
   const prendaEmp = await obtenerPrenda(prendaId);
   const prendaCat = prendaEmp?.categoria;
   // Candado de servidor: un vehículo no puede entrar a un empeño sin haber
@@ -446,8 +446,7 @@ export async function crearEmpeno(form: FormData) {
   if (prendaCat === "Vehículos" && !prendaEmp?.verificado) {
     throw new Error("Este vehículo todavía no tiene verificación REPUVE registrada; no se puede empeñar.");
   }
-  const almacenajePctForm = num(form, "almacenajePct");
-  const almacenajePct = almacenajePctForm > 0 ? almacenajePctForm : prendaCat && prendaCat !== "Vehículos" ? tasaInteres : 0;
+  const almacenajePct = form.get("almacenajePct") !== null ? Math.max(0, num(form, "almacenajePct")) : tasaInteres;
   // IVA fijo de la sucursal — no se toma del formulario, no es negociable.
   const ivaPct = IVA_FIJO;
   const metodoPago = (s(form, "metodoPago") || "efectivo") as MetodoPago;
@@ -456,7 +455,8 @@ export async function crearEmpeno(form: FormData) {
   const realSucursal = form.get("realSucursal") ? num(form, "realSucursal") : null;
   const diasGracia = form.get("diasGracia") ? Math.round(num(form, "diasGracia")) : 7;
   const fechaVencimiento = calcularVencimiento(fechaInicio, periodo, plazoPeriodos);
-  const especial = requiereAutorizacionTasa(tasaInteres);
+  const especial = requiereAutorizacionTasa(tasaInteres, almacenajePct, ivaPct);
+  const tasaTotal = tasaEfectiva(tasaInteres, almacenajePct, ivaPct);
   const estadoInicial = especial ? "borrador" : "activo";
 
   let empenoId: string;
@@ -492,7 +492,7 @@ export async function crearEmpeno(form: FormData) {
     if (!especial) {
       await registrarSalidaPrestamo(empenoId, data.folio, montoPrestado);
     } else {
-      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaInteres, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${data.folio} en borrador por tasa especial`, referencia: data.folio, empenoId });
+      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaTotal, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${data.folio} en borrador por tasa especial`, referencia: data.folio, empenoId });
     }
   } else {
     const store = getStore();
@@ -527,7 +527,7 @@ export async function crearEmpeno(form: FormData) {
     if (!especial) {
       await registrarSalidaPrestamo(empeno.id, empeno.folio, montoPrestado);
     } else {
-      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaInteres, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${empeno.folio} en borrador por tasa especial`, referencia: empeno.folio, empenoId: empeno.id });
+      await solicitarAutorizacion({ tipo: "interes_especial", clienteNombre: null, bien: null, monto: montoPrestado, tasaSolicitada: tasaTotal, tasaEstandar: TASA_MINIMA_LIBRE, motivo: `Empeño ${empeno.folio} en borrador por tasa especial`, referencia: empeno.folio, empenoId: empeno.id });
     }
     empenoId = empeno.id;
   }
@@ -891,7 +891,8 @@ export async function crearEmpenoGuiado(
     ? "Bodega"
     : "Matriz";
   // Tasa especial (≤ 6.48%): el empeño se crea en BORRADOR hasta que Dirección autorice.
-  const especial = requiereAutorizacionTasa(data.tasaInteres);
+  const especial = requiereAutorizacionTasa(data.tasaInteres, data.almacenajePct, IVA_FIJO);
+  const tasaTotal = tasaEfectiva(data.tasaInteres, data.almacenajePct, IVA_FIJO);
   const estadoInicial = especial ? "borrador" : "activo";
   const nombreClienteAut = data.clienteNuevo
     ? `${data.clienteNuevo.nombre} ${data.clienteNuevo.apellidoPaterno} ${data.clienteNuevo.apellidoMaterno}`.trim()
@@ -1008,7 +1009,7 @@ export async function crearEmpenoGuiado(
         clienteNombre: nombreClienteAut,
         bien: data.prenda.descripcion,
         monto: data.montoPrestado,
-        tasaSolicitada: data.tasaInteres,
+        tasaSolicitada: tasaTotal,
         tasaEstandar: TASA_MINIMA_LIBRE,
         motivo: `Empeño ${e.folio} en borrador por tasa especial`,
         referencia: e.folio,
@@ -1136,7 +1137,7 @@ export async function crearEmpenoGuiado(
       clienteNombre: nombreClienteAut,
       bien: data.prenda.descripcion,
       monto: data.montoPrestado,
-      tasaSolicitada: data.tasaInteres,
+      tasaSolicitada: tasaTotal,
       tasaEstandar: TASA_MINIMA_LIBRE,
       motivo: `Empeño ${empeno.folio} en borrador por tasa especial`,
       referencia: empeno.folio,

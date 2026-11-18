@@ -46,7 +46,7 @@ export default async function ConfiguracionPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Tasas de interés por historial" subtitle="Vehículos · mensual, según nº de empeños (artículos: 21.6% fijo)" />
+          <CardHeader title="Tasas de interés por historial" subtitle="Vehículos · mensual, tasa total con IVA (5%+5%+IVA = 10.8%) · artículos 10%+10%+IVA = 21.6%" />
           <div className="space-y-3 p-5">
             {niveles.map((nv) => (
               <div key={nv.nivel} className="flex items-center justify-between text-sm">

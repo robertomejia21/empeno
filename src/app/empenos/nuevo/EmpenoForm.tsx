@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarDays, Plus, TriangleAlert } from "lucide-react";
 import { crearEmpeno } from "@/lib/actions";
 import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, IVA_FIJO } from "@/lib/interes";
+import { CargosEditor } from "@/components/CargosEditor";
 import { formatMXN, formatFecha, hoyISO } from "@/lib/format";
 import { Card, CardHeader, Button, Field, SelectField, TextArea } from "@/components/ui";
 import type { CategoriaPrenda, PeriodoInteres } from "@/lib/types";
@@ -43,16 +44,21 @@ export function EmpenoForm({
   const historial = tasaPorHistorial(cliente?.previos ?? 0, prenda ? prenda.categoria === "Vehículos" : true);
 
   const [monto, setMonto] = useState(0);
-  const [tasa, setTasa] = useState(historial.tasa);
+  const [tasa, setTasa] = useState(historial.interes);
+  const [almacenajePct, setAlmacenajePct] = useState(historial.almacenaje);
 
   const vencimiento = useMemo(
     () => calcularVencimiento(fechaInicio, periodo as "mensual" | "quincenal" | "semanal", plazo),
     [fechaInicio, periodo, plazo]
   );
 
-  // Artículos (todo lo que no sea Vehículos) cargan almacenaje = mismo % que
-  // el interés; IVA fijo de la sucursal. Mismos valores que aplica el servidor.
-  const almacenajePct = prenda && prenda.categoria !== "Vehículos" ? tasa : 0;
+  // Cargos precargados por tipo de bien (automóvil 5%+5%, artículo 10%+10%,
+  // más IVA fijo); el personal puede ajustarlos a mano.
+  function sugerir(previos: number, p: PrendaOpt | undefined) {
+    const h = tasaPorHistorial(previos, p ? p.categoria === "Vehículos" : true);
+    setTasa(h.interes);
+    setAlmacenajePct(h.almacenaje);
+  }
   const previewCalc = useMemo(() => {
     if (monto <= 0 || tasa <= 0) return null;
     return calcularLiquidacion({
@@ -72,13 +78,14 @@ export function EmpenoForm({
   function onCliente(id: string) {
     setClienteId(id);
     const c = clientes.find((x) => x.id === id);
-    setTasa(tasaPorHistorial(c?.previos ?? 0, prenda ? prenda.categoria === "Vehículos" : true).tasa);
+    sugerir(c?.previos ?? 0, prenda);
   }
   // Cuando cambia la prenda, prefijar el préstamo sugerido
   function onPrenda(id: string) {
     setPrendaId(id);
     const p = prendas.find((x) => x.id === id);
     if (p) setMonto(p.montoPrestamoSugerido);
+    sugerir(cliente?.previos ?? 0, p);
   }
 
   const sinPrendas = prendas.length === 0;
@@ -182,25 +189,23 @@ export function EmpenoForm({
             )}
           </label>
 
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">
-              Tasa de interés (% por periodo) <span className="text-danger">*</span>
-            </span>
-            <input
-              name="tasaInteres"
-              type="number"
-              step="0.01"
-              required
-              value={tasa}
-              onChange={(e) => setTasa(parseFloat(e.target.value) || 0)}
-              className="w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+          <div className="sm:col-span-2 xl:col-span-4">
+            <input type="hidden" name="tasaInteres" value={tasa} />
+            <input type="hidden" name="almacenajePct" value={almacenajePct} />
+            <CargosEditor
+              monto={monto}
+              interes={tasa}
+              almacenaje={almacenajePct}
+              ivaPct={IVA_FIJO}
+              sugeridoId={historial.presetId}
+              periodos={plazo}
+              ocultarTotales
+              onChange={(i, a) => {
+                setTasa(i);
+                setAlmacenajePct(a);
+              }}
             />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">IVA (%)</span>
-            <input value={`${IVA_FIJO}% (fijo)`} disabled className="cursor-not-allowed rounded-lg border border-border bg-surface px-3 py-2 text-sm opacity-70 outline-none" />
-          </label>
+          </div>
 
           <SelectField
             label="Periodo"

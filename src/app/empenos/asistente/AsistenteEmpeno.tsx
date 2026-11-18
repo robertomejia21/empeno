@@ -33,7 +33,8 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO, desgloseProducto, tasaEfectiva } from "@/lib/interes";
+import { CargosEditor } from "@/components/CargosEditor";
 import type { AjustesPrestamo } from "@/lib/ajustesBase";
 import { evaluarOperacionPLD, MESES_ACUMULACION } from "@/lib/compliance";
 import { formatMXN, formatFecha, formatFechaLarga, hoyISO } from "@/lib/format";
@@ -219,9 +220,9 @@ export function AsistenteEmpeno({
   const [montoTocado, setMontoTocado] = useState(false);
 
   // Paso 6 — intereses y cargos
-  const [tasa, setTasa] = useState(10.8);
+  const [tasa, setTasa] = useState(5);
   const [productoSelId, setProductoSelId] = useState<string | null>(null);
-  const [almacenajePct, setAlmacenajePct] = useState(0);
+  const [almacenajePct, setAlmacenajePct] = useState(5);
   const ivaPct = IVA_FIJO; // fijo de la sucursal, no editable
   const [metodoPago, setMetodoPago] = useState("efectivo");
   const [comisionista, setComisionista] = useState("");
@@ -273,7 +274,7 @@ export function AsistenteEmpeno({
   const esJoyeria = categoria === "Joyería";
   const avaluoNum = parseFloat(valorAvaluo) || 0;
   const montoNum = parseFloat(monto) || 0;
-  const tasaEspecial = requiereAutorizacionTasa(tasa);
+  const tasaEspecial = requiereAutorizacionTasa(tasa, almacenajePct, IVA_FIJO);
 
   const clientesFiltrados = useMemo(() => {
     const q = busqCliente.trim();
@@ -303,13 +304,14 @@ export function AsistenteEmpeno({
     });
   }, [montoNum, tasa, periodo, fechaInicio, vencimiento, diasGracia, almacenajePct, ivaPct]);
 
-  // Al entrar al paso de intereses, sugerir tasa por historial. Los artículos
-  // (todo lo que no sea Vehículos) llevan almacenaje = mismo % que el interés
-  // (ej. 10.8% + 10.8% = 21.6% mensual); los vehículos no cargan almacenaje.
+  // Al entrar al paso de intereses, precargar cargos según el tipo de bien:
+  // automóvil 5% interés + 5% almacenaje (+IVA = 10.8%), artículo 10% + 10%
+  // (+IVA = 21.6%). El personal puede ajustar cada concepto a mano.
   function irAPaso(n: number) {
     if (n === 6) {
-      setTasa(historial.tasa);
-      setAlmacenajePct(esVehiculo ? 0 : historial.tasa);
+      setTasa(historial.interes);
+      setAlmacenajePct(historial.almacenaje);
+      setProductoSelId(null);
     }
     if (n === 5 && !montoTocado && avaluoNum > 0) setMonto(String(prestamoSugeridoPorRegla(avaluoNum, reglaPrestamo).monto));
     setPaso(n);
@@ -901,21 +903,20 @@ export function AsistenteEmpeno({
                   <div className="flex flex-wrap gap-2">
                     {productos.map((p) => {
                       const activo = productoSelId === p.id;
-                      // Vehículos/GPS no cargan almacenaje; el resto (Tradicional,
-                      // Compra) sí, igual al interés — el % mostrado va doblado,
-                      // como en el sistema anterior (10.8+10.8=21.6%, etc.).
-                      const productoEsVehiculo = p.nombre === "VEHÍCULOS" || p.modalidad === "gps";
-                      const pctMostrado = productoEsVehiculo ? p.tasa : p.tasa * 2;
+                      // Se desglosa en interés + almacenaje (+IVA): vehículos 10.8 →
+                      // 5% + 5%; artículos 10.8 → 10% + 10% (21.6% total).
+                      const d = desgloseProducto(p);
+                      const pctMostrado = tasaEfectiva(d.interes, d.almacenaje, ivaPct);
                       return (
                         <button
                           key={p.id}
                           type="button"
                           onClick={() => {
                             setProductoSelId(p.id);
-                            setTasa(p.tasa);
+                            setTasa(d.interes);
                             setPeriodo(p.periodo);
                             setPlazo(p.plazoPeriodos);
-                            setAlmacenajePct(productoEsVehiculo ? 0 : p.tasa);
+                            setAlmacenajePct(d.almacenaje);
                           }}
                           className={`rounded-lg border px-3 py-1.5 text-left text-sm transition ${
                             activo ? "border-primary bg-primary-soft text-primary" : "border-border bg-surface text-foreground hover:border-primary/40"
@@ -935,35 +936,30 @@ export function AsistenteEmpeno({
               <div className="flex items-start gap-2.5 rounded-xl border border-warning/30 bg-warning-soft p-4 text-sm text-warning">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <p>
-                <strong>Tasa especial ({tasa}%)</strong> — requiere autorización de Dirección General. Al finalizar, el
+                <strong>Tasa especial ({tasaEfectiva(tasa, almacenajePct, ivaPct)}% total)</strong> — requiere autorización de Dirección General. Al finalizar, el
                 empeño quedará en <strong>borrador</strong> y se enviará la solicitud al supervisor por WhatsApp; se
                 activará cuando la autoricen.
                 </p>
               </div>
             )}
 
-            {productoSelId && (() => {
-              const p = productos.find((x) => x.id === productoSelId);
-              if (!p) return null;
-              const esVeh = p.nombre === "VEHÍCULOS" || p.modalidad === "gps";
-              if (esVeh) return null;
-              return (
-                <p className="-mt-2 mb-3 flex items-start gap-1.5 text-xs text-info">
-                  <Info className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-                  <span>
-                  En {p.nombre.toLowerCase()} el almacenaje se cobra igual al interés — por eso {p.tasa}% (interés) +{" "}
-                  {p.tasa}% (almacenaje) = {p.tasa * 2}% en el catálogo.
-                  </span>
-                </p>
-              );
-            })()}
+            <div className="rounded-xl border border-border bg-surface-2 p-4">
+              <p className="mb-3 text-sm font-semibold text-foreground">Cargos por periodo</p>
+              <CargosEditor
+                monto={montoNum}
+                interes={tasa}
+                almacenaje={almacenajePct}
+                ivaPct={ivaPct}
+                sugeridoId={historial.presetId}
+                periodos={plazo}
+                onChange={(i, a) => {
+                  setTasa(i);
+                  setAlmacenajePct(a);
+                  setProductoSelId(null);
+                }}
+              />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <Campo label="Interés (% por periodo)" req type="number" value={String(tasa)} onChange={(v) => setTasa(parseFloat(v) || 0)} />
-              <Campo label="Almacenaje (% por periodo)" type="number" value={String(almacenajePct)} onChange={(v) => setAlmacenajePct(parseFloat(v) || 0)} />
-              <div>
-                <Label>IVA (%)</Label>
-                <input value={`${ivaPct}% (fijo)`} disabled className={`${inputCls} cursor-not-allowed opacity-70`} />
-              </div>
               <div>
                 <Label>Método de pago</Label>
                 <select value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)} className={inputCls}>
@@ -1006,7 +1002,7 @@ export function AsistenteEmpeno({
               <Rev k="Bien" v={bien.descripcion} />
               <Rev k="Avalúo" v={formatMXN(avaluoNum)} />
               <Rev k="Préstamo" v={formatMXN(montoNum)} />
-              <Rev k="Interés + almacenaje + IVA" v={`${tasa}% + ${almacenajePct}% + ${ivaPct}% ${periodo}`} />
+              <Rev k="Interés + almacenaje + IVA" v={`${tasa}% + ${almacenajePct}% + IVA ${ivaPct}% = ${tasaEfectiva(tasa, almacenajePct, ivaPct)}% ${periodo}`} />
               <Rev k="Refrendo (periodo)" v={formatMXN(previewCalc?.totalRefrendo ?? 0)} />
               <Rev k="Desempeño (total)" v={formatMXN(previewCalc?.totalDesempeno ?? 0)} />
               <Rev k="Inicio" v={formatFecha(fechaInicio)} />

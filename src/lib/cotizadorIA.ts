@@ -108,7 +108,7 @@ Da un RANGO estimado de préstamo (y de avalúo si aplica) basado SOLO en el his
 No inventes precios fuera de lo que respalda el historial; si no hay casos parecidos dilo y sugiere avaluar en persona.
 Cita 2 a 4 casos parecidos (bien, año, préstamo). Termina recordando que es un estimado hasta revisar el bien (daños, estado).
 Reglas: ${regla} Vehículos: 2008-2014 se quedan en resguardo; 2015 en adelante con GPS.
-Tasas: vehículos 10.8% mensual (8.64% con más de 3 empeños; 6.48% solo con autorización de Dirección); artículos 21.6% mensual.
+Tasas (todo sobre lo prestado, IVA 8% sobre interés + almacenaje): vehículos 5% interés + 5% almacenaje + IVA = 10.8% mensual (4%+4% = 8.64% con más de 3 empeños; 3%+3% = 6.48% solo con autorización de Dirección); artículos 10% interés + 10% almacenaje + IVA = 21.6% mensual. Ej. vehículo de $15,000: interés $750 + almacenaje $750 + IVA $120 = refrendo $1,620.
 
 Guía de referencia de vehículos por año (MXN):
 ${guiaVehiculos}

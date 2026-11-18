@@ -170,7 +170,10 @@ export function prestamoSugeridoPorRegla(
   return { monto: prestamoSugerido(valorAvaluo, porcentaje), porcentaje };
 }
 
-/** Tasa mínima del catálogo que NO requiere autorización de Dirección General. */
+/**
+ * Tasa total mínima (interés + almacenaje + IVA) que NO requiere autorización
+ * de Dirección General. 6.48% = (3% + 3%) × 1.08.
+ */
 export const TASA_MINIMA_LIBRE = 6.48;
 
 /** IVA fijo de la sucursal (zona fronteriza). No es editable por el personal. */
@@ -188,33 +191,94 @@ export function moratoriosSugeridos(montoPrestado: number, vencido: boolean): nu
   return vencido ? Math.round(montoPrestado * (TASA_MORATORIOS / 100) * 100) / 100 : 0;
 }
 
-/** ¿Esta tasa requiere autorización de Dirección? (6.48% o menor). */
-export function requiereAutorizacionTasa(tasa: number): boolean {
-  return tasa > 0 && tasa <= TASA_MINIMA_LIBRE;
+/**
+ * Tasa total por periodo, igual que en la boleta del sistema anterior:
+ * (interés + almacenaje) × (1 + IVA). Ej. vehículo 5% + 5% + 8% IVA = 10.8%.
+ */
+export function tasaEfectiva(interesPct: number, almacenajePct = 0, ivaPct = IVA_FIJO): number {
+  return round2((interesPct + almacenajePct) * (1 + ivaPct / 100));
 }
 
-/** Tasa especial de vehículos: nunca se asigna sola, siempre con autorización de Dirección. */
+/** ¿Estos cargos requieren autorización de Dirección? (tasa total de 6.48% o menor). */
+export function requiereAutorizacionTasa(interesPct: number, almacenajePct = 0, ivaPct = IVA_FIJO): boolean {
+  const total = tasaEfectiva(interesPct, almacenajePct, ivaPct);
+  return total > 0 && total <= TASA_MINIMA_LIBRE;
+}
+
+/** Tasa especial de vehículos (total): nunca se asigna sola, siempre con autorización de Dirección. */
 export const TASA_ESPECIAL_DIRECCION = 6.48;
 
+/** Cargos precargados por tipo de bien (chips de captura rápida). Todo es % sobre lo prestado. */
+export interface PresetCargos {
+  id: string;
+  etiqueta: string;
+  interes: number;
+  almacenaje: number;
+  vehiculo: boolean;
+  requiereAutorizacion?: boolean;
+}
+
+export const PRESETS_CARGOS: PresetCargos[] = [
+  { id: "automovil", etiqueta: "Automóvil", interes: 5, almacenaje: 5, vehiculo: true },
+  { id: "automovil-frecuente", etiqueta: "Automóvil · frecuente", interes: 4, almacenaje: 4, vehiculo: true },
+  { id: "articulo", etiqueta: "Artículo", interes: 10, almacenaje: 10, vehiculo: false },
+  { id: "automovil-especial", etiqueta: "Automóvil · especial", interes: 3, almacenaje: 3, vehiculo: true, requiereAutorizacion: true },
+];
+
+/** ¿El producto del catálogo es de vehículos (resguardo o GPS)? */
+export function productoEsVehiculo(p: { nombre: string; modalidad: string | null }): boolean {
+  return p.modalidad !== null || /VEH[IÍ]CULO/i.test(p.nombre);
+}
+
 /**
- * Tasa de interés mensual sugerida según el historial del cliente (reunión con la sucursal):
- *  - Vehículos: 10.80% base; con más de 3 empeños se sugiere 8.64%.
- *    La de 6.48% es un precio especial que solo se usa con autorización de
- *    Dirección: se elige a mano en el catálogo, nunca en automático.
- *  - Artículos (electrónicos, herramienta, alhajas…): 10.80% interés + 10.80%
- *    almacenaje = 21.60% para todos, sin descuento por historial.
+ * Desglosa un producto del catálogo en interés y almacenaje.
+ * El catálogo guarda la tasa como se conocía en el sistema anterior:
+ *  - Vehículos: tasa TOTAL con IVA (10.8 → 5% interés + 5% almacenaje + IVA).
+ *  - Artículos: tasa por concepto con IVA (10.8 → 10% interés + 10% almacenaje + IVA = 21.6%).
+ */
+export function desgloseProducto(p: { nombre: string; modalidad: string | null; tasa: number }): {
+  interes: number;
+  almacenaje: number;
+} {
+  const base = p.tasa / (1 + IVA_FIJO / 100);
+  const porConcepto = productoEsVehiculo(p) ? base / 2 : base;
+  const v = round4(porConcepto);
+  return { interes: v, almacenaje: v };
+}
+
+/**
+ * Cargos sugeridos según el tipo de bien y el historial del cliente:
+ *  - Vehículos: 5% interés + 5% almacenaje + IVA = 10.8%; con más de 3 empeños
+ *    4% + 4% + IVA = 8.64%. El 3% + 3% (6.48%) es precio especial con
+ *    autorización de Dirección: se elige a mano, nunca en automático.
+ *  - Artículos: 10% interés + 10% almacenaje + IVA = 21.6%, sin descuento por historial.
+ * `tasa` es la tasa total (con IVA) para mostrar.
  */
 export function tasaPorHistorial(
   empenosPrevios: number,
   esVehiculo = true
 ): {
   tasa: number;
+  interes: number;
+  almacenaje: number;
+  presetId: string;
   nivel: string;
   requiereAutorizacion: boolean;
 } {
-  if (esVehiculo && empenosPrevios > 3)
-    return { tasa: 8.64, nivel: "Frecuente (+3 empeños)", requiereAutorizacion: false };
-  return { tasa: 10.8, nivel: "Regular", requiereAutorizacion: false };
+  const id = !esVehiculo ? "articulo" : empenosPrevios > 3 ? "automovil-frecuente" : "automovil";
+  const p = PRESETS_CARGOS.find((x) => x.id === id)!;
+  return {
+    tasa: tasaEfectiva(p.interes, p.almacenaje),
+    interes: p.interes,
+    almacenaje: p.almacenaje,
+    presetId: p.id,
+    nivel: id === "automovil-frecuente" ? "Frecuente (+3 empeños)" : "Regular",
+    requiereAutorizacion: false,
+  };
+}
+
+function round4(n: number): number {
+  return Math.round(n * 10000) / 10000;
 }
 
 function round2(n: number): number {

@@ -12,7 +12,7 @@ function sumarDias(iso: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConDetalle; calc: CalculoLiquidacion; qrPrenda?: string }) {
+export function ContratoProfeco({ empeno, calc, qrPrenda, horario }: { empeno: EmpenoConDetalle; calc: CalculoLiquidacion; qrPrenda?: string; horario: string }) {
   const c = empeno.cliente;
   const p = empeno.prenda;
 
@@ -208,7 +208,7 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
       <p className="mt-2 text-justify text-[9px]">
         <strong>Dudas, aclaraciones y reclamaciones:</strong> favor de dirigirse a: Domicilio: {PROVEEDOR.domicilio};
         Teléfono: {PROVEEDOR.telefono || "____________"}; correo electrónico: {PROVEEDOR.correo || "____________"};
-        Página de Internet: {PROVEEDOR.paginaWeb}, en un horario de {PROVEEDOR.horario}. O en su caso a PROFECO a los
+        Página de Internet: {PROVEEDOR.paginaWeb}, en un horario de {horario}. O en su caso a PROFECO a los
         teléfonos: {PROFECO.telefonos}, Página de Internet: {PROFECO.paginaWeb}. Estado de cuenta/consulta de
         movimientos: NO APLICA. Contrato de Adhesión registrado en el Registro Público de Contratos de Adhesión de la
         PROFECO bajo el número {PROVEEDOR.registroRPCA} de fecha {PROVEEDOR.registroFecha}.
@@ -237,7 +237,7 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
       </div>
 
       <p className="mt-6 text-justify text-[8.5px]">
-        EL HORARIO DE SERVICIO AL PÚBLICO EN ESTE ESTABLECIMIENTO ES DE: {PROVEEDOR.horario}. Para todo lo relativo a la
+        EL HORARIO DE SERVICIO AL PÚBLICO EN ESTE ESTABLECIMIENTO ES DE: {horario}. Para todo lo relativo a la
         interpretación, aplicación y cumplimiento del contrato, LAS PARTES acuerdan someterse en la vía administrativa a
         la Procuraduría Federal del Consumidor, y en caso de subsistir diferencias, a la jurisdicción de los tribunales
         competentes del lugar donde se celebra este Contrato.

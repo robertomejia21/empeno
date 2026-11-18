@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerPago, obtenerEmpeno } from "@/lib/db/repo";
+import { obtenerPago, obtenerEmpeno, obtenerAjustes } from "@/lib/db/repo";
+import { textoHorarioCorto } from "@/lib/ajustesBase";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
 
@@ -17,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const pago = await obtenerPago(id);
   if (!pago) return new Response("No encontrado", { status: 404 });
-  const emp = await obtenerEmpeno(pago.empenoId);
+  const [emp, ajustes] = await Promise.all([obtenerEmpeno(pago.empenoId), obtenerAjustes()]);
 
   const W = 300;
   const doc = await PDFDocument.create();
@@ -62,6 +63,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   center(EMPRESA.direccion.toUpperCase(), 7, font, gris);
   center(`${EMPRESA.colonia.toUpperCase()}, C.P.: ${EMPRESA.cp}`, 7, font, gris);
   center(`R.F.C.: ${EMPRESA.rfc}  TEL.: ${EMPRESA.telefono}`, 7, font, gris);
+  center(`HORARIO: ${textoHorarioCorto(ajustes.horario)}`, 6.5, font, gris);
   y -= 4;
   center(tituloTipo[pago.tipo] ?? "PAGO", 13, bold);
   y -= 2;

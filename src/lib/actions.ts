@@ -2510,6 +2510,23 @@ export async function guardarAjustesDesempeno(form: FormData) {
   await guardarAjuste("desempeno", { modo, diasGracia });
 }
 
+export async function guardarAjustesHorario(form: FormData) {
+  const reHora = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const turno = (pre: string, nombre: string) => {
+    const abierto = form.get(`${pre}Abierto`) === "on";
+    const abre = s(form, `${pre}Abre`) || "09:00";
+    const cierra = s(form, `${pre}Cierra`) || "13:00";
+    if (!reHora.test(abre) || !reHora.test(cierra)) throw new Error(`Hora inválida en ${nombre}.`);
+    if (abierto && abre >= cierra) throw new Error(`En ${nombre} la hora de cierre debe ser después de la de apertura.`);
+    return { abierto, abre, cierra };
+  };
+  await guardarAjuste("horario", {
+    lunesViernes: turno("lv", "lunes a viernes"),
+    sabado: turno("sab", "sábado"),
+    domingo: turno("dom", "domingo"),
+  });
+}
+
 function normalizarFestivos(lista: DiaFestivo[]): DiaFestivo[] {
   const porFecha = new Map<string, DiaFestivo>();
   for (const f of lista) porFecha.set(f.fecha, f);

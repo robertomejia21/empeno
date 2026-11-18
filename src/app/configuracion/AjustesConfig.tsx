@@ -2,13 +2,14 @@ import {
   guardarAjustesDireccion,
   guardarAjustesPrestamo,
   guardarAjustesDesempeno,
+  guardarAjustesHorario,
   agregarDiaFestivo,
   eliminarDiaFestivo,
   cargarFestivosOficiales,
 } from "@/lib/actions";
 import { Card, CardHeader } from "@/components/ui";
 import { formatMXN, formatFecha } from "@/lib/format";
-import type { Ajustes } from "@/lib/ajustesBase";
+import { textoHorario, type Ajustes, type TurnoDia } from "@/lib/ajustesBase";
 
 const inputCls = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm disabled:opacity-60";
 const btnCls = "rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-fg hover:opacity-90";
@@ -24,7 +25,7 @@ function Campo({ label, children, ayuda }: { label: string; children: React.Reac
 }
 
 export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editable: boolean }) {
-  const { direccion, prestamo, festivos, desempeno } = ajustes;
+  const { direccion, prestamo, festivos, desempeno, horario } = ajustes;
   const anioActual = new Date().getFullYear();
   const proximos = festivos.filter((f) => f.fecha >= `${anioActual}-01-01`);
   const pasados = festivos.length - proximos.length;
@@ -92,6 +93,17 @@ export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editabl
         </form>
       </Card>
 
+      <Card>
+        <CardHeader title="Horario de atención" subtitle="Sale en el contrato, en los tickets de pago y en el sistema" />
+        <form action={guardarAjustesHorario} className="space-y-3 p-5">
+          <FilaHorario pre="lv" titulo="Lunes a viernes" turno={horario.lunesViernes} editable={editable} />
+          <FilaHorario pre="sab" titulo="Sábado" turno={horario.sabado} editable={editable} />
+          <FilaHorario pre="dom" titulo="Domingo" turno={horario.domingo} editable={editable} />
+          <p className="text-xs text-muted">Hoy se imprime: {textoHorario(horario)}.</p>
+          {editable && <button className={btnCls}>Guardar</button>}
+        </form>
+      </Card>
+
       <Card className="md:col-span-2 xl:col-span-3">
         <CardHeader
           title="Días festivos (sucursal cerrada)"
@@ -155,6 +167,28 @@ export function AjustesConfig({ ajustes, editable }: { ajustes: Ajustes; editabl
           )}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function FilaHorario({ pre, titulo, turno, editable }: { pre: string; titulo: string; turno: TurnoDia; editable: boolean }) {
+  return (
+    <div className="rounded-lg border border-border p-2.5">
+      <label className="mb-2 flex items-center justify-between gap-2 text-sm">
+        <span className="font-medium text-foreground">{titulo}</span>
+        <span className="flex items-center gap-1.5 text-xs text-muted">
+          <input type="checkbox" name={`${pre}Abierto`} defaultChecked={turno.abierto} disabled={!editable} className="accent-primary" />
+          Abierto
+        </span>
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <Campo label="Abre">
+          <input type="time" name={`${pre}Abre`} defaultValue={turno.abre} disabled={!editable} className={inputCls} />
+        </Campo>
+        <Campo label="Cierra">
+          <input type="time" name={`${pre}Cierra`} defaultValue={turno.cierra} disabled={!editable} className={inputCls} />
+        </Campo>
+      </div>
     </div>
   );
 }

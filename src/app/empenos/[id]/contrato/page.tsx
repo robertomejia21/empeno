@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { obtenerEmpeno, obtenerReglasCalculo } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerReglasCalculo, obtenerAjustes } from "@/lib/db/repo";
+import { textoHorario } from "@/lib/ajustesBase";
 import { calcularLiquidacion } from "@/lib/interes";
 import { getUsuarioActual } from "@/lib/session";
 import { generarQR, urlPrenda } from "@/lib/qr";
@@ -11,7 +12,7 @@ import { ContratoProfeco } from "./ContratoProfeco";
 import { FirmaContrato } from "./FirmaContrato";
 
 export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
-  const festivos = await obtenerReglasCalculo();
+  const [festivos, ajustes] = await Promise.all([obtenerReglasCalculo(), obtenerAjustes()]);
   const { id } = await params;
   const empeno = await obtenerEmpeno(id);
   if (!empeno) notFound();
@@ -46,7 +47,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
       </div>
 
       <div className="shadow-card overflow-x-auto rounded-2xl border border-border">
-        <ContratoProfeco empeno={empeno} calc={calc} qrPrenda={qrPrenda} />
+        <ContratoProfeco horario={textoHorario(ajustes.horario)} empeno={empeno} calc={calc} qrPrenda={qrPrenda} />
       </div>
 
       {!invitado && (

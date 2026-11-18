@@ -418,7 +418,14 @@ export async function obtenerAjustes(): Promise<Ajustes> {
   const prestamo = porClave.get("prestamo") as Partial<typeof AJUSTES_DEFAULT.prestamo> | undefined;
   const festivos = porClave.get("festivos");
   const desempeno = porClave.get("desempeno") as Partial<typeof AJUSTES_DEFAULT.desempeno> | undefined;
+  const horario = porClave.get("horario") as Partial<typeof AJUSTES_DEFAULT.horario> | undefined;
+  const H = AJUSTES_DEFAULT.horario;
   return {
+    horario: {
+      lunesViernes: { ...H.lunesViernes, ...(horario?.lunesViernes ?? {}) },
+      sabado: { ...H.sabado, ...(horario?.sabado ?? {}) },
+      domingo: { ...H.domingo, ...(horario?.domingo ?? {}) },
+    },
     desempeno: { ...AJUSTES_DEFAULT.desempeno, ...(desempeno ?? {}) },
     direccion: { ...AJUSTES_DEFAULT.direccion, ...(direccion ?? {}) },
     prestamo: { ...AJUSTES_DEFAULT.prestamo, ...(prestamo ?? {}) },

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { obtenerEmpeno, obtenerReglasCalculo } from "@/lib/db/repo";
+import { obtenerEmpeno, obtenerReglasCalculo, obtenerAjustes } from "@/lib/db/repo";
+import { textoHorario } from "@/lib/ajustesBase";
 import { calcularLiquidacion } from "@/lib/interes";
 import { generarQR, urlPrenda } from "@/lib/qr";
 import { SUCURSAL } from "@/lib/negocio";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function FirmarPage({ params }: { params: Promise<{ id: string }> }) {
-  const festivos = await obtenerReglasCalculo();
+  const [festivos, ajustes] = await Promise.all([obtenerReglasCalculo(), obtenerAjustes()]);
   const { id } = await params;
   const empeno = await obtenerEmpeno(id);
   if (!empeno) notFound();
@@ -26,10 +27,11 @@ export default async function FirmarPage({ params }: { params: Promise<{ id: str
         <div className="mb-4 text-center">
           <h1 className="text-xl font-bold tracking-tight text-foreground">{SUCURSAL.nombre}</h1>
           <p className="mt-1 text-sm text-muted">Revisa y firma tu contrato de empeño {empeno.folio}</p>
+          <p className="mt-0.5 text-xs text-muted">Horario: {textoHorario(ajustes.horario)}</p>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-border bg-white">
-          <ContratoProfeco empeno={empeno} calc={calc} qrPrenda={qrPrenda} />
+          <ContratoProfeco empeno={empeno} calc={calc} qrPrenda={qrPrenda} horario={textoHorario(ajustes.horario)} />
         </div>
 
         <div className="mt-4 rounded-xl border border-border bg-surface p-5">

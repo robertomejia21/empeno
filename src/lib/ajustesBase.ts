@@ -36,6 +36,20 @@ export interface AjustesDesempeno {
   diasGracia: number;
 }
 
+/** Horario de un grupo de días. Horas en formato 24 h "HH:MM". */
+export interface TurnoDia {
+  abierto: boolean;
+  abre: string;
+  cierra: string;
+}
+
+/** Horario de servicio al público: sale en el contrato, tickets y sistema. */
+export interface AjustesHorario {
+  lunesViernes: TurnoDia;
+  sabado: TurnoDia;
+  domingo: TurnoDia;
+}
+
 export interface DiaFestivo {
   fecha: string; // YYYY-MM-DD
   nombre: string;
@@ -45,6 +59,7 @@ export interface Ajustes {
   direccion: AjustesDireccion;
   prestamo: AjustesPrestamo;
   desempeno: AjustesDesempeno;
+  horario: AjustesHorario;
   /** Días que la sucursal cierra: no cuentan como día de retraso (además de los domingos). */
   festivos: DiaFestivo[];
 }
@@ -60,6 +75,11 @@ export const AJUSTES_DEFAULT: Ajustes = {
     pctArribaUmbral: 40,
   },
   desempeno: { modo: "proporcional", diasGracia: 5 },
+  horario: {
+    lunesViernes: { abierto: true, abre: "07:00", cierra: "16:00" },
+    sabado: { abierto: true, abre: "08:00", cierra: "13:00" },
+    domingo: { abierto: false, abre: "09:00", cierra: "13:00" },
+  },
   festivos: [],
 };
 
@@ -80,4 +100,33 @@ export function porcentajePrestamo(avaluo: number, cfg: AjustesPrestamo): number
 /** Fechas (YYYY-MM-DD) de los festivos, para pasarlas al cálculo de retraso. */
 export function fechasFestivas(festivos: DiaFestivo[]): string[] {
   return festivos.map((f) => f.fecha);
+}
+
+/** "07:00" → "7:00" */
+function hora(h: string): string {
+  return h.replace(/^0(\d)/, "$1");
+}
+
+const GRUPOS_HORARIO: { clave: keyof AjustesHorario; largo: string; corto: string }[] = [
+  { clave: "lunesViernes", largo: "lunes a viernes", corto: "L-V" },
+  { clave: "sabado", largo: "sábados", corto: "SÁB" },
+  { clave: "domingo", largo: "domingos", corto: "DOM" },
+];
+
+/** "Lunes a viernes de 7:00 a 16:00 hrs, sábados de 8:00 a 13:00 hrs y domingos cerrado" */
+export function textoHorario(h: AjustesHorario): string {
+  const partes = GRUPOS_HORARIO.map(({ clave, largo }) => {
+    const t = h[clave];
+    return t.abierto ? `${largo} de ${hora(t.abre)} a ${hora(t.cierra)} hrs` : `${largo} cerrado`;
+  });
+  const txt = `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+/** Versión corta para tickets: "L-V 7:00-16:00 · SÁB 8:00-13:00 · DOM CERRADO" */
+export function textoHorarioCorto(h: AjustesHorario): string {
+  return GRUPOS_HORARIO.map(({ clave, corto }) => {
+    const t = h[clave];
+    return t.abierto ? `${corto} ${hora(t.abre)}-${hora(t.cierra)}` : `${corto} CERRADO`;
+  }).join(" · ");
 }

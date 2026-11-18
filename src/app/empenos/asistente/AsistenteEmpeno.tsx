@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { crearEmpenoGuiado, analizarINE, analizarVehiculo, subirFotoCliente, subirArchivoPrenda } from "@/lib/actions";
-import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO, desgloseProducto, tasaEfectiva, diasGraciaSugeridos } from "@/lib/interes";
+import { tasaPorHistorial, calcularVencimiento, calcularLiquidacion, prestamoSugeridoPorRegla, requiereAutorizacionTasa, IVA_FIJO, desgloseProducto, tasaEfectiva, diasGraciaSugeridos, catPorTipo } from "@/lib/interes";
 import { CargosEditor } from "@/components/CargosEditor";
 import type { AjustesPrestamo } from "@/lib/ajustesBase";
 import { evaluarOperacionPLD, MESES_ACUMULACION } from "@/lib/compliance";
@@ -1004,6 +1004,7 @@ export function AsistenteEmpeno({
               <Rev k="Avalúo" v={formatMXN(avaluoNum)} />
               <Rev k="Préstamo" v={formatMXN(montoNum)} />
               <Rev k="Interés + almacenaje + IVA" v={`${tasa}% + ${almacenajePct}% + IVA ${ivaPct}% = ${tasaEfectiva(tasa, almacenajePct, ivaPct)}% ${periodo}`} />
+              <Rev k="CAT (sin IVA)" v={`${catPorTipo(esVehiculo)}%`} />
               <Rev k="Refrendo (periodo)" v={formatMXN(previewCalc?.totalRefrendo ?? 0)} />
               <Rev k="Desempeño (total)" v={formatMXN(previewCalc?.totalDesempeno ?? 0)} />
               <Rev k="Inicio" v={formatFecha(fechaInicio)} />

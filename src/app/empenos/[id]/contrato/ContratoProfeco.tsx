@@ -2,7 +2,7 @@ import type { EmpenoConDetalle, CalculoLiquidacion } from "@/lib/types";
 import { formatMXN, formatFecha, formatPorcentaje } from "@/lib/format";
 import { pesosALetras } from "@/lib/letras";
 import { PROVEEDOR, PROFECO, periodosPorAnio } from "@/lib/negocio";
-import { TASA_MORATORIOS } from "@/lib/interes";
+import { TASA_MORATORIOS, catPorTipo } from "@/lib/interes";
 
 const periodoLabel: Record<string, string> = { mensual: "mensual", quincenal: "quincenal", semanal: "semanal", diario: "diario" };
 
@@ -26,8 +26,8 @@ export function ContratoProfeco({ empeno, calc, qrPrenda }: { empeno: EmpenoConD
   const almacenajeTotal = almacenajePeriodo * empeno.plazoPeriodos;
   const ivaTotal = (interesTotal + almacenajeTotal) * (empeno.ivaPct / 100);
   const montoTotalPagar = monto + interesTotal + almacenajeTotal + ivaTotal;
-  // CAT y costos totales (sin IVA): interés + almacenaje, como pide la carátula PROFECO.
-  const costoAnualTotal = (empeno.tasaInteres + empeno.almacenajePct) * periodosPorAnio(empeno.periodo);
+  // CAT (sin IVA) fijo por tipo de bien: 120% automóviles, 240% demás artículos.
+  const costoAnualTotal = catPorTipo(p.categoria === "Vehículos");
   const costoMensual = costoAnualTotal / 12;
   const costoDiario = costoAnualTotal / 360;
   const pctPrestamo = p.valorAvaluo > 0 ? (monto / p.valorAvaluo) * 100 : 0;

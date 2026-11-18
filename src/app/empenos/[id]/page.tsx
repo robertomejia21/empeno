@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Camera, Download, FileSignature, Hourglass, Printer, ShieldCheck, Trash2, TriangleAlert } from "lucide-react";
 import { obtenerEmpeno, contarRefrendos, obtenerReglasCalculo } from "@/lib/db/repo";
-import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento } from "@/lib/interes";
+import { calcularLiquidacion, moratoriosSugeridos, calcularVencimiento, catPorTipo } from "@/lib/interes";
 import { esDiaInhabil } from "@/lib/diasInhabiles";
 import { refrendarEmpeno, desempenarEmpeno, enviarFotoVehiculo, cancelarEmpeno, eliminarEmpenoPermanente } from "@/lib/actions";
 import { getUsuarioActual } from "@/lib/session";
@@ -193,6 +193,7 @@ export default async function EmpenoDetalle({
               {(empeno.almacenajePct > 0 || empeno.ivaPct > 0) && (
                 <Linea etiqueta="Cargos" valor={`Almacenaje ${empeno.almacenajePct}% · IVA ${empeno.ivaPct}%`} />
               )}
+              <Linea etiqueta="CAT (sin IVA)" valor={`${catPorTipo(empeno.prenda.categoria === "Vehículos")}%`} />
               {empeno.comisionista && <Linea etiqueta="Comisionista" valor={empeno.comisionista} />}
             </dl>
           </Card>

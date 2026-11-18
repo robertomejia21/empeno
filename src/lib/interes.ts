@@ -214,6 +214,17 @@ export function diasGraciaSugeridos(esVehiculo: boolean): number {
   return esVehiculo ? 5 : 3;
 }
 
+/**
+ * CAT (Costo Anual Total, sin IVA) que se informa en el sistema y en la
+ * carátula del contrato: 120% para automóviles (5% + 5% × 12) y 240% para el
+ * resto de los artículos (10% + 10% × 12).
+ */
+export const CAT_VEHICULO = 120;
+export const CAT_ARTICULO = 240;
+export function catPorTipo(esVehiculo: boolean): number {
+  return esVehiculo ? CAT_VEHICULO : CAT_ARTICULO;
+}
+
 /** Tasa especial de vehículos (total): nunca se asigna sola, siempre con autorización de Dirección. */
 export const TASA_ESPECIAL_DIRECCION = 6.48;
 

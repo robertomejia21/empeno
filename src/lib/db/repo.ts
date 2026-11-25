@@ -270,6 +270,19 @@ export async function listarPagosCliente(clienteId: string): Promise<Pago[]> {
   return getStore().pagos.filter((p) => p.clienteId === clienteId).sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
+export async function listarPagosEmpeno(empenoId: string): Promise<Pago[]> {
+  if (supabaseConfigured) {
+    const { data, error } = await getServerSupabase()
+      .from("pagos")
+      .select("*")
+      .eq("empeno_id", empenoId)
+      .order("fecha", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(rowToPago);
+  }
+  return getStore().pagos.filter((p) => p.empenoId === empenoId).sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
 export async function listarPagos(): Promise<Pago[]> {
   if (supabaseConfigured) {
     const { data, error } = await getServerSupabase().from("pagos").select("*").order("fecha", { ascending: false });

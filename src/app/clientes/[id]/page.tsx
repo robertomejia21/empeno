@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { obtenerCliente, listarEmpenos, listarPagosCliente } from "@/lib/db/repo";
-import { formatFechaHora } from "@/lib/format";
+import { formatFechaHora, aISOLocal } from "@/lib/format";
+import { SelectorPeriodo } from "@/components/SelectorPeriodo";
 import { tasaPorHistorial } from "@/lib/interes";
 import { formatFecha, formatFechaLarga, formatMXN } from "@/lib/format";
 import { Card, CardHeader, PageHeader, LinkButton, Badge, VolverLink } from "@/components/ui";
@@ -10,17 +11,34 @@ import { FileText, Pencil, Plus, Receipt, TriangleAlert } from "lucide-react";
 
 export default async function ClienteDetalle({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const fechaValida = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "");
+  const desde = fechaValida(sp.desde);
+  const hasta = fechaValida(sp.hasta);
+  const filtrando = !!(desde || hasta);
+  const enPeriodo = (iso: string) => {
+    const d = iso.length > 10 ? aISOLocal(new Date(iso)) : iso;
+    return (!desde || d >= desde) && (!hasta || d <= hasta);
+  };
   const cliente = await obtenerCliente(id);
   if (!cliente) notFound();
 
-  const [empenosAll, pagos] = await Promise.all([listarEmpenos(), listarPagosCliente(id)]);
-  const empenos = empenosAll.filter((e) => e.clienteId === id);
-  const previos = empenos.length;
+  const [empenosAll, pagosAll] = await Promise.all([listarEmpenos(), listarPagosCliente(id)]);
+  const empenosCliente = empenosAll.filter((e) => e.clienteId === id);
+  const previos = empenosCliente.length;
+  // Filtro de periodo: empeños por fecha de alta, pagos por fecha de pago.
+  const empenos = empenosCliente.filter((e) => enPeriodo(e.creadoEn));
+  const pagos = pagosAll.filter((p) => enPeriodo(p.fecha));
   const totalAbonado = pagos.reduce((s, p) => s + p.total, 0);
+  const sumaTipo = (t: string) => pagos.filter((p) => p.tipo === t).reduce((s, p) => s + p.total, 0);
+  const cuentaTipo = (t: string) => pagos.filter((p) => p.tipo === t).length;
+  const etiquetaTipo: Record<string, string> = { refrendo: "Refrendo", abono: "Abono parcial", desempeno: "Desempeño" };
   const { tasa, nivel, requiereAutorizacion } = tasaPorHistorial(previos);
 
   return (
@@ -111,11 +129,36 @@ export default async function ClienteDetalle({
         </Card>
       </div>
 
+      {/* Filtro de periodo para las tablas de empeños, abonos y refrendos */}
+      <Card className="mt-6 p-4 sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <SelectorPeriodo
+            etiqueta="Filtrar por periodo"
+            incluirTodo
+            desde={desde}
+            hasta={hasta}
+            navegar={{ paramDesde: "desde", paramHasta: "hasta" }}
+          />
+          <dl className="grid flex-1 grid-cols-2 gap-3 text-sm sm:grid-cols-4 sm:max-w-3xl">
+            <Resumen etiqueta="Empeños" valor={`${empenos.length} · ${formatMXN(empenos.reduce((s, e) => s + e.montoPrestado, 0))}`} />
+            <Resumen etiqueta="Refrendos" valor={`${cuentaTipo("refrendo")} · ${formatMXN(sumaTipo("refrendo"))}`} />
+            <Resumen etiqueta="Abonos" valor={`${cuentaTipo("abono")} · ${formatMXN(sumaTipo("abono"))}`} />
+            <Resumen etiqueta="Desempeños" valor={`${cuentaTipo("desempeno")} · ${formatMXN(sumaTipo("desempeno"))}`} />
+          </dl>
+        </div>
+        {filtrando && (
+          <p className="mt-3 text-xs text-muted">
+            Mostrando {desde ? `del ${formatFecha(desde)}` : "desde el inicio"} {hasta ? `al ${formatFecha(hasta)}` : "a hoy"} ·{" "}
+            <Link href={`/clientes/${cliente.id}`} className="font-medium text-primary hover:underline">Ver todo</Link>
+          </p>
+        )}
+      </Card>
+
       <Card className="mt-6">
-        <CardHeader title="Empeños del cliente" />
+        <CardHeader title="Empeños del cliente" subtitle={filtrando ? `${empenos.length} de ${empenosCliente.length} en el periodo` : undefined} />
         {empenos.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-muted">
-            Este cliente no tiene empeños registrados.
+            {filtrando ? "Sin empeños en el periodo elegido." : "Este cliente no tiene empeños registrados."}
           </p>
         ) : (
           <ul className="divide-y divide-border">
@@ -145,10 +188,12 @@ export default async function ClienteDetalle({
       <Card className="mt-6">
         <CardHeader
           title="Abonos y refrendos"
-          subtitle={`${pagos.length} pagos · ${formatMXN(totalAbonado)} abonado`}
+          subtitle={`${pagos.length} pagos · ${formatMXN(totalAbonado)} pagado${filtrando ? " en el periodo" : ""}`}
         />
         {pagos.length === 0 ? (
-          <p className="px-5 py-8 text-center text-sm text-muted">Sin abonos ni refrendos registrados.</p>
+          <p className="px-5 py-8 text-center text-sm text-muted">
+            {filtrando ? "Sin abonos ni refrendos en el periodo elegido." : "Sin abonos ni refrendos registrados."}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-140 text-sm">
@@ -156,6 +201,7 @@ export default async function ClienteDetalle({
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Recibo</th>
                   <th className="px-5 py-3 font-medium">Fecha</th>
+                  <th className="px-5 py-3 font-medium">Contrato</th>
                   <th className="px-5 py-3 font-medium">Tipo</th>
                   <th className="px-5 py-3 text-right font-medium">Total</th>
                   <th className="px-5 py-3 text-right font-medium"></th>
@@ -165,11 +211,17 @@ export default async function ClienteDetalle({
                 {pagos.map((p) => (
                   <tr key={p.id} className="hover:bg-surface-2">
                     <td className="px-5 py-3 font-mono text-xs text-muted">
-                      #{p.reciboNo}{p.tipo === "refrendo" ? ` · Ref. ${p.refrendoNo}` : ""}
+                      #{p.reciboNo}{p.tipo === "refrendo" || p.tipo === "abono" ? ` · Ref. ${p.refrendoNo}` : ""}
                     </td>
                     <td className="px-5 py-3 text-muted">{formatFechaHora(p.fecha)}</td>
                     <td className="px-5 py-3">
-                      <Badge tono={p.tipo === "refrendo" ? "info" : p.tipo === "desempeno" ? "success" : "muted"}>{p.tipo}</Badge>
+                      {(() => {
+                        const e = empenosCliente.find((x) => x.id === p.empenoId);
+                        return e ? <Link href={`/empenos/${e.id}`} className="text-primary hover:underline">{e.folio}</Link> : "—";
+                      })()}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge tono={p.tipo === "refrendo" ? "info" : p.tipo === "desempeno" ? "success" : "warning"}>{etiquetaTipo[p.tipo] ?? p.tipo}</Badge>
                     </td>
                     <td className="px-5 py-3 text-right font-semibold text-foreground">{formatMXN(p.total)}</td>
                     <td className="px-5 py-3 text-right">
@@ -204,6 +256,15 @@ function Dato({
       <dd className={`mt-0.5 text-sm wrap-break-word text-foreground ${mono ? "font-mono" : ""}`}>
         {valor || "—"}
       </dd>
+    </div>
+  );
+}
+
+function Resumen({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-surface-2/60 px-3 py-2">
+      <dt className="text-xs text-muted">{etiqueta}</dt>
+      <dd className="truncate font-semibold tabular-nums text-foreground">{valor}</dd>
     </div>
   );
 }

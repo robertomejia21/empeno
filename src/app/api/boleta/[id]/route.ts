@@ -35,7 +35,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   };
 
   // Encabezado
-  text(EMPRESA.nombre.toUpperCase(), 40, 18, bold, oro);
+  text(EMPRESA.razonSocial, 40, 14, bold, oro);
   page.drawText("Contrato Prendario / Boleta de Empeño", { x: 40, y: y - 16, size: 10, font, color: gris });
   page.drawText(e.folio, { x: width - 140, y, size: 16, font: bold, color: negro });
   page.drawText(fecha(e.fechaInicio), { x: width - 140, y: y - 16, size: 9, font, color: gris });

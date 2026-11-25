@@ -45,7 +45,7 @@ export default async function ReportesPage({
     { label: "Mes pasado", ...rangoMesPasado() },
   ];
 
-  const reportePeriodo = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+  const reportePeriodo = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta, prendas);
 
   // Vehículos en garantía: por modalidad (GPS / resguardo) y motocicletas en resguardo.
   const vehiculosActivos = prendas.filter((p) => p.categoria === "Vehículos" && p.estado === "empenada");
@@ -312,7 +312,7 @@ export default async function ReportesPage({
       <ReporteSemanalCard
         reporte={reportePeriodo}
         titulo="Desglose por vehículos y artículos"
-        descarga={`/api/export/mensual?desde=${desde}&hasta=${hasta}`}
+        descarga="/api/export/informe"
       />
     </div>
   );

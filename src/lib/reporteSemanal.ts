@@ -1,7 +1,7 @@
 // Informe semanal de la operación: se envía cada semana.
 // Desglosa por modalidad (Vehículos vs Artículos) los empeños, refrendos y
 // desempeños, más las ventas de vitrina. Los importes son en MXN.
-import type { EmpenoConDetalle, Pago, Venta, CategoriaPrenda } from "@/lib/types";
+import type { EmpenoConDetalle, Pago, Venta, CategoriaPrenda, Prenda } from "@/lib/types";
 import { aISOLocal } from "@/lib/format";
 
 export interface FilaModalidad {
@@ -10,10 +10,19 @@ export interface FilaModalidad {
   desempenos: number; // total pagado en desempeños de la semana
 }
 
+export interface VentaVehiculoDetalle {
+  folio: string;
+  descripcion: string;
+  fecha: string;
+  precio: number;
+}
+
 export interface ReporteSemanal {
-  desde: string; // ISO date (lunes)
-  hasta: string; // ISO date (domingo)
-  ventasVitrina: number;
+  desde: string; // ISO date (inicio del periodo)
+  hasta: string; // ISO date (fin del periodo)
+  ventasVitrina: number; // ventas de artículos (no vehículos)
+  ventasVehiculos: number; // ventas de vehículos
+  ventasVehiculosDetalle: VentaVehiculoDetalle[];
   vehiculos: FilaModalidad;
   articulos: FilaModalidad;
 }
@@ -43,7 +52,8 @@ export function calcularReporteSemanal(
   pagos: Pago[],
   ventas: Venta[],
   desde: string,
-  hasta: string
+  hasta: string,
+  prendas: Pick<Prenda, "id" | "categoria" | "descripcion" | "marca" | "submarca" | "modelo">[] = []
 ): ReporteSemanal {
   const enRango = (f: string) => {
     const d = f.slice(0, 10);
@@ -75,11 +85,30 @@ export function calcularReporteSemanal(
     else fila.desempenos += p.total;
   }
 
-  const ventasVitrina = ventas
-    .filter((v) => enRango(v.fecha))
-    .reduce((s, v) => s + v.precio, 0);
+  // Ventas: se separan los vehículos de la vitrina para dejar claro qué
+  // unidades se vendieron y por cuánto.
+  const prendaPorId = new Map<string, { categoria: CategoriaPrenda; descripcion: string }>();
+  for (const e of empenos) prendaPorId.set(e.prendaId, { categoria: e.prenda.categoria, descripcion: e.prenda.descripcion });
+  for (const p of prendas) {
+    const desc = p.descripcion || [p.marca, p.submarca, p.modelo].filter(Boolean).join(" ");
+    prendaPorId.set(p.id, { categoria: p.categoria, descripcion: desc });
+  }
+  let ventasVitrina = 0;
+  let ventasVehiculos = 0;
+  const ventasVehiculosDetalle: VentaVehiculoDetalle[] = [];
+  for (const v of ventas) {
+    if (!enRango(v.fecha)) continue;
+    const pr = prendaPorId.get(v.prendaId);
+    if (pr && esVehiculoCat(pr.categoria)) {
+      ventasVehiculos += v.precio;
+      ventasVehiculosDetalle.push({ folio: v.folio, descripcion: pr.descripcion || "Vehículo", fecha: v.fecha.slice(0, 10), precio: v.precio });
+    } else {
+      ventasVitrina += v.precio;
+    }
+  }
+  ventasVehiculosDetalle.sort((a, b) => a.fecha.localeCompare(b.fecha));
 
-  return { desde, hasta, ventasVitrina, vehiculos, articulos };
+  return { desde, hasta, ventasVitrina, ventasVehiculos, ventasVehiculosDetalle, vehiculos, articulos };
 }
 
 /** Semana operativa anterior (sábado–viernes). */
@@ -102,6 +131,33 @@ function fechaCorta(iso: string): string {
   return `${d}/${m}/${a}`;
 }
 
+/** Atajos de periodo comunes (para selectores). */
+export function atajosPeriodo(hoy: Date = new Date()) {
+  return [
+    { clave: "semana", label: "Esta semana", ...rangoSemanaActual(hoy) },
+    { clave: "semana_pasada", label: "Semana pasada", ...rangoSemanaPasada(hoy) },
+    { clave: "mes", label: "Este mes", ...rangoMesActual(hoy) },
+    { clave: "mes_pasado", label: "Mes pasado", ...rangoMesPasado(hoy) },
+  ];
+}
+
+/** Renglones del informe (descripción, total) — compartidos por la tarjeta, el CSV y el PDF. */
+export function filasInforme(r: ReporteSemanal): { desc: string; total?: number; seccion?: boolean; detalle?: boolean; comentario?: string }[] {
+  return [
+    { desc: "Ventas de vitrina (artículos)", total: r.ventasVitrina },
+    { desc: "Venta de vehículos", total: r.ventasVehiculos, comentario: `${r.ventasVehiculosDetalle.length} unidad(es)` },
+    ...r.ventasVehiculosDetalle.map((v) => ({ desc: `${v.descripcion} · ${v.folio}`, total: v.precio, detalle: true, comentario: fechaCorta(v.fecha) })),
+    { desc: "Vehículos", seccion: true },
+    { desc: "Empeños", total: r.vehiculos.empenos },
+    { desc: "Refrendos", total: r.vehiculos.refrendos },
+    { desc: "Desempeños", total: r.vehiculos.desempenos },
+    { desc: "Artículos", seccion: true },
+    { desc: "Empeños", total: r.articulos.empenos },
+    { desc: "Refrendos", total: r.articulos.refrendos },
+    { desc: "Desempeños", total: r.articulos.desempenos },
+  ];
+}
+
 /** Texto del reporte para mandarlo por WhatsApp o correo a Dirección. */
 export function textoReporte(r: ReporteSemanal, sucursal: string): string {
   const fila = (t: string, f: FilaModalidad) =>
@@ -111,6 +167,8 @@ export function textoReporte(r: ReporteSemanal, sucursal: string): string {
     `Del ${fechaCorta(r.desde)} al ${fechaCorta(r.hasta)}`,
     "",
     `Ventas de vitrina: ${mxn(r.ventasVitrina)}`,
+    `Venta de vehículos: ${mxn(r.ventasVehiculos)}${r.ventasVehiculosDetalle.length ? ` (${r.ventasVehiculosDetalle.length})` : ""}`,
+    ...r.ventasVehiculosDetalle.map((v) => `  – ${v.descripcion}: ${mxn(v.precio)}`),
     "",
     fila("Vehículos", r.vehiculos),
     "",

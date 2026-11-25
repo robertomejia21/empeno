@@ -12,6 +12,8 @@ import { estadoEmpenoBadge } from "@/components/badges";
 import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { Boleta } from "./Boleta";
 import { RefrendoForm } from "./RefrendoForm";
+import { infoAbonosRefrendo } from "@/lib/abonosServer";
+import { ShieldPlus } from "lucide-react";
 import { DesempenoForm } from "./DesempenoForm";
 import { FotoLavado } from "./FotoLavado";
 
@@ -52,6 +54,7 @@ export default async function EmpenoDetalle({
   // real de pago — aquí solo se avisa si ese día fijo cae en domingo/festivo.
   const proximoVenc = calcularVencimiento(empeno.fechaVencimiento, empeno.periodo, empeno.plazoPeriodos);
   const proximoVencInhabil = esDiaInhabil(proximoVenc, festivos.festivos);
+  const abonosRef = await infoAbonosRefrendo(empeno, moratorios);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -94,13 +97,27 @@ export default async function EmpenoDetalle({
           </div>
         )}
 
+        {activo && abonosRef.abonos.length > 0 && (
+          <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-sm text-info">
+            <ShieldPlus className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <p>
+            El cliente lleva <strong>{abonosRef.abonos.length} abono(s) por {formatMXN(abonosRef.total)}</strong> al refrendo
+            pendiente. La prenda está <strong>protegida de remate hasta el {formatFecha(abonosRef.protegeHasta)}</strong>; antes de
+            esa fecha debe cubrir el saldo de{" "}
+            {formatMXN(abonosRef.pendiente.moratorios + abonosRef.pendiente.intereses + abonosRef.pendiente.almacenaje + abonosRef.pendiente.iva)}.
+            </p>
+          </div>
+        )}
+
         {calc.vencido && activo && (
           <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
             <p>
             Este empeño está <strong>vencido</strong> (venció el{" "}
-            {formatFecha(empeno.fechaVencimiento)}). Pasados los días de gracia puede
-            pasar a remate.
+            {formatFecha(empeno.fechaVencimiento)}).{" "}
+            {abonosRef.abonos.length > 0
+              ? `Tiene abonos al refrendo: no puede pasar a remate antes del ${formatFecha(abonosRef.protegeHasta)}. Para esa fecha el refrendo debe estar cubierto.`
+              : "Pasados los días de gracia puede pasar a remate. Si el cliente no completa el refrendo, registra un abono para proteger la prenda este mes."}
             </p>
           </div>
         )}
@@ -139,6 +156,7 @@ export default async function EmpenoDetalle({
                   diasAtraso={calc.diasAtraso}
                   capitalPendiente={calc.capital}
                   proximoVencInhabil={proximoVencInhabil}
+                  abonos={abonosRef}
                 />
                 <DesempenoForm
                   accion={desempenar}
@@ -150,6 +168,7 @@ export default async function EmpenoDetalle({
                   iva={calc.ivaAcumulado}
                   moratorios={moratorios}
                   diasAtraso={calc.diasAtraso}
+                  abonosRefrendo={abonosRef.total}
                 />
               </div>
             )}

@@ -9,7 +9,7 @@ import { ContratoProfeco } from "@/app/empenos/[id]/contrato/ContratoProfeco";
 import { FirmaContrato } from "@/app/empenos/[id]/contrato/FirmaContrato";
 
 export const metadata: Metadata = {
-  title: "Firma tu contrato — Turbo Presta El Dorado",
+  title: "Firma tu contrato — WORKLINE COMPANY",
 };
 
 export default async function FirmarPage({ params }: { params: Promise<{ id: string }> }) {

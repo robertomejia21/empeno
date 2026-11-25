@@ -53,3 +53,25 @@ create table if not exists public.checklists_semanales (
 );
 create index if not exists checklists_semanales_prenda_idx on public.checklists_semanales (prenda_id, semana desc);
 alter table public.checklists_semanales enable row level security;
+
+-- Abonos parciales al refrendo (nov 2026): los pagos ahora pueden ser de tipo
+-- 'abono' además de 'refrendo' y 'desempeno'. Si pagos.tipo tiene un CHECK que
+-- no lo acepta, se reemplaza. Seguro de ejecutar varias veces.
+do $$
+declare c record;
+begin
+  for c in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    where rel.relname = 'pagos' and con.contype = 'c'
+      and pg_get_constraintdef(con.oid) ilike '%tipo%'
+  loop
+    execute format('alter table public.pagos drop constraint %I', c.conname);
+  end loop;
+end $$;
+alter table public.pagos drop constraint if exists pagos_tipo_check;
+alter table public.pagos add constraint pagos_tipo_check
+  check (tipo in ('refrendo', 'abono', 'desempeno'));
+-- Consulta de abonos por contrato y refrendo pendiente.
+create index if not exists pagos_empeno_tipo_idx on public.pagos (empeno_id, tipo, refrendo_no);

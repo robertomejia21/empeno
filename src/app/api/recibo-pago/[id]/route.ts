@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { obtenerPago, obtenerEmpeno, obtenerAjustes } from "@/lib/db/repo";
+import { obtenerPago, obtenerEmpeno, obtenerAjustes, listarPagosEmpeno } from "@/lib/db/repo";
+import { calcularVencimiento, cargosPeriodo } from "@/lib/interes";
 import { textoHorarioCorto } from "@/lib/ajustesBase";
 import { EMPRESA } from "@/lib/compliance";
 import { getUsuarioActual } from "@/lib/session";
@@ -10,7 +11,9 @@ const fechaHora = (iso: string) =>
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
   }).format(new Date(iso));
 
-const tituloTipo: Record<string, string> = { refrendo: "REFRENDO", abono: "ABONO", desempeno: "DESEMPEÑO" };
+const tituloTipo: Record<string, string> = { refrendo: "REFRENDO", abono: "ABONO AL REFRENDO", desempeno: "DESEMPEÑO" };
+const fechaCorta = (iso: string) =>
+  new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(iso.length === 10 ? iso + "T12:00:00" : iso));
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const actual = await getUsuarioActual();
@@ -18,7 +21,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const pago = await obtenerPago(id);
   if (!pago) return new Response("No encontrado", { status: 404 });
-  const [emp, ajustes] = await Promise.all([obtenerEmpeno(pago.empenoId), obtenerAjustes()]);
+  const [emp, ajustes, pagosEmp] = await Promise.all([obtenerEmpeno(pago.empenoId), obtenerAjustes(), listarPagosEmpeno(pago.empenoId)]);
+  // Abonos parciales ligados al mismo refrendo (anteriores a este recibo).
+  const abonosPrevios = pagosEmp
+    .filter((p) => p.tipo === "abono" && p.refrendoNo === pago.refrendoNo && p.id !== pago.id && p.fecha <= pago.fecha)
+    .reduce((s, p) => s + p.total, 0);
+  // En desempeño se descuentan los abonos al refrendo que estaba pendiente.
+  const refrendosPrevios = pagosEmp.filter((p) => p.tipo === "refrendo" && p.fecha <= pago.fecha).length;
+  const abonosRefrendoDesempeno = pagosEmp
+    .filter((p) => p.tipo === "abono" && p.refrendoNo === refrendosPrevios + 1 && p.fecha <= pago.fecha)
+    .reduce((s, p) => s + p.total, 0);
 
   const W = 300;
   const doc = await PDFDocument.create();
@@ -68,48 +80,116 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   center(tituloTipo[pago.tipo] ?? "PAGO", 13, bold);
   y -= 2;
 
+  const esAbono = pago.tipo === "abono";
   left(`CONTRATO No.: ${emp?.folio ?? "—"}`, 9, bold); y -= 13;
   left(`RECIBO No.: ${pago.reciboNo}`); y -= 12;
   if (pago.tipo === "refrendo") { left(`REFRENDO No.: ${pago.refrendoNo}`); y -= 12; }
+  if (esAbono) { left(`APLICADO AL REFRENDO No.: ${pago.refrendoNo}`); y -= 12; }
   left(`FECHA: ${fechaHora(pago.fecha)}`); y -= 12;
   left(`CLIENTE: ${emp ? `${emp.cliente.nombre} ${emp.cliente.apellidoPaterno} ${emp.cliente.apellidoMaterno}` : "—"}`); y -= 16;
 
   // En el ticket en papel los importes en cero se dejan en blanco.
   const imp = (v: number) => (v > 0 ? mxn.format(v) : "");
   const esDesempeno = pago.tipo === "desempeno";
+  const box = (lineas: string[], size = 7.5) => {
+    const alto = lineas.length * (size + 3) + 8;
+    page.drawRectangle({ x: 12, y: y - alto + size + 2, width: W - 24, height: alto, borderColor: negro, borderWidth: 1 });
+    y -= 3;
+    for (const l of lineas) center(l, size, bold);
+    y -= 7;
+  };
 
-  // En desempeño se liquida el préstamo íntegro y los abonos previos se restan abajo;
-  // en refrendo el abono a capital es un cargo más de la exhibición.
-  const conceptos: [string, number][] = [
-    esDesempeno
-      ? ["PRÉSTAMO:", emp?.montoPrestado ?? 0]
-      : ["ABONO CAPITAL:", pago.abonoCapital],
-    ["INTERESES:", pago.intereses],
-    ["ALMACENAJE:", pago.almacenaje],
-    ["GASTOS ADMIN.:", pago.gastosAdmin],
-    ["MORATORIOS:", pago.moratorios],
-    ["RENTA GPS:", pago.rentaGps],
-    ["RENTA SEGURO:", pago.rentaSeguro],
-    ["GASTOS VENTA:", pago.gastosVenta],
-    ["PENSIÓN:", pago.pension],
-    ["IVA:", pago.iva],
-  ];
-  for (const [l, v] of conceptos) row(l, imp(v));
+  if (esAbono) {
+    // ---- ABONO PARCIAL: deja claro que NO es el refrendo completo ----
+    const saldoAntes = pago.subtotal;
+    const saldoDespues = Math.max(0, Math.round((saldoAntes - pago.total) * 100) / 100);
+    const deudaTotal = saldoAntes + abonosPrevios;
+    const cargos = emp ? cargosPeriodo(emp) : { interes: 0, almacenaje: 0, iva: 0 };
+    const moratoriosDeuda = Math.max(0, Math.round((deudaTotal - cargos.interes - cargos.almacenaje - cargos.iva) * 100) / 100);
+    const protegeHasta = emp ? calcularVencimiento(emp.fechaVencimiento, emp.periodo, emp.plazoPeriodos) : null;
 
-  dashed();
-  row("SUBTOTAL:", mxn.format(pago.subtotal), bold);
-  if (esDesempeno) row("ABONOS:", imp(pago.abonoCapital));
-  dashed();
-  page.drawText("TOTAL:", { x: 14, y, size: 12, font: bold, color: negro });
-  const tw = bold.widthOfTextAtSize(mxn.format(pago.total), 12);
-  page.drawText(mxn.format(pago.total), { x: W - 14 - tw, y, size: 12, font: bold, color: negro });
-  y -= 18;
+    box(["ESTE PAGO ES SOLO UN ABONO (PAGO PARCIAL)", "NO CUBRE EL REFRENDO COMPLETO", "NO RENUEVA EL PERIODO DEL CONTRATO"]);
 
-  row("EFECTIVO:", imp(pago.efectivo));
-  row("TARJETA:", imp(pago.tarjeta));
-  row("TRANSFERENCIA:", imp(pago.transferencia));
-  row("CAMBIO:", mxn.format(pago.cambio), bold);
-  row("DESCUENTO:", imp(pago.descuento));
+    left("DEUDA DEL REFRENDO", 8, bold); y -= 12;
+    row("INTERESES:", mxn.format(cargos.interes));
+    row("ALMACENAJE:", mxn.format(cargos.almacenaje));
+    row("IVA:", mxn.format(cargos.iva));
+    row("MORATORIOS:", mxn.format(moratoriosDeuda));
+    dashed();
+    row("TOTAL DEL REFRENDO:", mxn.format(deudaTotal), bold);
+    if (abonosPrevios > 0) row("ABONOS ANTERIORES:", `- ${mxn.format(abonosPrevios)}`);
+    row("SALDO ANTES DE ESTE ABONO:", mxn.format(saldoAntes), bold);
+    y -= 4;
+
+    left("APLICACIÓN DE ESTE ABONO", 8, bold); y -= 12;
+    row("A MORATORIOS:", imp(pago.moratorios));
+    row("A INTERESES:", imp(pago.intereses));
+    row("A ALMACENAJE:", imp(pago.almacenaje));
+    row("A IVA:", imp(pago.iva));
+    dashed();
+    page.drawText("ABONO:", { x: 14, y, size: 12, font: bold, color: negro });
+    const aw = bold.widthOfTextAtSize(mxn.format(pago.total), 12);
+    page.drawText(mxn.format(pago.total), { x: W - 14 - aw, y, size: 12, font: bold, color: negro });
+    y -= 18;
+
+    row("EFECTIVO RECIBIDO:", imp(pago.efectivo + pago.cambio));
+    row("TARJETA:", imp(pago.tarjeta));
+    row("TRANSFERENCIA:", imp(pago.transferencia));
+    row("CAMBIO:", mxn.format(pago.cambio));
+    dashed();
+    page.drawText("SALDO PENDIENTE:", { x: 14, y, size: 11, font: bold, color: negro });
+    const sw = bold.widthOfTextAtSize(mxn.format(saldoDespues), 11);
+    page.drawText(mxn.format(saldoDespues), { x: W - 14 - sw, y, size: 11, font: bold, color: negro });
+    y -= 18;
+
+    if (protegeHasta) {
+      box([
+        `PRENDA PROTEGIDA DE REMATE HASTA EL ${fechaCorta(protegeHasta).toUpperCase()}`,
+        "CUBRA EL SALDO ANTES DE ESA FECHA PARA",
+        "COMPLETAR EL REFRENDO. LOS MORATORIOS SIGUEN",
+        "APLICANDO CONFORME A LAS REGLAS DEL CONTRATO.",
+      ], 6.5);
+    }
+  } else {
+    // En desempeño se liquida el préstamo íntegro y los abonos previos se restan abajo;
+    // en refrendo el abono a capital es un cargo más de la exhibición.
+    if (pago.tipo === "refrendo") {
+      center(abonosPrevios > 0 ? "PAGO QUE COMPLETA EL REFRENDO" : "PAGO COMPLETO DEL REFRENDO", 7.5, bold);
+      y -= 2;
+    }
+    const conceptos: [string, number][] = [
+      esDesempeno
+        ? ["PRÉSTAMO:", emp?.montoPrestado ?? 0]
+        : ["ABONO CAPITAL:", pago.abonoCapital],
+      ["INTERESES:", pago.intereses],
+      ["ALMACENAJE:", pago.almacenaje],
+      ["GASTOS ADMIN.:", pago.gastosAdmin],
+      ["MORATORIOS:", pago.moratorios],
+      ["RENTA GPS:", pago.rentaGps],
+      ["RENTA SEGURO:", pago.rentaSeguro],
+      ["GASTOS VENTA:", pago.gastosVenta],
+      ["PENSIÓN:", pago.pension],
+      ["IVA:", pago.iva],
+    ];
+    for (const [l, v] of conceptos) row(l, imp(v));
+
+    dashed();
+    row("SUBTOTAL:", mxn.format(pago.subtotal), bold);
+    if (esDesempeno) row("ABONOS A CAPITAL:", imp(pago.abonoCapital));
+    if (esDesempeno && abonosRefrendoDesempeno > 0) row("ABONOS AL REFRENDO:", `- ${mxn.format(abonosRefrendoDesempeno)}`);
+    if (pago.tipo === "refrendo" && abonosPrevios > 0) row("ABONOS PREVIOS AL REFRENDO:", `- ${mxn.format(abonosPrevios)}`);
+    row("DESCUENTO:", imp(pago.descuento));
+    dashed();
+    page.drawText("TOTAL:", { x: 14, y, size: 12, font: bold, color: negro });
+    const tw = bold.widthOfTextAtSize(mxn.format(pago.total), 12);
+    page.drawText(mxn.format(pago.total), { x: W - 14 - tw, y, size: 12, font: bold, color: negro });
+    y -= 18;
+
+    row("EFECTIVO RECIBIDO:", imp(pago.efectivo + pago.cambio));
+    row("TARJETA:", imp(pago.tarjeta));
+    row("TRANSFERENCIA:", imp(pago.transferencia));
+    row("CAMBIO:", mxn.format(pago.cambio), bold);
+  }
   y -= 8;
   left(`USUARIO: ${(pago.usuarioNombre ?? "—").toUpperCase()}`, 7, font); y -= 10;
   left(`CAJA: ${EMPRESA.sucursal}`, 7, font); y -= 20;

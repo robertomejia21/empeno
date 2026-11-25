@@ -1,6 +1,7 @@
 import { listarEmpenos, listarMovimientos, listarClientes, listarPrendas, listarPagos, listarVentas, listarCotizaciones, listarBitacora, obtenerReglasCalculo } from "@/lib/db/repo";
 import { calcularLiquidacion } from "@/lib/interes";
-import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual } from "@/lib/reporteSemanal";
+import { calcularReporteSemanal, rangoSemanaActual, rangoMesActual, filasInforme } from "@/lib/reporteSemanal";
+import { informePdf } from "@/lib/informePdf";
 import { getUsuarioActual } from "@/lib/session";
 import { puedeAcceder, ROL_LABEL } from "@/lib/auth";
 import { formatFechaHora } from "@/lib/format";
@@ -28,6 +29,7 @@ const RUTA_REQUERIDA: Record<string, string> = {
   prendas: "/reportes",
   semanal: "/",
   mensual: "/",
+  informe: "/",
   cotizaciones: "/cotizaciones",
   bitacora: "/bitacora",
 };
@@ -88,28 +90,30 @@ export async function GET(req: Request, { params }: { params: Promise<{ tipo: st
     for (const x of pg) {
       rows.push([x.reciboNo, x.refrendoNo, x.tipo, x.fecha, x.intereses, x.almacenaje, x.moratorios, x.iva, x.abonoCapital, x.total, x.metodoPago, x.usuarioNombre]);
     }
-  } else if (tipo === "semanal" || tipo === "mensual") {
-    nombre = tipo === "semanal" ? "reporte-semanal" : "reporte-mensual";
-    const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
+  } else if (tipo === "semanal" || tipo === "mensual" || tipo === "informe") {
+    const [empenos, pagos, ventas, prendas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas(), listarPrendas()]);
     const url = new URL(req.url);
-    const desdeParam = url.searchParams.get("desde");
-    const hastaParam = url.searchParams.get("hasta");
-    const porDefecto = tipo === "semanal" ? rangoSemanaActual() : rangoMesActual();
-    const desde = desdeParam || porDefecto.desde;
-    const hasta = hastaParam || porDefecto.hasta;
-    const r = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+    const valida = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const porDefecto = tipo === "mensual" ? rangoMesActual() : rangoSemanaActual();
+    const desde = valida(url.searchParams.get("desde")) || porDefecto.desde;
+    const hasta = valida(url.searchParams.get("hasta")) || porDefecto.hasta;
+    const r = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta, prendas);
+    nombre = `informe_${desde}_a_${hasta}`;
+    if (url.searchParams.get("formato") === "pdf") {
+      const bytes = await informePdf(r);
+      return new Response(Buffer.from(bytes), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${nombre}.pdf"`,
+        },
+      });
+    }
     rows = [
-      [`Información ${tipo === "semanal" ? "semanal" : "mensual"} casa empeño (${desde} a ${hasta})`, "", ""],
+      [`Informe casa de empeño (${desde} a ${hasta})`, "", ""],
       ["Descripción", "Total", "Comentarios"],
-      ["Ventas de vitrina", r.ventasVitrina, ""],
-      ["Vehículos", "", ""],
-      ["Empeños", r.vehiculos.empenos, ""],
-      ["Refrendos", r.vehiculos.refrendos, ""],
-      ["Desempeños", r.vehiculos.desempenos, ""],
-      ["Artículos", "", ""],
-      ["Empeños", r.articulos.empenos, ""],
-      ["Refrendos", r.articulos.refrendos, ""],
-      ["Desempeños", r.articulos.desempenos, ""],
+      ...filasInforme(r).map((f) =>
+        f.seccion ? [f.desc, "", ""] : [f.detalle ? `   ${f.desc}` : f.desc, f.total ?? 0, f.comentario ?? ""]
+      ),
     ];
   } else if (tipo === "cotizaciones") {
     nombre = "cotizaciones";

@@ -18,7 +18,6 @@ import {
   ShoppingCart,
   TrendingUp,
   TriangleAlert,
-  UserPlus,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -27,10 +26,14 @@ const accesos: { href: string; icon: LucideIcon; label: string; tono: string }[]
   { href: "/empenos/asistente", icon: Handshake, label: "Nuevo empeño", tono: "bg-primary-soft text-primary" },
   { href: "/cotizaciones", icon: Receipt, label: "Cotizar", tono: "bg-info-soft text-info" },
   { href: "/ventas", icon: ShoppingCart, label: "Punto de venta", tono: "bg-warning-soft text-warning" },
-  { href: "/clientes/nuevo", icon: UserPlus, label: "Nuevo cliente", tono: "bg-success-soft text-success" },
 ];
 
-export default async function Tablero() {
+export default async function Tablero({
+  searchParams,
+}: {
+  searchParams: Promise<{ inf_desde?: string; inf_hasta?: string }>;
+}) {
+  const { inf_desde, inf_hasta } = await searchParams;
   const festivos = await obtenerReglasCalculo();
   const [empenos, movimientos, clientes, prendas, pagos, ventas] = await Promise.all([
     listarEmpenos(),
@@ -42,7 +45,10 @@ export default async function Tablero() {
   ]);
 
   const semana = rangoSemanaActual();
-  const reporteSemanal = calcularReporteSemanal(empenos, pagos, ventas, semana.desde, semana.hasta);
+  const fechaValida = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+  const infDesde = fechaValida(inf_desde) ?? semana.desde;
+  const infHasta = fechaValida(inf_hasta) ?? semana.hasta;
+  const reporteSemanal = calcularReporteSemanal(empenos, pagos, ventas, infDesde, infHasta, prendas);
   const resumenGps = resumenModalidades(empenos);
 
   const activos = empenos.filter((e) => e.estado === "activo" || e.estado === "refrendado");
@@ -116,7 +122,7 @@ export default async function Tablero() {
       </div>
 
       {/* Accesos rápidos */}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 2xl:gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 2xl:gap-4">
         {accesos.map((a) => (
           <Link
             key={a.href}
@@ -162,12 +168,19 @@ export default async function Tablero() {
               Ver GPS y resguardo <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
-          <GpsModalidades resumen={resumenGps} />
+          <GpsModalidades resumen={resumenGps} enlaces />
         </div>
       )}
 
-      {/* Informe semanal */}
-      <ReporteSemanalCard reporte={reporteSemanal} titulo="Informe semanal" descarga="/api/export/semanal" />
+      {/* Informe (periodo elegible, descarga en Excel y PDF) */}
+      <div id="informe" className="scroll-mt-4">
+        <ReporteSemanalCard
+          reporte={reporteSemanal}
+          titulo="Informe"
+          descarga="/api/export/informe"
+          selector={{ paramDesde: "inf_desde", paramHasta: "inf_hasta" }}
+        />
+      </div>
 
       {/* Gráficas */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">

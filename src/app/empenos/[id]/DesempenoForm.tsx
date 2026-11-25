@@ -33,6 +33,7 @@ export function DesempenoForm({
   iva,
   moratorios,
   diasAtraso,
+  abonosRefrendo = 0,
   conExtras = true,
 }: {
   accion: (form: FormData) => void | Promise<void>;
@@ -44,6 +45,8 @@ export function DesempenoForm({
   iva: number;
   moratorios: number;
   diasAtraso: number;
+  /** Abonos parciales hechos al refrendo pendiente (se descuentan al liquidar). */
+  abonosRefrendo?: number;
   /** Muestra los cargos de GPS, seguro, pensión, etc. */
   conExtras?: boolean;
 }) {
@@ -55,7 +58,7 @@ export function DesempenoForm({
     return Number.isFinite(f) && f > 0 ? f : 0;
   };
   const sumaExtras = EXTRAS.reduce((s, [k]) => s + n(extras[k]), 0);
-  const total = Math.max(0, prestamo + interes + almacenaje + iva + moratorios + sumaExtras - abonos - n(descuento));
+  const total = Math.max(0, prestamo + interes + almacenaje + iva + moratorios + sumaExtras - abonos - abonosRefrendo - n(descuento));
   const cambio = n(recibido) > total ? n(recibido) - total : 0;
 
   return (
@@ -86,6 +89,7 @@ export function DesempenoForm({
             lineas={[
               { concepto: "Préstamo", monto: prestamo, siempre: true },
               { concepto: "Abonos a capital", monto: abonos, resta: true },
+              { concepto: "Abonos al refrendo pendiente", monto: abonosRefrendo, resta: true },
               { concepto: "Intereses", monto: interes, siempre: true },
               { concepto: "Almacenaje (resguardo)", monto: almacenaje, siempre: true },
               { concepto: "IVA", monto: iva, siempre: true },

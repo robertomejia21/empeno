@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { crearCotizacion, marcarResultadoCotizacion, analizarVehiculo, subirDocumentoCotizacion, solicitarAvaluoMecanico } from "@/lib/actions";
 import { normalizarImagen } from "@/lib/imagen";
 import { prestamoSugerido } from "@/lib/interes";
@@ -9,7 +10,7 @@ import { porcentajePrestamo, type AjustesPrestamo } from "@/lib/ajustesBase";
 import { coincideTexto, coincideTelefono } from "@/lib/buscar";
 import { formatMXN, formatFecha } from "@/lib/format";
 import { Card, CardHeader } from "@/components/ui";
-import { Car, Check, CircleAlert, FileScan, Hourglass, Package, Paperclip, Plus, Wallet, Wrench, X } from "lucide-react";
+import { ArrowRightLeft, Car, Check, CircleAlert, FileScan, Hourglass, Package, Paperclip, Plus, Wallet, Wrench, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Cotizacion, ContactoCotizacion, CondicionArticulo, TipoCotizacion, CotizacionInput } from "@/lib/types";
 
@@ -443,6 +444,19 @@ function FilaCot({ c, onResultado }: { c: Cotizacion; onResultado: (id: string, 
       <td className="px-4 py-2.5">
         <p className="font-medium text-foreground">{c.descripcion}</p>
         <p className="text-xs text-muted">{c.folio}{c.prospectoNombre ? ` · ${c.prospectoNombre}` : ""}</p>
+        {c.estado === "convertida" && c.notas?.includes("Convertida a empeño") ? (
+          <p className="mt-1 text-xs font-medium text-success">
+            {c.notas.split("\n").find((l) => l.startsWith("Convertida a empeño"))}
+          </p>
+        ) : (
+          <Link
+            href={`/empenos/asistente?cotizacion=${c.id}`}
+            className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-fg shadow-soft transition hover:brightness-105"
+            title="Abrir el asistente de empeño con los datos de esta cotización ya cargados"
+          >
+            <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden /> Convertir a empeño
+          </Link>
+        )}
         {c.tipo === "vehiculo" && (
           <div className="mt-1 text-xs">
             {c.avaluoEstado === "respondido" ? (

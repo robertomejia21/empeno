@@ -1,12 +1,14 @@
-import { Satellite, Warehouse } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Satellite, Warehouse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { formatMXN, formatPorcentaje } from "@/lib/format";
 import type { ResumenGps } from "@/lib/gps";
 
-export function GpsModalidades({ resumen }: { resumen: ResumenGps }) {
-  const cards: { titulo: string; icono: LucideIcon; data: ResumenGps["gps"]; tono: "info" | "primary"; sub: string }[] = [
-    { titulo: "GPS", icono: Satellite, data: resumen.gps, tono: "info" as const, sub: "El cliente conserva el vehículo con GPS" },
-    { titulo: "Resguardo", icono: Warehouse, data: resumen.resguardo, tono: "primary" as const, sub: "Vehículo en nuestra bóveda/patio" },
+/** `enlaces`: el número de contratos abre el listado de unidades de esa modalidad en /gps. */
+export function GpsModalidades({ resumen, enlaces = false }: { resumen: ResumenGps; enlaces?: boolean }) {
+  const cards: { titulo: string; clave: "gps" | "resguardo"; icono: LucideIcon; data: ResumenGps["gps"]; tono: "info" | "primary"; sub: string }[] = [
+    { titulo: "GPS", clave: "gps", icono: Satellite, data: resumen.gps, tono: "info" as const, sub: "El cliente conserva el vehículo con GPS" },
+    { titulo: "Resguardo", clave: "resguardo", icono: Warehouse, data: resumen.resguardo, tono: "primary" as const, sub: "Vehículo en nuestra bóveda/patio" },
   ];
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -35,10 +37,24 @@ export function GpsModalidades({ resumen }: { resumen: ResumenGps }) {
             </span>
           </div>
           <div className="mt-4 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[32px] font-bold leading-none tracking-tight text-foreground">{c.data.cantidad}</p>
-              <p className="mt-1 text-xs text-muted">contratos activos</p>
-            </div>
+            {enlaces ? (
+              <Link
+                href={`/gps?modalidad=${c.clave}#unidades`}
+                title={`Ver las unidades en modalidad ${c.titulo}`}
+                className="group -m-1.5 rounded-xl p-1.5 transition hover:bg-surface-2"
+              >
+                <p className="flex items-start gap-1 text-[32px] font-bold leading-none tracking-tight text-foreground group-hover:text-primary">
+                  {c.data.cantidad}
+                  <ArrowUpRight className="h-4 w-4 text-muted group-hover:text-primary" aria-hidden />
+                </p>
+                <p className="mt-1 text-xs text-muted underline-offset-2 group-hover:underline">contratos activos · ver unidades</p>
+              </Link>
+            ) : (
+              <div>
+                <p className="text-[32px] font-bold leading-none tracking-tight text-foreground">{c.data.cantidad}</p>
+                <p className="mt-1 text-xs text-muted">contratos activos</p>
+              </div>
+            )}
             <div className="text-right">
               <p className="text-lg font-bold tabular-nums text-foreground">{formatMXN(c.data.montoPrestado)}</p>
               <p className="text-xs text-muted">prestado</p>

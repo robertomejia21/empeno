@@ -1,8 +1,7 @@
 import { listarCotizaciones, obtenerAjustes } from "@/lib/db/repo";
-import { Download } from "lucide-react";
 import { PageHeader } from "@/components/ui";
 import { CotizacionesPanel } from "./CotizacionesPanel";
-import { rangoSemanaActual, rangoSemanaPasada, rangoMesActual } from "@/lib/reporteSemanal";
+import { SelectorPeriodo } from "@/components/SelectorPeriodo";
 
 export default async function CotizacionesPage() {
   const [cotizaciones, ajustes] = await Promise.all([listarCotizaciones(), obtenerAjustes()]);
@@ -13,24 +12,11 @@ export default async function CotizacionesPage() {
         title="Cotizaciones"
         subtitle="Propuestas de préstamo y análisis de mercado"
         action={
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { label: "Excel semana", ...rangoSemanaActual() },
-              { label: "Semana pasada", ...rangoSemanaPasada() },
-              { label: "Mes", ...rangoMesActual() },
-              { label: "Todo", desde: "", hasta: "" },
-            ].map((r) => (
-              // Descarga de un archivo desde una ruta API: no es navegación, <Link> no aplica.
-              // eslint-disable-next-line @next/next/no-html-link-for-pages
-              <a
-                key={r.label}
-                href={r.desde ? `/api/export/cotizaciones?desde=${r.desde}&hasta=${r.hasta}` : "/api/export/cotizaciones"}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground shadow-soft transition hover:bg-surface-2"
-              >
-                <Download className="h-4 w-4" aria-hidden /> {r.label}
-              </a>
-            ))}
-          </div>
+          <SelectorPeriodo
+            etiqueta="Periodo a exportar"
+            incluirTodo
+            descargas={[{ label: "Exportar Excel", href: "/api/export/cotizaciones", tipo: "excel" }]}
+          />
         }
       />
       <CotizacionesPanel cotizaciones={cotizaciones} reglaPrestamo={ajustes.prestamo} />

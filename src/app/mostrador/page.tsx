@@ -3,6 +3,7 @@ import { listarEmpenos, obtenerReglasCalculo, listarProductosInteres } from "@/l
 import { SimuladorRapido } from "./SimuladorRapido";
 import { calcularLiquidacion, moratoriosSugeridos, cargosPeriodo } from "@/lib/interes";
 import { RefrendoForm } from "@/app/empenos/[id]/RefrendoForm";
+import { infoAbonosRefrendo } from "@/lib/abonosServer";
 import { DesempenoForm } from "@/app/empenos/[id]/DesempenoForm";
 import { refrendarEmpeno, desempenarEmpeno } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -245,10 +246,11 @@ function Expediente({ e, q, festivos }: { e: EmpenoConDetalle; q: string; festiv
   );
 }
 
-function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+async function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+  const abonos = await infoAbonosRefrendo(e, moratoriosSugeridos(e.montoPrestado, calc.vencido));
   return (
     <Card>
-      <CardHeader title="Refrendo (pago del periodo)" subtitle="Renueva el contrato otro periodo" />
+      <CardHeader title="Refrendo o abono" subtitle="Renueva el periodo o registra un abono parcial" />
       <div className="p-4 sm:p-5">
         <RefrendoForm
           titulo="Pago del periodo"
@@ -258,13 +260,15 @@ function FormRefrendo({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidaci
           moratorios={moratoriosSugeridos(e.montoPrestado, calc.vencido)}
           diasAtraso={calc.diasAtraso}
           capitalPendiente={calc.capital}
+          abonos={abonos}
         />
       </div>
     </Card>
   );
 }
 
-function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+async function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidacion }) {
+  const abonos = await infoAbonosRefrendo(e, moratoriosSugeridos(e.montoPrestado, calc.vencido));
   return (
     <Card>
       <CardHeader title="Desempeño (liquidación)" subtitle="El cliente recupera su prenda" />
@@ -279,6 +283,7 @@ function FormDesempeno({ e, calc }: { e: EmpenoConDetalle; calc: CalculoLiquidac
           iva={calc.ivaAcumulado}
           moratorios={moratoriosSugeridos(e.montoPrestado, calc.vencido)}
           diasAtraso={calc.diasAtraso}
+          abonosRefrendo={abonos.total}
           conExtras={false}
         />
       </div>

@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { listarEmpenos, listarPrendasEnVenta, obtenerReglasCalculo } from "@/lib/db/repo";
+import { listarEmpenos, listarPrendasEnVenta, obtenerReglasCalculo, listarPagos } from "@/lib/db/repo";
+import { abonosRefrendoPendiente, protegidoHasta } from "@/lib/abonos";
+import { hoyISO } from "@/lib/format";
 import { calcularLiquidacion } from "@/lib/interes";
 import { enviarARemate } from "@/lib/actions";
 import { formatMXN, formatFecha } from "@/lib/format";
@@ -15,15 +17,21 @@ export default async function RematesPage({
 }) {
   const festivos = await obtenerReglasCalculo();
   const { q } = await searchParams;
-  const [empenos, enVenta] = await Promise.all([
+  const [empenos, enVenta, pagos] = await Promise.all([
     listarEmpenos(),
     listarPrendasEnVenta(),
+    listarPagos(),
   ]);
+  const hoy = hoyISO();
 
   const t = (q ?? "").trim();
   const vencidos = empenos
     .filter((e) => e.estado === "activo" || e.estado === "refrendado")
-    .map((e) => ({ e, calc: calcularLiquidacion(e, undefined, festivos) }))
+    .map((e) => {
+      const pend = abonosRefrendoPendiente(pagos.filter((p) => p.empenoId === e.id));
+      const hasta = protegidoHasta(e, pend);
+      return { e, calc: calcularLiquidacion(e, undefined, festivos), protegido: hasta && hasta >= hoy ? hasta : null, abonado: pend.total };
+    })
     .filter((x) => x.calc.vencido)
     .filter((x) =>
       t ? coincideTexto([x.e.folio, x.e.prenda.descripcion, x.e.cliente.nombre, x.e.cliente.apellidoPaterno], t) : true
@@ -53,7 +61,7 @@ export default async function RematesPage({
             />
           ) : (
             <div className="divide-y divide-border">
-              {vencidos.map(({ e, calc }) => (
+              {vencidos.map(({ e, calc, protegido, abonado }) => (
                 <div key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1 basis-56">
                     <Link href={`/empenos/${e.id}`} className="wrap-break-word text-sm font-medium text-foreground hover:text-primary">
@@ -66,6 +74,11 @@ export default async function RematesPage({
                   </div>
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="text-sm tabular-nums text-muted">avalúo {formatMXN(e.prenda.valorAvaluo)}</span>
+                    {protegido ? (
+                      <span className="rounded-full bg-info-soft px-2.5 py-1 text-xs font-medium text-info" title={`Abonado al refrendo: ${formatMXN(abonado)}`}>
+                        Con abono · protegido hasta {formatFecha(protegido)}
+                      </span>
+                    ) : (
                     <form action={enviarARemate.bind(null, e.id)}>
                       <ConfirmSubmit
                         variante="warning"
@@ -75,6 +88,7 @@ export default async function RematesPage({
                         Enviar a remate
                       </ConfirmSubmit>
                     </form>
+                    )}
                   </div>
                 </div>
               ))}

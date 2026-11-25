@@ -47,6 +47,30 @@ import type { CategoriaPrenda, PeriodoInteres, TipoIdentificacion, ProductoInter
 import { PASOS } from "./pasos";
 import { Stepper } from "./Stepper";
 
+/** Datos de una cotización para precargar el asistente (conversión a empeño). */
+export interface CotizacionPrefill {
+  id: string;
+  folio: string;
+  categoria: CategoriaPrenda;
+  descripcion: string;
+  marca: string | null;
+  submarca: string | null;
+  modelo: string | null;
+  serie: string | null;
+  placas: string | null;
+  metal: string | null;
+  kilataje: string | null;
+  gramos: number | null;
+  kilometraje: number | null;
+  valorAvaluo: number;
+  monto: number;
+  fotos: string[];
+  notas: string | null;
+  clienteId: string | null;
+  prospectoNombre: string | null;
+  prospectoTelefono: string | null;
+}
+
 interface ClienteOpt {
   id: string;
   nombre: string;
@@ -77,22 +101,33 @@ export function AsistenteEmpeno({
   clientes,
   productos,
   reglaPrestamo,
+  cotizacion = null,
 }: {
   clientes: ClienteOpt[];
   productos: ProductoInteres[];
   reglaPrestamo: AjustesPrestamo;
+  cotizacion?: CotizacionPrefill | null;
 }) {
-  const [paso, setPaso] = useState(1);
+  const cot = cotizacion;
+  // Nombre del prospecto → nombre / apellidos (para un cliente nuevo).
+  const partesNombre = (cot?.prospectoNombre ?? "").trim().split(/\s+/).filter(Boolean);
+  const nombreProspecto =
+    partesNombre.length >= 3
+      ? { nombre: partesNombre.slice(0, -2).join(" "), apellidoPaterno: partesNombre[partesNombre.length - 2], apellidoMaterno: partesNombre[partesNombre.length - 1] }
+      : { nombre: partesNombre[0] ?? "", apellidoPaterno: partesNombre[1] ?? "", apellidoMaterno: "" };
+  const clienteCot = cot?.clienteId && clientes.some((c) => c.id === cot.clienteId) ? cot.clienteId : "";
+
+  const [paso, setPaso] = useState(cot ? 2 : 1);
 
   // Paso 2 — cliente
   const [modoCliente, setModoCliente] = useState<"existente" | "nuevo">(
-    clientes.length > 0 ? "existente" : "nuevo"
+    clienteCot ? "existente" : cot ? "nuevo" : clientes.length > 0 ? "existente" : "nuevo"
   );
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(clienteCot);
   const [busqCliente, setBusqCliente] = useState("");
   const [cn, setCn] = useState({
-    nombre: "", apellidoPaterno: "", apellidoMaterno: "",
-    curp: "", telefono: "", direccion: "", email: "",
+    nombre: nombreProspecto.nombre, apellidoPaterno: nombreProspecto.apellidoPaterno, apellidoMaterno: nombreProspecto.apellidoMaterno,
+    curp: "", telefono: cot?.prospectoTelefono ?? "", direccion: "", email: "",
     fechaNacimiento: "",
     tipoIdentificacion: "INE" as TipoIdentificacion, numeroIdentificacion: "",
   });
@@ -191,20 +226,21 @@ export function AsistenteEmpeno({
   }
 
   // Paso 3 — departamento
-  const [categoria, setCategoria] = useState<CategoriaPrenda | "">("");
+  const [categoria, setCategoria] = useState<CategoriaPrenda | "">(cot?.categoria ?? "");
 
   // Paso 4 — bien y avalúo
   const [bien, setBien] = useState({
-    descripcion: "", marca: "", submarca: "", modelo: "", color: "",
-    serie: "", placas: "", metal: "", kilataje: "", gramos: "",
+    descripcion: cot?.descripcion ?? "", marca: cot?.marca ?? "", submarca: cot?.submarca ?? "", modelo: cot?.modelo ?? "", color: "",
+    serie: cot?.serie ?? "", placas: cot?.placas ?? "", metal: cot?.metal ?? "", kilataje: cot?.kilataje ?? "",
+    gramos: cot?.gramos != null ? String(cot.gramos) : "",
   });
-  const [valorAvaluo, setValorAvaluo] = useState("");
+  const [valorAvaluo, setValorAvaluo] = useState(cot && cot.valorAvaluo > 0 ? String(cot.valorAvaluo) : "");
   // Paso 4 — comentarios del bien (daños, faltantes, estado)
-  const [comentariosBien, setComentariosBien] = useState("");
+  const [comentariosBien, setComentariosBien] = useState(cot?.notas ?? "");
 
   // Paso 4 — ficha del vehículo
   const [veh, setVeh] = useState({
-    tipoVehiculo: "", transmision: "", numeroMotor: "", kilometraje: "",
+    tipoVehiculo: "", transmision: "", numeroMotor: "", kilometraje: cot?.kilometraje != null ? String(cot.kilometraje) : "",
     cilindros: "", claveVehicular: "", nivelGasolina: "",
     numeroFactura: "", emisorFactura: "", valorFactura: "", fechaFactura: "",
     aseguradora: "", poliza: "", danios: "", gpsUbicacion: "",
@@ -216,8 +252,8 @@ export function AsistenteEmpeno({
   const [modalidadTocada, setModalidadTocada] = useState(false);
 
   // Paso 5 — préstamo
-  const [monto, setMonto] = useState("");
-  const [montoTocado, setMontoTocado] = useState(false);
+  const [monto, setMonto] = useState(cot && cot.monto > 0 ? String(cot.monto) : "");
+  const [montoTocado, setMontoTocado] = useState(!!cot && cot.monto > 0);
 
   // Paso 6 — intereses y cargos
   const [tasa, setTasa] = useState(5);
@@ -233,7 +269,7 @@ export function AsistenteEmpeno({
 
   // Paso 8 — resguardo
   const [ubicacion, setUbicacion] = useState("");
-  const [fotos, setFotos] = useState<string[]>([]);
+  const [fotos, setFotos] = useState<string[]>(cot?.fotos ?? []);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
 
   async function onSubirArchivos(files: FileList | null) {
@@ -425,7 +461,10 @@ export function AsistenteEmpeno({
         plazoPeriodos: plazo,
         diasGracia,
         fechaInicio,
-        notas: tasaEspecial ? `Tasa especial ${tasa}% — pendiente de autorización` : null,
+        notas: [tasaEspecial ? `Tasa especial ${tasa}% — pendiente de autorización` : null, cot ? `Desde cotización ${cot.folio}` : null]
+          .filter(Boolean)
+          .join(" · ") || null,
+        cotizacionId: cot?.id ?? null,
       });
       setResultado(res);
       setPaso(9);
@@ -443,6 +482,16 @@ export function AsistenteEmpeno({
 
   return (
     <div>
+      {cot && paso < 9 && (
+        <div className="mb-4 flex flex-wrap items-start gap-2 rounded-xl border border-info/30 bg-info-soft px-4 py-3 text-sm text-info">
+          <ReceiptText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <p className="min-w-0">
+            <strong>Convirtiendo la cotización {cot.folio} a empeño.</strong> Los datos del bien, el avalúo y el monto
+            ofrecido ya vienen precargados; revisa cada paso y completa lo que falte (cliente, verificación, cargos y
+            resguardo). Al finalizar, la cotización queda marcada como empeñada.
+          </p>
+        </div>
+      )}
       {paso < 9 && <Stepper actual={paso} />}
 
       <Card className="p-4 sm:p-6">

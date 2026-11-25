@@ -33,7 +33,8 @@ import { getStore, nuevoId, siguienteFolio } from "@/lib/db/store";
 import { calcularVencimiento, calcularLiquidacion, requiereAutorizacionTasa, prestamoSugeridoPorRegla, TASA_MINIMA_LIBRE, IVA_FIJO, tasaEfectiva, diasGraciaSugeridos, cargosPeriodo, moratoriosSugeridos } from "@/lib/interes";
 import { supabaseConfigured, getServerSupabase } from "@/lib/supabase/server";
 import { bitacoraAuto } from "@/lib/bitacora";
-import { listarPagos } from "@/lib/db/repo";
+import { listarPagos, listarPrendas, listarPagosEmpeno } from "@/lib/db/repo";
+import { abonosRefrendoPendiente, aplicarAbono, pendientePorConcepto, protegidoHasta } from "@/lib/abonos";
 import { calcularReporteSemanal, textoReporte } from "@/lib/reporteSemanal";
 import { obtenerEmpeno, obtenerPrenda, listarEmpenos, listarMovimientos, listarVentas, contarRefrendos, listarCitasGps, obtenerCotizacion, obtenerAjustes, obtenerReglasCalculo } from "@/lib/db/repo";
 import type { Ajustes, ClaveAjuste, DiaFestivo } from "@/lib/ajustesBase";
@@ -541,6 +542,11 @@ export async function crearEmpeno(form: FormData) {
 /**
  * Refrendo: el cliente paga intereses/almacenaje/IVA (+ moratorios, abono a
  * capital, descuento), se renueva el periodo y se genera el recibo digital.
+ *
+ * Con modo=abono (pago parcial): lo entregado se registra como ABONO al
+ * refrendo pendiente — no renueva el periodo, pero protege la prenda de
+ * remate hasta el siguiente vencimiento. Cuando lo abonado cubre el refrendo,
+ * se registra como refrendo completo (descontando los abonos previos).
  */
 export async function refrendarEmpeno(id: string, form?: FormData) {
   if (await esInvitado()) return;
@@ -557,17 +563,92 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
     const v = parseFloat(((form?.get(k) as string) ?? "").replace(/,/g, ""));
     return Number.isFinite(v) && v > 0 ? v : 0;
   };
+  const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
+  const u = await getUsuarioActual();
+  const recibido = g("recibido");
+
+  // Abonos previos al refrendo en curso y lo que falta de cada concepto.
+  const pend = abonosRefrendoPendiente(await listarPagosEmpeno(id));
+  const porConcepto = pendientePorConcepto(
+    { moratorios, intereses: interesP, almacenaje: almacenajeP, iva: ivaP },
+    pend.abonos
+  );
+  const saldoRefrendo = round2(porConcepto.moratorios + porConcepto.intereses + porConcepto.almacenaje + porConcepto.iva);
+
+  if (form?.get("modo") === "abono") {
+    const montoAbono = round2(g("montoAbono"));
+    if (montoAbono <= 0) throw new Error("Indica el monto del abono.");
+    if (montoAbono < saldoRefrendo) {
+      const aplicado = aplicarAbono(montoAbono, porConcepto);
+      const efectivoA = metodoPago === "efectivo" ? montoAbono : 0;
+      const cambioA = metodoPago === "efectivo" && recibido > montoAbono ? round2(recibido - montoAbono) : 0;
+      const abonoBase = {
+        empeno_id: id,
+        cliente_id: e.clienteId,
+        refrendo_no: pend.refrendoNo,
+        tipo: "abono",
+        abono_capital: 0,
+        intereses: aplicado.intereses,
+        almacenaje: aplicado.almacenaje,
+        gastos_admin: 0,
+        moratorios: aplicado.moratorios,
+        iva: aplicado.iva,
+        descuento: 0,
+        subtotal: saldoRefrendo, // saldo del refrendo ANTES de este abono
+        total: montoAbono,
+        efectivo: efectivoA,
+        tarjeta: metodoPago === "tarjeta" ? montoAbono : 0,
+        transferencia: metodoPago === "transferencia" || metodoPago === "cheque" ? montoAbono : 0,
+        cambio: cambioA,
+        metodo_pago: metodoPago,
+        usuario_nombre: u?.nombre ?? null,
+      };
+      let abonoId = "";
+      if (supabaseConfigured) {
+        const { data: pago, error } = await getServerSupabase().from("pagos").insert(abonoBase).select("id").single();
+        if (error) throw error;
+        abonoId = pago.id;
+      } else {
+        const store = getStore();
+        abonoId = nuevoId("pg");
+        store.pagos.unshift({
+          id: abonoId, reciboNo: 2554 + store.pagos.length, refrendoNo: pend.refrendoNo, empenoId: id, clienteId: e.clienteId,
+          tipo: "abono", abonoCapital: 0, intereses: aplicado.intereses, almacenaje: aplicado.almacenaje, gastosAdmin: 0,
+          moratorios: aplicado.moratorios, rentaGps: 0, rentaSeguro: 0, gastosVenta: 0, pension: 0, iva: aplicado.iva, descuento: 0,
+          subtotal: saldoRefrendo, total: montoAbono, efectivo: abonoBase.efectivo, tarjeta: abonoBase.tarjeta,
+          transferencia: abonoBase.transferencia, cambio: cambioA, metodoPago,
+          usuarioNombre: u?.nombre ?? null, fecha: new Date().toISOString(), creadoEn: new Date().toISOString(),
+        });
+      }
+      await registrarMovimientoCaja({
+        tipo: "abono", monto: montoAbono, esEntrada: true,
+        concepto: `Abono parcial al refrendo ${e.folio} (saldo ${formatMXN(saldoRefrendo - montoAbono)})`, empenoId: id, referencia: e.folio,
+      });
+      await bitacoraAuto("Abono parcial al refrendo", `${montoAbono} MXN · saldo ${round2(saldoRefrendo - montoAbono)} MXN`, e.folio);
+      revalidatePath(`/empenos/${id}`);
+      revalidatePath("/empenos");
+      revalidatePath("/caja");
+      revalidatePath("/remates");
+      if (e.clienteId) revalidatePath(`/clientes/${e.clienteId}`);
+      redirect(`/api/recibo-pago/${abonoId}`);
+    }
+    // El abono alcanza para cubrir el refrendo: se registra como refrendo completo.
+  }
+
   const capitalPendiente = Math.max(0, e.montoPrestado - e.abonoCapital);
   const abonoCapital = Math.min(Math.max(0, g("abonoCapital")), capitalPendiente);
   const descuento = g("descuento");
   const gastosAdmin = g("gastosAdmin");
-  const metodoPago = ((form?.get("metodoPago") as string) || e.metodoPago || "efectivo") as MetodoPago;
 
+  // El subtotal muestra el refrendo íntegro; los abonos previos se restan en el total.
   const subtotal = round2(interesP + almacenajeP + gastosAdmin + moratorios + ivaP);
-  const u = await getUsuarioActual();
   validarDescuento(descuento, subtotal, u?.rol);
-  const total = round2(Math.max(0, subtotal + abonoCapital - descuento));
-  const recibido = g("recibido");
+  const total = round2(Math.max(0, saldoRefrendo + gastosAdmin + abonoCapital - descuento));
+  if (metodoPago === "efectivo" && recibido > 0 && recibido < total && form?.get("modo") !== "abono") {
+    throw new Error(
+      `El efectivo recibido (${formatMXN(recibido)}) no cubre el refrendo (${formatMXN(total)}). Regístralo como abono parcial.`
+    );
+  }
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
   const tarjeta = metodoPago === "tarjeta" ? total : 0;
   const transferencia = metodoPago === "transferencia" || metodoPago === "cheque" ? total : 0;
@@ -643,9 +724,12 @@ export async function refrendarEmpeno(id: string, form?: FormData) {
   }
   await registrarMovimientoCaja({
     tipo: "refrendo", monto: total, esEntrada: true,
-    concepto: `Refrendo ${e.folio} (recibo)`, empenoId: id, referencia: e.folio,
+    concepto: pend.total > 0
+      ? `Refrendo ${e.folio} (recibo · liquida saldo tras abonos por ${formatMXN(pend.total)})`
+      : `Refrendo ${e.folio} (recibo)`,
+    empenoId: id, referencia: e.folio,
   });
-  await bitacoraAuto("Refrendo registrado", `${total} MXN`, e.folio);
+  await bitacoraAuto("Refrendo registrado", `${total} MXN${pend.total > 0 ? ` (abonos previos ${pend.total} MXN)` : ""}`, e.folio);
   revalidatePath(`/empenos/${id}`);
   revalidatePath("/empenos");
   revalidatePath("/caja");
@@ -683,7 +767,9 @@ export async function desempenarEmpeno(id: string, form?: FormData) {
   );
   const u = await getUsuarioActual();
   validarDescuento(descuento, subtotal, u?.rol);
-  const total = Math.max(0, round2(subtotal - e.abonoCapital - descuento));
+  // Lo abonado al refrendo pendiente se descuenta al liquidar.
+  const abonosRefrendo = abonosRefrendoPendiente(await listarPagosEmpeno(id)).total;
+  const total = Math.max(0, round2(subtotal - e.abonoCapital - abonosRefrendo - descuento));
   const recibido = g("recibido");
   const efectivo = metodoPago === "efectivo" ? (recibido > 0 ? Math.min(recibido, total) : total) : 0;
   const tarjeta = metodoPago === "tarjeta" ? total : 0;
@@ -1025,6 +1111,7 @@ export async function crearEmpenoGuiado(
     }
 
     await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, e.folio);
+    await marcarCotizacionConvertida(data.cotizacionId, e.folio);
     revalidatePaths();
     return { empenoId: e.id, folio: e.folio };
   }
@@ -1151,6 +1238,7 @@ export async function crearEmpenoGuiado(
 
   await bitacoraAuto("Empeño creado (asistente)", `Préstamo ${data.montoPrestado} MXN`, empeno.folio);
   revalidatePaths();
+  await marcarCotizacionConvertida(data.cotizacionId, empeno.folio);
   return { empenoId: empeno.id, folio: empeno.folio };
 }
 
@@ -1335,6 +1423,14 @@ export async function eliminarFotoPrenda(prendaId: string, url: string) {
 /** Envía un empeño vencido a remate: la prenda pasa a estar en venta. */
 export async function enviarARemate(empenoId: string) {
   if (await esInvitado()) return;
+  // Un abono al refrendo protege la prenda hasta el siguiente vencimiento.
+  const empR = await obtenerEmpeno(empenoId);
+  if (empR) {
+    const hasta = protegidoHasta(empR, abonosRefrendoPendiente(await listarPagosEmpeno(empenoId)));
+    if (hasta && hasta >= hoyISO()) {
+      throw new Error(`Este empeño tiene abonos al refrendo; la prenda está protegida hasta el ${formatFecha(hasta)}.`);
+    }
+  }
   if (supabaseConfigured) {
     const sb = getServerSupabase();
     const { data, error } = await sb.from("empenos").select("prenda_id").eq("id", empenoId).single();
@@ -2136,6 +2232,38 @@ export async function resolverAutorizacion(id: string, aprobada: boolean, coment
   if (empenoId) revalidatePath(`/empenos/${empenoId}`);
 }
 
+/**
+ * Al crear un empeño desde una cotización, ésta queda como "convertida"
+ * (¿Se empeñó? = Sí) y se anota el folio del contrato en sus notas.
+ */
+async function marcarCotizacionConvertida(cotizacionId: string | null | undefined, folioEmpeno: string) {
+  if (!cotizacionId) return;
+  try {
+    const cot = await obtenerCotizacion(cotizacionId);
+    if (!cot) return;
+    const nota = `Convertida a empeño ${folioEmpeno}`;
+    const notas = cot.notas ? `${cot.notas}\n${nota}` : nota;
+    if (supabaseConfigured) {
+      await getServerSupabase()
+        .from("cotizaciones")
+        .update({ se_empeno: true, motivo_no: null, estado: "convertida", notas })
+        .eq("id", cotizacionId);
+    } else {
+      const c = getStore().cotizaciones.find((x) => x.id === cotizacionId);
+      if (c) {
+        c.seEmpeno = true;
+        c.motivoNo = null;
+        c.estado = "convertida";
+        c.notas = notas;
+      }
+    }
+    await bitacoraAuto("Cotización convertida a empeño", `${cot.folio} → ${folioEmpeno}`, cot.folio);
+    revalidatePath("/cotizaciones");
+  } catch {
+    // No bloquear el empeño ya creado si falla la marca de la cotización.
+  }
+}
+
 /** Marca el resultado de una cotización: si terminó en empeño o el motivo de rechazo. */
 export async function marcarResultadoCotizacion(id: string, seEmpeno: boolean, motivo: string | null) {
   if (await esInvitado()) return;
@@ -2564,8 +2692,8 @@ export async function enviarReporteDireccion(desde: string, hasta: string): Prom
   if (!/^\d{4}-\d{2}-\d{2}$/.test(desde) || !/^\d{4}-\d{2}-\d{2}$/.test(hasta)) return { ok: false, mensaje: "Rango de fechas inválido." };
   const { direccion } = await obtenerAjustes();
   if (!direccion.whatsapp) return { ok: false, mensaje: "Falta el WhatsApp de Dirección en Configuración." };
-  const [empenos, pagos, ventas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas()]);
-  const rep = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta);
+  const [empenos, pagos, ventas, prendas] = await Promise.all([listarEmpenos(), listarPagos(), listarVentas(), listarPrendas()]);
+  const rep = calcularReporteSemanal(empenos, pagos, ventas, desde, hasta, prendas);
   const res = await enviarWhatsApp(direccion.whatsapp, textoReporte(rep, SUCURSAL.nombre));
   await bitacoraAuto("Reporte enviado a Dirección", res.ok ? `WhatsApp ${desde} a ${hasta}` : `Falló: ${res.error}`, null);
   return res.ok

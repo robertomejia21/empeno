@@ -608,6 +608,8 @@ export interface EmpenoGuiadoPayload {
   diasGracia: number;
   fechaInicio: string;
   notas: string | null;
+  /** Cotización de origen (si el empeño se convirtió desde /cotizaciones). */
+  cotizacionId?: string | null;
 }
 
 export interface CalculoLiquidacion {

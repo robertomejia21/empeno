@@ -238,9 +238,28 @@ body {
   .print-only {
     display: block !important;
   }
+  html,
   body {
-    background: #ffffff;
+    background: #ffffff !important;
   }
+  /* Contrato PROFECO: una sola hoja tamaño oficio (legal). */
+  .contrato {
+    page: contrato;
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    zoom: var(--contrato-zoom, 0.98);
+  }
+  .contrato-marco {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+  }
+}
+@page contrato {
+  size: legal;
+  margin: 6mm 7mm;
 }
 .print-only {
   display: none;

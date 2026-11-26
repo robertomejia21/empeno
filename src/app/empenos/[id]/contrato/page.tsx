@@ -11,6 +11,12 @@ import { PrintButton, ConfirmSubmit } from "@/components/actions-ui";
 import { ContratoProfeco } from "./ContratoProfeco";
 import { FirmaContrato } from "./FirmaContrato";
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const e = await obtenerEmpeno(id);
+  return { title: e ? `Contrato ${e.folio} — WORKLINE COMPANY, S. DE R.L. DE C.V.` : "Contrato — WORKLINE COMPANY" };
+}
+
 export default async function ContratoPage({ params }: { params: Promise<{ id: string }> }) {
   const [festivos, ajustes] = await Promise.all([obtenerReglasCalculo(), obtenerAjustes()]);
   const { id } = await params;
@@ -46,7 +52,7 @@ export default async function ContratoPage({ params }: { params: Promise<{ id: s
         />
       </div>
 
-      <div className="shadow-card overflow-x-auto rounded-2xl border border-border">
+      <div className="contrato-marco shadow-card overflow-x-auto rounded-2xl border border-border">
         <ContratoProfeco horario={textoHorario(ajustes.horario)} empeno={empeno} calc={calc} qrPrenda={qrPrenda} />
       </div>
 

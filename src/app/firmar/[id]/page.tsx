@@ -30,7 +30,7 @@ export default async function FirmarPage({ params }: { params: Promise<{ id: str
           <p className="mt-0.5 text-xs text-muted">Horario: {textoHorario(ajustes.horario)}</p>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-border bg-white">
+        <div className="contrato-marco overflow-x-auto rounded-xl border border-border bg-white">
           <ContratoProfeco empeno={empeno} calc={calc} qrPrenda={qrPrenda} horario={textoHorario(ajustes.horario)} />
         </div>
 
